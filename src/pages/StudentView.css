@@ -1,0 +1,137 @@
+.sv-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+.sv-topbar {
+    height: 50px;
+    background: var(--surf);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    flex-shrink: 0;
+}
+
+.sv-topbar-left  { flex: 1; }
+.sv-topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.sv-logo {
+    font-family: var(--disp);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--t1);
+}
+
+.sv-session-info {
+    font-size: 13px;
+    color: var(--t2);
+}
+
+.sv-session-info strong {
+    color: var(--teal);
+    font-weight: 600;
+}
+
+.sv-capture-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t3);
+}
+
+.sv-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--tdim);
+    border: 1px solid var(--tbr);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--disp);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--teal);
+}
+
+.sv-feed-area {
+    flex: 1;
+    position: relative;
+    padding: 12px;
+    min-height: 0;
+}
+
+.sv-object-overlay {
+    position: absolute;
+    bottom: 22px;
+    left: 22px;
+    right: 22px;
+    background: rgba(6,11,22,0.8);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+}
+
+.sv-object-name {
+    font-family: var(--disp);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--teal);
+    margin-bottom: 4px;
+}
+
+.sv-object-desc {
+    font-size: 13px;
+    color: var(--t2);
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.sv-fun-fact {
+    font-size: 12px;
+    color: var(--t3);
+    line-height: 1.5;
+    font-style: italic;
+}
+
+.sv-actions {
+    padding: 14px 20px;
+    background: var(--surf);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.sv-capture-btn {
+    width: 100%;
+    padding: 14px 0;
+    border-radius: 12px;
+    font-family: var(--disp);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.sv-capture-btn.active {
+    background: var(--teal);
+    color: #060b16;
+    box-shadow: 0 4px 20px rgba(94,234,212,0.3);
+}
+
+.sv-capture-btn.active:hover {
+    background: #7af5e0;
+    transform: translateY(-1px);
+}
+
+.sv-capture-btn.disabled {
+    background: rgba(255,255,255,0.05);
+    color: var(--t3);
+    cursor: not-allowed;
+    border: 1px solid var(--border);
+}

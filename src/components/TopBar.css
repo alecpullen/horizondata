@@ -1,0 +1,84 @@
+.topbar {
+    display: flex;
+    align-items: center;
+    height: 52px;
+    padding: 0 24px;
+    background: var(--surf);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.topbar-logo {
+    font-family: var(--disp);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    margin-right: 32px;
+    white-space: nowrap;
+}
+.logo-horizon { color: var(--t1); }
+.logo-data    { color: var(--teal); margin-left: 4px; }
+
+.topbar-nav {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.nav-link {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 14px;
+    border-radius: 7px;
+    color: var(--t3);
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition: all 0.15s;
+}
+.nav-link:hover {
+    color: var(--t2);
+    background: rgba(255, 255, 255, 0.04);
+}
+.nav-link.active {
+    color: var(--teal);
+    background: var(--tdim);
+    border-color: var(--tbr);
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sys-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
+}
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.status-dot.online { background: var(--green); }
+
+.avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--tdim);
+    border: 1px solid var(--tbr);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--disp);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--teal);
+}
