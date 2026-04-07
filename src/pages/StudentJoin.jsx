@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './StudentJoin.css'
 
 function StudentJoin() {
     const navigate = useNavigate()
+    const inputRef = useRef(null)
 
     const [code, setCode] = useState('')
     const [error, setError] = useState('')
@@ -45,7 +46,8 @@ function StudentJoin() {
                 {/*code input*/}
                 <div className="sj-input-wrap">
                     <input
-                        className={`sj-input ${error ? 'sj-input-error' : ''}`}
+                        className="sj-input"
+                        ref={inputRef}
                         type="text"
                         inputMode="numeric"
                         pattern="[0-9]*"
@@ -58,7 +60,7 @@ function StudentJoin() {
                         />
                 </div>
 
-                <div className="sj-digit-row">
+                <div className="sj-digit-row" onClick={() => inputRef.current?.focus()}>
                     {Array.from({ length: 6 }).map((_, i) => (
                         <div key={i} className={`sj-digit ${code[i] ? 'filled' : ''}`}>
                             {code[i] || ''}
