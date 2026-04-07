@@ -1,0 +1,28 @@
+logLevel: debug   # <-- fix the "updatelogLevel" typo
+
+# Protocols
+rtmp: yes
+hls: yes
+webrtc: yes
+srt: yes                 # <-- enable SRT ingest
+
+# SRT server (listener)
+srtAddress: :8890        # UDP; expose 8890/udp in docker-compose
+
+# HLS server
+hlsAddress: :8888
+hlsAllowOrigin: "*"
+hlsSegmentDuration: 1s   # NEW (faster time-to-first-frame)
+hlsSegmentCount: 3  
+
+# WebRTC server (WHEP/WHIP)
+webrtcAddress: :8889
+webrtcAllowOrigin: "*"
+webrtcLocalUDPAddress: :8189
+webrtcICEServers:
+  - stun:stun.l.google.com:19302
+
+paths:
+  telescope-camera: {}
+  telescope-view: {}
+  allsky: {}

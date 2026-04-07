@@ -1,0 +1,543 @@
+openapi: 3.0.3
+info:
+  title: CSE3CAP RSDCC API
+  description: |
+    REST API for the CSE3CAP Remote Scientific Data Capture and Control project.
+    
+    This API provides endpoints for:
+    - Telescope control via ASCOM Alpaca protocol
+    - Weather data retrieval
+    - System health monitoring
+    
+    ## Authentication
+    Currently, no authentication is required for development.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+paths:
+  /:
+    get:
+      summary: API Documentation
+      description: Interactive API documentation rendered with Redocly
+      tags:
+        - Documentation
+      responses:
+        '200':
+          description: HTML documentation page
+          content:
+            text/html:
+              schema:
+                type: string
+  /openapi.yaml:
+    get:
+      summary: OpenAPI Specification
+      description: Raw OpenAPI specification in YAML format
+      tags:
+        - Documentation
+      responses:
+        '200':
+          description: OpenAPI specification
+          content:
+            application/x-yaml:
+              schema:
+                type: string
+  /health:
+    get:
+      summary: Health Check
+      description: Check if the API is running and healthy
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                    description: Health status of the API
+                  timestamp:
+                    type: number
+                    format: double
+                    example: 1756723862.8357465
+                    description: Unix timestamp of the health check
+  /hello:
+    get:
+      summary: Hello World
+      description: Simple test endpoint to verify the API is working
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Greeting message
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Hello from the App Factory!"
+  /weather/temperature:
+    get:
+      summary: Get Temperature Data
+      description: Retrieve temperature data from ThingSpeak
+      tags:
+        - Weather
+      responses:
+        '200':
+          description: Temperature data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 270748
+                      name:
+                        type: string
+                        example: "Sensor Feed"
+                      description:
+                        type: string
+                        example: "Multi-Sensor live feed"
+                  feeds:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entry_id:
+                          type: integer
+                          example: 26928
+                        field1:
+                          type: string
+                          example: "18.30"
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2025-09-01T10:37:33Z"
+        '503':
+          description: Weather service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /weather/humidity:
+    get:
+      summary: Get Humidity Data
+      description: Retrieve humidity data from ThingSpeak
+      tags:
+        - Weather
+      responses:
+        '200':
+          description: Humidity data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    type: object
+                  feeds:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entry_id:
+                          type: integer
+                        field2:
+                          type: string
+                          example: "65.2"
+                        created_at:
+                          type: string
+                          format: date-time
+        '503':
+          description: Weather service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /weather/pressure:
+    get:
+      summary: Get Pressure Data
+      description: Retrieve atmospheric pressure data from ThingSpeak
+      tags:
+        - Weather
+      responses:
+        '200':
+          description: Pressure data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    type: object
+                  feeds:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entry_id:
+                          type: integer
+                        field3:
+                          type: string
+                          example: "1013.25"
+                        created_at:
+                          type: string
+                          format: date-time
+        '503':
+          description: Weather service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /weather/dew_point:
+    get:
+      summary: Get Dew Point Data
+      description: Retrieve dew point data from ThingSpeak
+      tags:
+        - Weather
+      responses:
+        '200':
+          description: Dew point data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    type: object
+                  feeds:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entry_id:
+                          type: integer
+                        field4:
+                          type: string
+                          example: "12.5"
+                        created_at:
+                          type: string
+                          format: date-time
+        '503':
+          description: Weather service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/telescope/status:
+    get:
+      summary: Get Telescope Status
+      description: Retrieve the current status of the telescope
+      tags:
+        - Telescope
+      responses:
+        '200':
+          description: Telescope status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                    description: Whether the telescope is connected
+                    example: true
+                  tracking:
+                    type: boolean
+                    description: Whether the telescope is tracking
+                    example: false
+                  parked:
+                    type: boolean
+                    description: Whether the telescope is parked
+                    example: true
+                  slewing:
+                    type: boolean
+                    description: Whether the telescope is slewing
+                    example: false
+                  ra:
+                    type: number
+                    format: double
+                    description: Right ascension in degrees
+                    example: 180.0
+                  dec:
+                    type: number
+                    format: double
+                    description: Declination in degrees
+                    example: 45.0
+                  az:
+                    type: number
+                    format: double
+                    description: Azimuth in degrees
+                    example: 270.0
+                  alt:
+                    type: number
+                    format: double
+                    description: Altitude in degrees
+                    example: 30.0
+        '503':
+          description: Telescope connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/telescope/connect:
+    post:
+      summary: Connect/Disconnect Telescope
+      description: Connect or disconnect the telescope
+      tags:
+        - Telescope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - connected
+              properties:
+                connected:
+                  type: boolean
+                  description: Whether to connect (true) or disconnect (false)
+                  example: true
+      responses:
+        '200':
+          description: Telescope connection status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelescopeStatus'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Telescope connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/telescope/tracking:
+    post:
+      summary: Enable/Disable Telescope Tracking
+      description: Enable or disable telescope tracking
+      tags:
+        - Telescope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tracking
+              properties:
+                tracking:
+                  type: boolean
+                  description: Whether to enable (true) or disable (false) tracking
+                  example: true
+      responses:
+        '200':
+          description: Telescope tracking status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelescopeStatus'
+        '400':
+          description: Invalid request or telescope not connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Telescope connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/telescope/park:
+    post:
+      summary: Park Telescope
+      description: Park the telescope
+      tags:
+        - Telescope
+      responses:
+        '200':
+          description: Telescope parked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelescopeStatus'
+        '400':
+          description: Telescope not connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Telescope connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/telescope/unpark:
+    post:
+      summary: Unpark Telescope
+      description: Unpark the telescope
+      tags:
+        - Telescope
+      responses:
+        '200':
+          description: Telescope unparked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelescopeStatus'
+        '400':
+          description: Telescope not connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Telescope connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/telescope/slew:
+    post:
+      summary: Slew Telescope to Coordinates
+      description: Slew the telescope to specified right ascension and declination
+      tags:
+        - Telescope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ra
+                - dec
+              properties:
+                ra:
+                  type: number
+                  format: double
+                  description: Right ascension in degrees
+                  example: 180.0
+                dec:
+                  type: number
+                  format: double
+                  description: Declination in degrees
+                  example: 45.0
+      responses:
+        '200':
+          description: Telescope slewing to coordinates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelescopeStatus'
+        '400':
+          description: Invalid coordinates or telescope not connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Telescope connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    TelescopeStatus:
+      type: object
+      properties:
+        connected:
+          type: boolean
+          description: Whether the telescope is connected
+        tracking:
+          type: boolean
+          description: Whether the telescope is tracking
+        parked:
+          type: boolean
+          description: Whether the telescope is parked
+        slewing:
+          type: boolean
+          description: Whether the telescope is slewing
+        ra:
+          type: number
+          format: double
+          description: Right ascension in degrees
+        dec:
+          type: number
+          format: double
+          description: Declination in degrees
+        az:
+          type: number
+          format: double
+          description: Azimuth in degrees
+        alt:
+          type: number
+          format: double
+          description: Altitude in degrees
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "connection_error"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Cannot connect to telescope simulator"
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+tags:
+  - name: Documentation
+    description: API documentation endpoints
+  - name: Health
+    description: Health check endpoints
+  - name: Weather
+    description: Weather data endpoints
+  - name: Telescope
+    description: Telescope control endpoints

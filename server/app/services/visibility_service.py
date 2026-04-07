@@ -1,0 +1,650 @@
+# app/services/visibility_service.py
+# Enhanced visibility service for telescope safety scheduling system
+
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, timezone, timedelta
+import logging
+import warnings
+import threading
+import time
+import hashlib
+import json
+
+# AstroPy imports for astronomical calculations
+from astropy.coordinates import EarthLocation, SkyCoord, AltAz, get_sun, get_body
+from astropy import units as u
+from astropy.time import Time
+from astropy.coordinates import solar_system_ephemeris
+
+logger = logging.getLogger(__name__)
+
+# Melbourne coordinates (La Trobe University, Bundoora)
+MELBOURNE_LOCATION = EarthLocation(
+    lat=-37.7214 * u.deg,
+    lon=145.0489 * u.deg,
+    height=140 * u.m
+)
+
+# Minimum elevation angle for visibility (degrees)
+MIN_ELEVATION = 20.0
+
+# Comprehensive object database with enhanced metadata
+ENHANCED_OBJECT_DATABASE = [
+    # Planets
+    {"name": "Mercury", "type": "Planet", "magnitude_range": (-2.5, 5.7), "constellation": "Variable"},
+    {"name": "Venus", "type": "Planet", "magnitude_range": (-4.9, -3.8), "constellation": "Variable"},
+    {"name": "Mars", "type": "Planet", "magnitude_range": (-2.9, 1.9), "constellation": "Variable"},
+    {"name": "Jupiter", "type": "Planet", "magnitude_range": (-2.9, -1.6), "constellation": "Variable"},
+    {"name": "Saturn", "type": "Planet", "magnitude_range": (-0.5, 1.5), "constellation": "Variable"},
+    {"name": "Uranus", "type": "Planet", "magnitude_range": (5.3, 6.0), "constellation": "Variable"},
+    {"name": "Neptune", "type": "Planet", "magnitude_range": (7.7, 8.0), "constellation": "Variable"},
+    
+    # Bright Stars
+    {"name": "Sirius", "type": "Star", "magnitude": -1.46, "constellation": "Canis Major", "distance": "8.6 ly"},
+    {"name": "Canopus", "type": "Star", "magnitude": -0.74, "constellation": "Carina", "distance": "310 ly"},
+    {"name": "Alpha Centauri", "type": "Star System", "magnitude": -0.27, "constellation": "Centaurus", "distance": "4.37 ly"},
+    {"name": "Arcturus", "type": "Star", "magnitude": -0.05, "constellation": "Boötes", "distance": "37 ly"},
+    {"name": "Vega", "type": "Star", "magnitude": 0.03, "constellation": "Lyra", "distance": "25 ly"},
+    {"name": "Capella", "type": "Star", "magnitude": 0.08, "constellation": "Auriga", "distance": "43 ly"},
+    {"name": "Rigel", "type": "Star", "magnitude": 0.13, "constellation": "Orion", "distance": "860 ly"},
+    {"name": "Procyon", "type": "Star", "magnitude": 0.34, "constellation": "Canis Minor", "distance": "11.5 ly"},
+    {"name": "Betelgeuse", "type": "Star", "magnitude": 0.50, "constellation": "Orion", "distance": "650 ly"},
+    {"name": "Achernar", "type": "Star", "magnitude": 0.46, "constellation": "Eridanus", "distance": "139 ly"},
+    {"name": "Aldebaran", "type": "Star", "magnitude": 0.85, "constellation": "Taurus", "distance": "65 ly"},
+    {"name": "Antares", "type": "Star", "magnitude": 1.09, "constellation": "Scorpius", "distance": "600 ly"},
+    {"name": "Spica", "type": "Star", "magnitude": 1.04, "constellation": "Virgo", "distance": "250 ly"},
+    {"name": "Pollux", "type": "Star", "magnitude": 1.14, "constellation": "Gemini", "distance": "34 ly"},
+    {"name": "Fomalhaut", "type": "Star", "magnitude": 1.16, "constellation": "Piscis Austrinus", "distance": "25 ly"},
+    {"name": "Deneb", "type": "Star", "magnitude": 1.25, "constellation": "Cygnus", "distance": "2600 ly"},
+    {"name": "Regulus", "type": "Star", "magnitude": 1.35, "constellation": "Leo", "distance": "79 ly"},
+    
+    # Deep Sky Objects - Nebulae
+    {"name": "Orion Nebula", "type": "Emission Nebula", "magnitude": 4.0, "constellation": "Orion", "distance": "1344 ly", "catalog_id": "M42"},
+    {"name": "Carina Nebula", "type": "Emission Nebula", "magnitude": 1.0, "constellation": "Carina", "distance": "7500 ly", "catalog_id": "NGC 3372"},
+    {"name": "Tarantula Nebula", "type": "Emission Nebula", "magnitude": 8.0, "constellation": "Dorado", "distance": "160000 ly", "catalog_id": "NGC 2070"},
+    {"name": "Eagle Nebula", "type": "Emission Nebula", "magnitude": 6.4, "constellation": "Serpens", "distance": "7000 ly", "catalog_id": "M16"},
+    {"name": "Rosette Nebula", "type": "Emission Nebula", "magnitude": 9.0, "constellation": "Monoceros", "distance": "5200 ly", "catalog_id": "NGC 2237"},
+    {"name": "Horsehead Nebula", "type": "Dark Nebula", "magnitude": 6.8, "constellation": "Orion", "distance": "1500 ly", "catalog_id": "Barnard 33"},
+    {"name": "Cat's Eye Nebula", "type": "Planetary Nebula", "magnitude": 8.1, "constellation": "Draco", "distance": "3300 ly", "catalog_id": "NGC 6543"},
+    {"name": "Ring Nebula", "type": "Planetary Nebula", "magnitude": 8.8, "constellation": "Lyra", "distance": "2300 ly", "catalog_id": "M57"},
+    
+    # Galaxies
+    {"name": "Andromeda Galaxy", "type": "Spiral Galaxy", "magnitude": 3.4, "constellation": "Andromeda", "distance": "2.5 Mly", "catalog_id": "M31"},
+    {"name": "Large Magellanic Cloud", "type": "Irregular Galaxy", "magnitude": 0.9, "constellation": "Dorado", "distance": "160000 ly", "catalog_id": "LMC"},
+    {"name": "Small Magellanic Cloud", "type": "Irregular Galaxy", "magnitude": 2.7, "constellation": "Tucana", "distance": "200000 ly", "catalog_id": "SMC"},
+    {"name": "Triangulum Galaxy", "type": "Spiral Galaxy", "magnitude": 5.7, "constellation": "Triangulum", "distance": "3 Mly", "catalog_id": "M33"},
+    {"name": "Centaurus A", "type": "Elliptical Galaxy", "magnitude": 6.8, "constellation": "Centaurus", "distance": "13.7 Mly", "catalog_id": "NGC 5128"},
+    {"name": "Whirlpool Galaxy", "type": "Spiral Galaxy", "magnitude": 8.4, "constellation": "Canes Venatici", "distance": "23 Mly", "catalog_id": "M51"},
+    
+    # Star Clusters
+    {"name": "Omega Centauri", "type": "Globular Cluster", "magnitude": 3.7, "constellation": "Centaurus", "distance": "15800 ly", "catalog_id": "NGC 5139"},
+    {"name": "47 Tucanae", "type": "Globular Cluster", "magnitude": 4.0, "constellation": "Tucana", "distance": "16700 ly", "catalog_id": "NGC 104"},
+    {"name": "The Pleiades", "type": "Open Cluster", "magnitude": 1.6, "constellation": "Taurus", "distance": "444 ly", "catalog_id": "M45"},
+    {"name": "Jewel Box Cluster", "type": "Open Cluster", "magnitude": 4.2, "constellation": "Crux", "distance": "6440 ly", "catalog_id": "NGC 4755"},
+    {"name": "Hyades", "type": "Open Cluster", "magnitude": 0.5, "constellation": "Taurus", "distance": "153 ly", "catalog_id": "Mel 25"},
+    {"name": "Double Cluster", "type": "Open Cluster", "magnitude": 4.3, "constellation": "Perseus", "distance": "7600 ly", "catalog_id": "NGC 869/884"},
+    {"name": "Beehive Cluster", "type": "Open Cluster", "magnitude": 3.7, "constellation": "Cancer", "distance": "577 ly", "catalog_id": "M44"},
+    {"name": "Wild Duck Cluster", "type": "Open Cluster", "magnitude": 6.3, "constellation": "Scutum", "distance": "6120 ly", "catalog_id": "M11"},
+]
+
+
+class VisibilityService:
+    """Enhanced visibility service for dynamic object filtering and positioning"""
+    
+    def __init__(self, cache_duration_minutes: int = 5, update_interval_minutes: int = 2):
+        self.location = MELBOURNE_LOCATION
+        self.min_elevation = MIN_ELEVATION
+        
+        # Caching configuration
+        self.cache_duration = timedelta(minutes=cache_duration_minutes)
+        self.update_interval = timedelta(minutes=update_interval_minutes)
+        
+        # Cache storage
+        self._visibility_cache = {}
+        self._cache_timestamps = {}
+        self._cache_lock = threading.RLock()
+        
+        # Background update thread
+        self._update_thread = None
+        self._stop_updates = threading.Event()
+        self._is_running = False
+        
+        # Change detection
+        self._last_positions = {}
+        self._position_threshold = 0.1  # degrees for significant position change
+        
+    def get_visible_objects(self, observation_time: Optional[datetime] = None, 
+                          min_elevation: Optional[float] = None) -> List[Dict[str, Any]]:
+        """
+        Get list of celestial objects visible from Melbourne at specified time
+        
+        Args:
+            observation_time: Time for visibility calculation (UTC), defaults to now
+            min_elevation: Minimum elevation angle in degrees, defaults to class setting
+            
+        Returns:
+            List of visible objects with position and metadata
+        """
+        if observation_time is None:
+            observation_time = datetime.now(timezone.utc)
+        
+        if min_elevation is None:
+            min_elevation = self.min_elevation
+            
+        # Convert to AstroPy Time object
+        astro_time = Time(observation_time)
+        
+        visible_objects = []
+        
+        # Suppress AstroPy warnings about IERS data
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            
+            for obj_data in ENHANCED_OBJECT_DATABASE:
+                try:
+                    visibility_info = self._calculate_object_visibility(
+                        obj_data, astro_time, min_elevation
+                    )
+                    
+                    if visibility_info and visibility_info['visibility']['is_visible']:
+                        visible_objects.append(visibility_info)
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to calculate visibility for {obj_data['name']}: {e}")
+                    continue
+        
+        # Sort by elevation (highest first)
+        visible_objects.sort(key=lambda x: x['coordinates']['elevation'], reverse=True)
+        
+        return visible_objects
+    
+    def _calculate_object_visibility(self, obj_data: Dict[str, Any], 
+                                   astro_time: Time, 
+                                   min_elevation: float) -> Optional[Dict[str, Any]]:
+        """
+        Calculate visibility information for a single object
+        
+        Args:
+            obj_data: Object metadata from database
+            astro_time: AstroPy Time object for calculation
+            min_elevation: Minimum elevation threshold
+            
+        Returns:
+            Object visibility information or None if not visible
+        """
+        try:
+            # Get object coordinates
+            if obj_data["type"] == "Planet":
+                # Use solar system ephemeris for planets
+                with solar_system_ephemeris.set('builtin'):
+                    target_coords = get_body(obj_data["name"].lower(), astro_time, self.location)
+            else:
+                # Use catalog lookup for deep sky objects and stars
+                target_coords = SkyCoord.from_name(obj_data["name"])
+            
+            # Transform to local Alt/Az coordinates
+            local_frame = AltAz(obstime=astro_time, location=self.location)
+            local_coords = target_coords.transform_to(local_frame)
+            
+            elevation = local_coords.alt.degree
+            azimuth = local_coords.az.degree
+            
+            # Check visibility threshold
+            is_visible = elevation > min_elevation
+            
+            if not is_visible:
+                return None
+            
+            # Calculate rise and set times (approximate)
+            rise_time, set_time = self._calculate_rise_set_times(target_coords, astro_time)
+            
+            # Determine magnitude
+            magnitude = self._get_object_magnitude(obj_data, astro_time)
+            
+            return {
+                "name": obj_data["name"],
+                "type": obj_data["type"],
+                "coordinates": {
+                    "ra": target_coords.ra.hour,
+                    "dec": target_coords.dec.degree,
+                    "elevation": elevation,
+                    "azimuth": azimuth
+                },
+                "visibility": {
+                    "is_visible": is_visible,
+                    "elevation": elevation,
+                    "magnitude": magnitude,
+                    "rise_time": rise_time.isoformat() if rise_time else None,
+                    "set_time": set_time.isoformat() if set_time else None
+                },
+                "metadata": {
+                    "constellation": obj_data.get("constellation", "Unknown"),
+                    "distance": obj_data.get("distance", "Unknown"),
+                    "catalog_id": obj_data.get("catalog_id"),
+                    "description": self._generate_description(obj_data)
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating visibility for {obj_data['name']}: {e}")
+            return None
+    
+    def _calculate_rise_set_times(self, target_coords: SkyCoord, 
+                                astro_time: Time) -> Tuple[Optional[datetime], Optional[datetime]]:
+        """
+        Calculate approximate rise and set times for an object
+        
+        Args:
+            target_coords: Object coordinates
+            astro_time: Current time
+            
+        Returns:
+            Tuple of (rise_time, set_time) as datetime objects or None
+        """
+        try:
+            # Simple approximation - calculate when object crosses elevation threshold
+            # This is a simplified calculation; more sophisticated methods could be used
+            
+            # For now, return None to indicate times are not calculated
+            # This can be enhanced with more sophisticated algorithms
+            return None, None
+            
+        except Exception as e:
+            logger.warning(f"Could not calculate rise/set times: {e}")
+            return None, None
+    
+    def _get_object_magnitude(self, obj_data: Dict[str, Any], astro_time: Time) -> Optional[float]:
+        """
+        Get object magnitude, accounting for variable objects like planets
+        
+        Args:
+            obj_data: Object metadata
+            astro_time: Current time
+            
+        Returns:
+            Magnitude value or None if unknown
+        """
+        if "magnitude" in obj_data:
+            return obj_data["magnitude"]
+        elif "magnitude_range" in obj_data:
+            # For planets, use middle of range as approximation
+            mag_range = obj_data["magnitude_range"]
+            return (mag_range[0] + mag_range[1]) / 2
+        else:
+            return None
+    
+    def _generate_description(self, obj_data: Dict[str, Any]) -> str:
+        """
+        Generate a descriptive text for the object
+        
+        Args:
+            obj_data: Object metadata
+            
+        Returns:
+            Descriptive string
+        """
+        obj_type = obj_data["type"]
+        name = obj_data["name"]
+        
+        if obj_type == "Planet":
+            return f"{name} is a planet in our solar system"
+        elif obj_type == "Star":
+            return f"{name} is a bright star"
+        elif obj_type == "Star System":
+            return f"{name} is a multiple star system"
+        elif "Nebula" in obj_type:
+            return f"{name} is a {obj_type.lower()}"
+        elif "Galaxy" in obj_type:
+            return f"{name} is a {obj_type.lower()}"
+        elif "Cluster" in obj_type:
+            return f"{name} is a {obj_type.lower()}"
+        else:
+            return f"{name} is a {obj_type.lower()}"
+    
+    def filter_by_elevation(self, objects: List[Dict[str, Any]], 
+                          min_elevation: float) -> List[Dict[str, Any]]:
+        """
+        Filter objects by minimum elevation angle
+        
+        Args:
+            objects: List of object visibility data
+            min_elevation: Minimum elevation in degrees
+            
+        Returns:
+            Filtered list of objects
+        """
+        return [
+            obj for obj in objects 
+            if obj.get('coordinates', {}).get('elevation', 0) >= min_elevation
+        ]
+    
+    def get_object_by_name(self, name: str, observation_time: Optional[datetime] = None) -> Optional[Dict[str, Any]]:
+        """
+        Get visibility information for a specific object by name
+        
+        Args:
+            name: Object name to search for
+            observation_time: Time for calculation, defaults to now
+            
+        Returns:
+            Object visibility information or None if not found/visible
+        """
+        visible_objects = self.get_visible_objects(observation_time)
+        
+        for obj in visible_objects:
+            if obj['name'].lower() == name.lower():
+                return obj
+        
+        return None
+    
+    def get_objects_by_type(self, object_type: str, 
+                          observation_time: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """
+        Get visible objects filtered by type
+        
+        Args:
+            object_type: Type of objects to return (Planet, Star, Galaxy, etc.)
+            observation_time: Time for calculation, defaults to now
+            
+        Returns:
+            List of visible objects of specified type
+        """
+        visible_objects = self.get_visible_objects(observation_time)
+        
+        return [
+            obj for obj in visible_objects 
+            if obj['type'].lower() == object_type.lower()
+        ]
+    
+    def get_objects_in_constellation(self, constellation: str, 
+                                   observation_time: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """
+        Get visible objects in a specific constellation
+        
+        Args:
+            constellation: Constellation name
+            observation_time: Time for calculation, defaults to now
+            
+        Returns:
+            List of visible objects in the constellation
+        """
+        visible_objects = self.get_visible_objects(observation_time)
+        
+        return [
+            obj for obj in visible_objects 
+            if obj.get('metadata', {}).get('constellation', '').lower() == constellation.lower()
+        ]
+    
+    def start_real_time_updates(self):
+        """Start background thread for real-time visibility updates"""
+        if self._is_running:
+            logger.warning("Real-time updates already running")
+            return
+        
+        self._is_running = True
+        self._stop_updates.clear()
+        self._update_thread = threading.Thread(target=self._update_loop, daemon=True)
+        self._update_thread.start()
+        logger.info("Started real-time visibility updates")
+    
+    def stop_real_time_updates(self):
+        """Stop background thread for real-time visibility updates"""
+        if not self._is_running:
+            return
+        
+        self._stop_updates.set()
+        if self._update_thread and self._update_thread.is_alive():
+            self._update_thread.join(timeout=5)
+        
+        self._is_running = False
+        logger.info("Stopped real-time visibility updates")
+    
+    def _update_loop(self):
+        """Background update loop for real-time visibility calculations"""
+        while not self._stop_updates.is_set():
+            try:
+                self._update_visibility_cache()
+                
+                # Wait for next update interval
+                self._stop_updates.wait(self.update_interval.total_seconds())
+                
+            except Exception as e:
+                logger.error(f"Error in visibility update loop: {e}")
+                # Continue running even if there's an error
+                time.sleep(30)  # Wait 30 seconds before retrying
+    
+    def _update_visibility_cache(self):
+        """Update the visibility cache with current calculations"""
+        current_time = datetime.now(timezone.utc)
+        
+        try:
+            # Calculate current visibility
+            visible_objects = self._calculate_visibility_no_cache(current_time)
+            
+            # Detect significant changes
+            changes_detected = self._detect_position_changes(visible_objects)
+            
+            # Update cache
+            with self._cache_lock:
+                cache_key = self._get_cache_key(current_time)
+                self._visibility_cache[cache_key] = visible_objects
+                self._cache_timestamps[cache_key] = current_time
+                
+                # Clean old cache entries
+                self._cleanup_old_cache_entries(current_time)
+            
+            if changes_detected:
+                logger.info(f"Significant position changes detected, cache updated at {current_time}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update visibility cache: {e}")
+    
+    def _calculate_visibility_no_cache(self, observation_time: datetime) -> List[Dict[str, Any]]:
+        """Calculate visibility without using cache (for background updates)"""
+        astro_time = Time(observation_time)
+        visible_objects = []
+        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            
+            for obj_data in ENHANCED_OBJECT_DATABASE:
+                try:
+                    visibility_info = self._calculate_object_visibility(
+                        obj_data, astro_time, self.min_elevation
+                    )
+                    
+                    if visibility_info and visibility_info['visibility']['is_visible']:
+                        visible_objects.append(visibility_info)
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to calculate visibility for {obj_data['name']}: {e}")
+                    continue
+        
+        visible_objects.sort(key=lambda x: x['coordinates']['elevation'], reverse=True)
+        return visible_objects
+    
+    def _detect_position_changes(self, current_objects: List[Dict[str, Any]]) -> bool:
+        """
+        Detect if any objects have moved significantly since last update
+        
+        Args:
+            current_objects: Current visibility calculations
+            
+        Returns:
+            True if significant changes detected
+        """
+        changes_detected = False
+        current_positions = {}
+        
+        # Build current position map
+        for obj in current_objects:
+            name = obj['name']
+            coords = obj['coordinates']
+            current_positions[name] = {
+                'elevation': coords['elevation'],
+                'azimuth': coords['azimuth']
+            }
+        
+        # If no previous positions, this is a new state (changes detected)
+        if not self._last_positions:
+            changes_detected = True
+        else:
+            # Compare with last known positions
+            for name, current_pos in current_positions.items():
+                if name in self._last_positions:
+                    last_pos = self._last_positions[name]
+                    
+                    # Calculate position difference
+                    elev_diff = abs(current_pos['elevation'] - last_pos['elevation'])
+                    azim_diff = abs(current_pos['azimuth'] - last_pos['azimuth'])
+                    
+                    # Handle azimuth wraparound (0/360 degrees)
+                    if azim_diff > 180:
+                        azim_diff = 360 - azim_diff
+                    
+                    # Check if change exceeds threshold
+                    if elev_diff > self._position_threshold or azim_diff > self._position_threshold:
+                        changes_detected = True
+                        break
+        
+        # Update last known positions
+        self._last_positions = current_positions
+        
+        return changes_detected
+    
+    def _get_cache_key(self, observation_time: datetime) -> str:
+        """
+        Generate cache key for given time (rounded to nearest minute)
+        
+        Args:
+            observation_time: Time for cache key
+            
+        Returns:
+            Cache key string
+        """
+        # Round to nearest minute for cache efficiency
+        rounded_time = observation_time.replace(second=0, microsecond=0)
+        return rounded_time.isoformat()
+    
+    def _is_cache_valid(self, cache_key: str, current_time: datetime) -> bool:
+        """
+        Check if cached data is still valid
+        
+        Args:
+            cache_key: Cache key to check
+            current_time: Current time for comparison
+            
+        Returns:
+            True if cache is valid
+        """
+        if cache_key not in self._cache_timestamps:
+            return False
+        
+        cache_time = self._cache_timestamps[cache_key]
+        age = current_time - cache_time
+        
+        return age <= self.cache_duration
+    
+    def _cleanup_old_cache_entries(self, current_time: datetime):
+        """
+        Remove old cache entries to prevent memory buildup
+        
+        Args:
+            current_time: Current time for age calculation
+        """
+        cutoff_time = current_time - (self.cache_duration * 2)  # Keep extra buffer
+        
+        keys_to_remove = []
+        for cache_key, timestamp in self._cache_timestamps.items():
+            if timestamp < cutoff_time:
+                keys_to_remove.append(cache_key)
+        
+        for key in keys_to_remove:
+            self._visibility_cache.pop(key, None)
+            self._cache_timestamps.pop(key, None)
+        
+        if keys_to_remove:
+            logger.debug(f"Cleaned up {len(keys_to_remove)} old cache entries")
+    
+    def get_cached_visible_objects(self, observation_time: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """
+        Get visible objects using cache when available
+        
+        Args:
+            observation_time: Time for visibility calculation, defaults to now
+            
+        Returns:
+            List of visible objects (cached or freshly calculated)
+        """
+        if observation_time is None:
+            observation_time = datetime.now(timezone.utc)
+        
+        cache_key = self._get_cache_key(observation_time)
+        
+        with self._cache_lock:
+            # Check if we have valid cached data
+            if (cache_key in self._visibility_cache and 
+                self._is_cache_valid(cache_key, observation_time)):
+                logger.debug(f"Using cached visibility data for {cache_key}")
+                return self._visibility_cache[cache_key].copy()
+        
+        # No valid cache, calculate fresh data
+        logger.debug(f"Calculating fresh visibility data for {observation_time}")
+        visible_objects = self.get_visible_objects(observation_time)
+        
+        # Cache the results
+        with self._cache_lock:
+            self._visibility_cache[cache_key] = visible_objects.copy()
+            self._cache_timestamps[cache_key] = observation_time
+        
+        return visible_objects
+    
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about the visibility cache
+        
+        Returns:
+            Dictionary with cache statistics
+        """
+        with self._cache_lock:
+            return {
+                'cache_entries': len(self._visibility_cache),
+                'oldest_entry': min(self._cache_timestamps.values()) if self._cache_timestamps else None,
+                'newest_entry': max(self._cache_timestamps.values()) if self._cache_timestamps else None,
+                'cache_duration_minutes': self.cache_duration.total_seconds() / 60,
+                'update_interval_minutes': self.update_interval.total_seconds() / 60,
+                'is_running': self._is_running,
+                'objects_tracked': len(self._last_positions)
+            }
+    
+    def clear_cache(self):
+        """Clear all cached visibility data"""
+        with self._cache_lock:
+            self._visibility_cache.clear()
+            self._cache_timestamps.clear()
+            self._last_positions.clear()
+        logger.info("Visibility cache cleared")
+
+
+# Global visibility service instance
+_visibility_service_instance = None
+_instance_lock = threading.Lock()
+
+
+def get_visibility_service() -> VisibilityService:
+    """
+    Get singleton instance of VisibilityService
+    
+    Returns:
+        VisibilityService instance
+    """
+    global _visibility_service_instance
+    
+    if _visibility_service_instance is None:
+        with _instance_lock:
+            if _visibility_service_instance is None:
+                _visibility_service_instance = VisibilityService()
+                # Start real-time updates by default
+                _visibility_service_instance.start_real_time_updates()
+    
+    return _visibility_service_instance
