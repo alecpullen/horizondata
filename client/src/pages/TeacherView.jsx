@@ -1,5 +1,6 @@
 import TopBar from '../components/TopBar'
 import StreamPlaceholder from '../components/StreamPlaceholder'
+import WeatherWidget from '../components/WeatherWidget'
 import './TeacherView.css'
 
 const SESSION = {
@@ -47,6 +48,9 @@ function TeacherView() {
                         <div className="tv-object-name">{SESSION.object}</div>
                         <div className="tv-object-scope">{SESSION.telescope}</div>
                     </div>
+
+                    {/*conditions*/}
+                    <WeatherWidget />
 
                     {/*students in session */}
                     <div className="tv-sidebar-section tv-sidebar-section--grow">

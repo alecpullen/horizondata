@@ -1,0 +1,79 @@
+.ww-root {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ww-loading {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t3);
+}
+
+.ww-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    width: fit-content;
+}
+
+.ww-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ww-badge--active {
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: var(--green);
+}
+.ww-badge--active .ww-dot {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+}
+
+.ww-badge--unsafe {
+    background: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--red);
+}
+.ww-badge--unsafe .ww-dot {
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+}
+
+.ww-badge--closed {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: var(--gold);
+}
+.ww-badge--closed .ww-dot {
+    background: var(--gold);
+    box-shadow: 0 0 6px var(--gold);
+}
+
+.ww-badge--error {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--t3);
+}
+
+.ww-reason {
+    font-size: 12px;
+    color: var(--t2);
+    line-height: 1.4;
+}
+
+.ww-next {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
+}
