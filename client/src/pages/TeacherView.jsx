@@ -1,5 +1,5 @@
 import TopBar from '../components/TopBar'
-import StreamPlaceholder from '../components/StreamPlaceholder'
+import StreamView from '../components/StreamView'
 import WeatherWidget from '../components/WeatherWidget'
 import './TeacherView.css'
 
@@ -25,9 +25,9 @@ function TeacherView() {
             <TopBar activePath="/live/teacher" />
             <div className="tv-body">
                 <div className="tv-feed-area">
-                    <StreamPlaceholder label="Primary · Telescope Feed" />
+                    <StreamView label="Primary · Telescope Feed" />
                     <div className="tv-pip">
-                        <StreamPlaceholder label="Site Camera" />
+                        <StreamView label="Site Camera" />
                     </div>
                 </div>
 

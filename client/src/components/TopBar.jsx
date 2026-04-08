@@ -5,7 +5,6 @@ const navLinks = [
     { label: 'Scheduling',  path: '/scheduling'  },
     { label: 'Sky Chart',   path: '/sky-chart'   },
     { label: 'Captures',    path: '/captures'    },
-    { label: 'Weather',     path: '/weather'     },
     { label: 'Account',     path: '/bookings'    },
 ]
 

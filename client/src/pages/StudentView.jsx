@@ -1,4 +1,4 @@
-import StreamPlaceholder from '../components/StreamPlaceholder'
+import StreamView from '../components/StreamView'
 import './StudentView.css'
 
 const SESSION = {
@@ -29,7 +29,7 @@ function StudentView() {
             </header>
 
             <div className="sv-feed-area">
-                <StreamPlaceholder label="Primary · Telescope Feed" />
+                <StreamView label="Primary · Telescope Feed" />
 
                 <div className="sv-object-overlay">
                     <div className="sv-object-name">{SESSION.object}</div>
