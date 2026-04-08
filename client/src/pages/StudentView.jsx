@@ -1,4 +1,5 @@
 import StreamView from '../components/StreamView'
+import AppLogo from '../components/AppLogo'
 import './StudentView.css'
 
 const SESSION = {
@@ -17,7 +18,7 @@ function StudentView() {
         <div className="sv-shell">
             <header className="sv-topbar">
                 <div className="sv-topbar-left">
-                    <span className="sv-logo">Horizon Data</span>
+                    <AppLogo />
                 </div>
                 <div className="sv-session-info">
                     Observing <strong>{SESSION.object}</strong>

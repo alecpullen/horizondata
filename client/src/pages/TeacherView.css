@@ -51,7 +51,7 @@
 
 .tv-sidebar-label {
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -61,7 +61,7 @@
 
 .tv-session-ref {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     color: var(--teal);
     margin-bottom: 4px;
 }
@@ -76,7 +76,7 @@
 
 .tv-session-time {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     color: var(--t2);
 }
 
@@ -89,7 +89,7 @@
 }
 
 .tv-object-scope {
-    font-size: 11px;
+    font-size: 13px;
     color: var(--t3);
 }
 
@@ -139,7 +139,7 @@
 }
 
 .student-name {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--t2);
 }

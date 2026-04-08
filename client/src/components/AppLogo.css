@@ -1,0 +1,12 @@
+.app-logo {
+    display: flex;
+    align-items: center;
+    font-family: var(--disp);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.app-logo-horizon { color: var(--t1); }
+.app-logo-data    { color: var(--teal); margin-left: 4px; }

@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Landing      from './pages/Landing'
 import MyBookings   from './pages/MyBookings'
 import TeacherView  from './pages/TeacherView'
 import StudentView  from './pages/StudentView'
@@ -9,7 +10,7 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/"              element={<Navigate to="/bookings" replace />} />
+                <Route path="/"              element={<Landing />}         />
                 <Route path="/bookings"      element={<MyBookings />}   />
                 <Route path="/live/teacher"  element={<TeacherView />}  />
                 <Route path="/live/student"  element={<StudentView />}  />

@@ -15,16 +15,9 @@
     flex-shrink: 0;
 }
 
-.lobby-logo {
-    font-family: var(--disp);
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--t1);
-}
-
 .lobby-session-info {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     color: var(--t3);
 }
 
@@ -97,13 +90,13 @@
 
 .lobby-qr-inner {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 13px;
     color: var(--t3);
     letter-spacing: 0.1em;
 }
 
 .lobby-qr-label {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--t3);
 }
 
@@ -212,7 +205,7 @@
     align-items: center;
     gap: 8px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     color: var(--t3);
 }
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { split } from '../utils/session'
+import AppLogo from '../components/AppLogo'
 import './SessionLobby.css'
 
 const JOIN_CODE = '483920'
@@ -17,7 +18,7 @@ function SessionLobby() {
         <div className="lobby-shell">
             {/*header*/}
             <header className="lobby-header">
-                <div className="lobby-logo"> Horizon Data</div>
+                <AppLogo />
                 <div className="lobby-session-info">Sun 22 August 2026 - 20:00 - 20:10 AEST - HD-2026-0841</div>
             </header>
 

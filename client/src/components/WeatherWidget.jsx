@@ -115,7 +115,7 @@ export default function WeatherWidget() {
                                         <span className="ww-row-label">{label}</span>
                                         <span className="ww-row-right">
                                             <span className="ww-row-value">
-                                                {noData ? '—' : fmt(cond.value, unit)}
+                                                {noData ? '-' : fmt(cond.value, unit)}
                                             </span>
                                             <span className={`ww-indicator ${noData ? 'ww-indicator--na' : safe ? 'ww-indicator--ok' : 'ww-indicator--fail'}`} />
                                         </span>

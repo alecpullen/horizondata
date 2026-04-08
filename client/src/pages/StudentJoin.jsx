@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AppLogo from '../components/AppLogo'
 import './StudentJoin.css'
 
 function StudentJoin() {
@@ -35,10 +36,7 @@ function StudentJoin() {
             <div className="sj-blob sj-blob--2" />
 
             <div className="sj-card">
-                <div className="sj-logo">
-                    <span className="sj-logo-scope">{/* img tag with logo */}</span>
-                    <span className="sj-logo-text">Horizon Data</span>
-                </div>
+                <AppLogo />
 
                 <h1 className="sj-heading">Join a Session</h1>
                 <p className="sj-sub">Enter the 6 digit code shown on your classroom screen</p>

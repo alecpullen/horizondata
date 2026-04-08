@@ -17,18 +17,15 @@
 }
 
 .sv-topbar-left  { flex: 1; }
-.sv-topbar-right { display: flex; align-items: center; gap: 12px; }
-
-.sv-logo {
-    font-family: var(--disp);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--t1);
-}
+.sv-topbar-right { display: flex; align-items: center; gap: 16px; }
 
 .sv-session-info {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--t2);
+    padding: 0 32px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .sv-session-info strong {
@@ -38,7 +35,7 @@
 
 .sv-capture-count {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     color: var(--t3);
 }
 
@@ -86,14 +83,14 @@
 }
 
 .sv-object-desc {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--t2);
     line-height: 1.5;
     margin-bottom: 8px;
 }
 
 .sv-fun-fact {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--t3);
     line-height: 1.5;
     font-style: italic;

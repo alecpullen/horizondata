@@ -1,3 +1,4 @@
+import AppLogo from './AppLogo'
 import './TopBar.css'
 
 const navLinks = [
@@ -12,10 +13,7 @@ function TopBar({ activePath }) {
     return (
         <header className="topbar">
 
-            <div className="topbar-logo">
-                <span className="logo-horizon">HORIZON</span>
-                <span className="logo-data">DATA</span>
-            </div>
+            <AppLogo />
 
             <nav className="topbar-nav">
                 {navLinks.map(link => (<a key={link.path} href={link.path} className={`nav-link ${activePath === link.path ? 'active' : ''}`}>{link.label}</a>))}

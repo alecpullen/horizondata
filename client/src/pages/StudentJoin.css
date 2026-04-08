@@ -55,22 +55,6 @@
     box-shadow: 0 24px 60px rgba(0,0,0,0.4);
 }
 
-.sj-logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-}
-
-.sj-logo-scope { font-size: 22px; }
-
-.sj-logo-text {
-    font-family: var(--disp);
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--t1);
-}
-
 .sj-heading {
     font-family: var(--disp);
     font-size: 26px;
@@ -80,7 +64,7 @@
 }
 
 .sj-sub {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--t3);
     text-align: center;
     line-height: 1.5;
@@ -128,7 +112,7 @@
 
 /* Error */
 .sj-error {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--red);
     text-align: center;
 }
