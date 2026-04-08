@@ -4,6 +4,38 @@
     gap: 6px;
 }
 
+/* ── header button ── */
+.ww-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 4px;
+}
+.ww-header:disabled {
+    cursor: default;
+}
+.ww-header .tv-sidebar-label {
+    margin-bottom: 0;
+}
+
+.ww-chevron {
+    font-size: 16px;
+    color: var(--t3);
+    line-height: 1;
+    transition: transform 0.2s ease, color 0.15s;
+    display: inline-block;
+}
+.ww-chevron--open {
+    transform: rotate(90deg);
+    color: var(--teal);
+}
+
+/* ── status badge ── */
 .ww-loading {
     font-family: var(--mono);
     font-size: 11px;
@@ -76,4 +108,57 @@
     font-family: var(--mono);
     font-size: 10px;
     color: var(--t3);
+}
+
+/* ── expanded detail panel ── */
+.ww-detail {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+}
+
+.ww-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.ww-row-label {
+    font-size: 11px;
+    color: var(--t3);
+}
+
+.ww-row-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ww-row-value {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t1);
+}
+
+.ww-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ww-indicator--ok   { background: var(--green); }
+.ww-indicator--fail { background: var(--red); }
+.ww-indicator--na   { background: var(--t3); }
+
+.ww-updated {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t3);
+    margin-top: 6px;
+    text-align: right;
 }
