@@ -98,6 +98,23 @@
     color: var(--t3);
 }
 
+.ww-retry-btn {
+    align-self: flex-start;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--t2);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.ww-retry-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--t1);
+}
+
 .ww-reason {
     font-size: 13px;
     color: var(--t2);
@@ -154,6 +171,14 @@
 .ww-indicator--ok   { background: var(--green); }
 .ww-indicator--fail { background: var(--red); }
 .ww-indicator--na   { background: var(--t3); }
+
+.ww-detail-unavailable {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t3);
+    font-style: italic;
+    padding: 4px 0;
+}
 
 .ww-updated {
     font-family: var(--mono);
