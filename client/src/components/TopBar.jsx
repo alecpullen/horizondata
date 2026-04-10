@@ -2,7 +2,8 @@ import AppLogo from './AppLogo'
 import './TopBar.css'
 
 const navLinks = [
-    { label: 'Live View',   path: '/live'       },
+    { label: 'Live View (teacher)',   path: '/live/teacher'       },
+    { label: 'Live View (student)',   path: '/live/student'       },
     { label: 'Scheduling',  path: '/scheduling'  },
     { label: 'Sky Chart',   path: '/sky-chart'   },
     { label: 'Captures',    path: '/captures'    },
