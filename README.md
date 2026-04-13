@@ -6,3 +6,6 @@ La Trobe University Capstone Project - Remote Scientific Data Capture and Contro
 TODO
 
 hello
+
+Welcome
+
