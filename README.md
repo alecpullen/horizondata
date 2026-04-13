@@ -9,3 +9,4 @@ hello
 
 Welcome
 
+Databasing is fun!
