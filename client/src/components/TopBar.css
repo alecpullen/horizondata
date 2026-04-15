@@ -61,6 +61,138 @@
     color: var(--teal);
 }
 
+.avatar--button {
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.avatar--button:hover {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg);
+    transform: scale(1.05);
+}
+
+.avatar--button[aria-expanded="true"] {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg);
+}
+
+/* Avatar Dropdown */
+.avatar-dropdown {
+    position: relative;
+}
+
+.avatar-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    min-width: 220px;
+    background: var(--surf);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}
+
+.avatar-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 4px;
+}
+
+.avatar-menu-initials {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--teal);
+    border: 1px solid var(--teal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--disp);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--bg);
+    flex-shrink: 0;
+}
+
+.avatar-menu-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.avatar-menu-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--t1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.avatar-menu-role {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--teal);
+}
+
+.avatar-menu-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 4px;
+}
+
+.avatar-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--t2);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    text-align: left;
+    transition: all 0.15s ease;
+}
+
+.avatar-menu-item svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.avatar-menu-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--t1);
+}
+
+.avatar-menu-item:hover svg {
+    opacity: 1;
+}
+
+.avatar-menu-item--danger {
+    color: var(--red);
+}
+
+.avatar-menu-item--danger:hover {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--red);
+}
+
 /* Dropdown styles */
 .nav-dropdown {
     position: relative;
