@@ -14,6 +14,7 @@ import TeacherView  from './pages/TeacherView'
 import StudentView  from './pages/StudentView'
 import StudentJoin  from './pages/StudentJoin'
 import SessionLobby from './pages/SessionLobby'
+import NewBooking from './pages/NewBooking'
 import { useMockSession } from './hooks/useLocalStorage'
 import { useSessionTimeout } from './hooks/useSessionTimeout'
 import { useToast } from './components/ui/ToastProvider'
@@ -65,6 +66,7 @@ function App() {
                         <Route path="/verify-email"    element={<VerifyEmail />}       />
                         <Route path="/pending-approval" element={<PendingApproval />} />
                         <Route path="/bookings"        element={<MyBookings />}        />
+                        <Route path="/bookings/new"  element={<NewBooking />}        />
                         <Route path="/account"         element={<MyAccount />}         />
                         <Route path="/live/teacher"    element={<TeacherView />}       />
                         <Route path="/live/student"    element={<StudentView />}       />

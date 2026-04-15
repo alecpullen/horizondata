@@ -26,8 +26,17 @@ function TopBar({ activePath }) {
     const [accountOpen, setAccountOpen] = useState(false)
     const [liveViewOpen, setLiveViewOpen] = useState(false)
     const [fullName, setFullName] = useState('')
+    const [mswEnabled, setMswEnabled] = useState(() => {
+        const stored = localStorage.getItem('msw-enabled')
+        return stored === null ? true : stored === 'true'
+    })
     const accountDropdownRef = useRef(null)
     const liveViewDropdownRef = useRef(null)
+
+    // Persist MSW toggle state
+    useEffect(() => {
+        localStorage.setItem('msw-enabled', mswEnabled.toString())
+    }, [mswEnabled])
 
     // Fetch user info on mount
     useEffect(() => {
@@ -158,10 +167,15 @@ function TopBar({ activePath }) {
             </nav>
 
             <div className="topbar-right">
-                <div className="sys-status">
-                    <span className="status-dot online" />
-                    ONLINE
-                </div>
+                <label className="msw-toggle" title="Toggle mock API">
+                    <span className="msw-toggle-label">MOCK API</span>
+                    <input
+                        type="checkbox"
+                        checked={mswEnabled}
+                        onChange={(e) => setMswEnabled(e.target.checked)}
+                    />
+                    <span className="msw-toggle-slider" />
+                </label>
                 <div className="avatar">
                     {fullName
                         ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
