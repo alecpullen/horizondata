@@ -3,8 +3,13 @@ import AppLogo from './AppLogo'
 import './TopBar.css'
 
 const navLinks = [
-    { label: 'Live View (teacher)',   path: '/live/teacher'       },
-    { label: 'Live View (student)',   path: '/live/student'       },
+    {
+        label: 'Live View',
+        children: [
+            { label: 'Teacher', path: '/live/teacher' },
+            { label: 'Student', path: '/live/student' },
+        ],
+    },
     { label: 'Scheduling',  path: '/scheduling'  },
     { label: 'Sky Chart',   path: '/sky-chart'   },
     { label: 'Captures',    path: '/captures'    },
@@ -17,13 +22,18 @@ const accountLinks = [
 
 function TopBar({ activePath }) {
     const [accountOpen, setAccountOpen] = useState(false)
-    const dropdownRef = useRef(null)
+    const [liveViewOpen, setLiveViewOpen] = useState(false)
+    const accountDropdownRef = useRef(null)
+    const liveViewDropdownRef = useRef(null)
 
-    // Close dropdown when clicking outside
+    // Close dropdowns when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target)) {
                 setAccountOpen(false)
+            }
+            if (liveViewDropdownRef.current && !liveViewDropdownRef.current.contains(event.target)) {
+                setLiveViewOpen(false)
             }
         }
         document.addEventListener('mousedown', handleClickOutside)
@@ -31,6 +41,7 @@ function TopBar({ activePath }) {
     }, [])
 
     const isAccountActive = accountLinks.some(link => link.path === activePath)
+    const isLiveViewActive = navLinks[0].children.some(link => link.path === activePath)
 
     return (
         <header className="topbar">
@@ -38,7 +49,44 @@ function TopBar({ activePath }) {
             <AppLogo />
 
             <nav className="topbar-nav">
-                {navLinks.map(link => (
+                {/* Live View Dropdown */}
+                <div className="nav-dropdown" ref={liveViewDropdownRef}>
+                    <button
+                        className={`nav-link nav-link--dropdown ${isLiveViewActive ? 'active' : ''}`}
+                        onClick={() => setLiveViewOpen(!liveViewOpen)}
+                        aria-expanded={liveViewOpen}
+                    >
+                        Live View
+                        <svg
+                            className={`dropdown-arrow ${liveViewOpen ? 'dropdown-arrow--open' : ''}`}
+                            viewBox="0 0 24 24"
+                            width="12"
+                            height="12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </button>
+
+                    {liveViewOpen && (
+                        <div className="dropdown-menu">
+                            {navLinks[0].children.map(link => (
+                                <a
+                                    key={link.path}
+                                    href={link.path}
+                                    className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
+                                    onClick={() => setLiveViewOpen(false)}
+                                >
+                                    {link.label}
+                                </a>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {navLinks.slice(1).map(link => (
                     <a
                         key={link.path}
                         href={link.path}
@@ -49,7 +97,7 @@ function TopBar({ activePath }) {
                 ))}
 
                 {/* Account Dropdown */}
-                <div className="nav-dropdown" ref={dropdownRef}>
+                <div className="nav-dropdown" ref={accountDropdownRef}>
                     <button
                         className={`nav-link nav-link--dropdown ${isAccountActive ? 'active' : ''}`}
                         onClick={() => setAccountOpen(!accountOpen)}
