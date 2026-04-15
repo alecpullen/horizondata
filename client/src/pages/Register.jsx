@@ -12,7 +12,6 @@ function Register() {
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'student',
         agreeToTerms: false
     })
 
@@ -89,13 +88,9 @@ function Register() {
         // Simulate API call
         await new Promise(r => setTimeout(r, 1000))
 
-        if (formData.role === 'teacher') {
-            showToast({ type: 'success', message: 'Registration submitted for approval!' })
-            window.location.href = '/pending-approval'
-        } else {
-            showToast({ type: 'success', message: 'Registration successful! Please verify your email.' })
-            window.location.href = '/verify-email?email=' + encodeURIComponent(formData.email)
-        }
+        // Teacher accounts require administrator approval
+        showToast({ type: 'success', message: 'Registration submitted for approval!' })
+        window.location.href = '/pending-approval'
     }
 
     const passwordValidation = validatePassword(formData.password)
@@ -110,7 +105,7 @@ function Register() {
     return (
         <AuthShell
             title="Create account"
-            subtitle="Join to access remote telescope sessions"
+            subtitle="Teacher registration requires administrator approval"
             footer={footer}
         >
             <form className="register-form" onSubmit={handleSubmit}>
@@ -227,42 +222,6 @@ function Register() {
                     />
                     {errors.confirmPassword && touched.confirmPassword && (
                         <span className="register-field__error">{errors.confirmPassword}</span>
-                    )}
-                </div>
-
-                {/* Role Selection */}
-                <div className="register-field">
-                    <label className="register-label">I am a</label>
-                    <div className="register-role-group">
-                        <label className={`register-role ${formData.role === 'student' ? 'register-role--selected' : ''}`}>
-                            <input
-                                type="radio"
-                                name="role"
-                                value="student"
-                                checked={formData.role === 'student'}
-                                onChange={handleChange}
-                                disabled={isLoading}
-                            />
-                            <span className="register-role__icon">🎓</span>
-                            <span className="register-role__label">Student</span>
-                        </label>
-                        <label className={`register-role ${formData.role === 'teacher' ? 'register-role--selected' : ''}`}>
-                            <input
-                                type="radio"
-                                name="role"
-                                value="teacher"
-                                checked={formData.role === 'teacher'}
-                                onChange={handleChange}
-                                disabled={isLoading}
-                            />
-                            <span className="register-role__icon">👨‍🏫</span>
-                            <span className="register-role__label">Teacher</span>
-                        </label>
-                    </div>
-                    {formData.role === 'teacher' && (
-                        <p className="register-role__note">
-                            Teacher accounts require administrator approval before activation.
-                        </p>
                     )}
                 </div>
 

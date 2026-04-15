@@ -139,59 +139,6 @@
     text-align: center;
 }
 
-/* Role selection */
-.register-role-group {
-    display: flex;
-    gap: 12px;
-}
-
-.register-role {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--elev);
-    cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.register-role:hover {
-    border-color: var(--tbr);
-}
-
-.register-role--selected {
-    border-color: var(--teal);
-    background: var(--tdim);
-}
-
-.register-role input {
-    display: none;
-}
-
-.register-role__icon {
-    font-size: 24px;
-}
-
-.register-role__label {
-    font-size: 14px;
-    color: var(--t1);
-    font-weight: 500;
-}
-
-.register-role__note {
-    font-size: 12px;
-    color: var(--gold);
-    margin: 4px 0 0;
-    padding: 8px 12px;
-    background: rgba(245, 158, 11, 0.08);
-    border-radius: 8px;
-    border-left: 2px solid var(--gold);
-}
-
 /* Checkbox */
 .register-checkbox {
     display: flex;
@@ -294,9 +241,3 @@
     to { transform: rotate(360deg); }
 }
 
-/* Responsive */
-@media (max-width: 480px) {
-    .register-role-group {
-        flex-direction: column;
-    }
-}
