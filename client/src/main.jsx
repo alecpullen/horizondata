@@ -4,14 +4,12 @@ import './index.css'
 import App from './App.jsx'
 
 async function enableMocking() {
-    // Only enable mocking in development
-    if (import.meta.env.DEV) {
-        const { worker } = await import('./mocks/browser')
-        return worker.start({
-            onUnhandledRequest: 'bypass', // Let unhandled requests go through
-        })
-    }
-    return Promise.resolve()
+    // Start MSW worker in all environments
+    // It will check localStorage to decide whether to mock or passthrough
+    const { worker } = await import('./mocks/browser')
+    return worker.start({
+        onUnhandledRequest: 'bypass', // Let unhandled requests go through
+    })
 }
 
 enableMocking().then(() => {

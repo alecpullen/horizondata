@@ -33,9 +33,16 @@ function TopBar({ activePath }) {
     const accountDropdownRef = useRef(null)
     const liveViewDropdownRef = useRef(null)
 
-    // Persist MSW toggle state
+    // Persist MSW toggle state and reload to apply changes
     useEffect(() => {
-        localStorage.setItem('msw-enabled', mswEnabled.toString())
+        const prev = localStorage.getItem('msw-enabled')
+        const next = mswEnabled.toString()
+        if (prev !== null && prev !== next) {
+            localStorage.setItem('msw-enabled', next)
+            window.location.reload()
+        } else {
+            localStorage.setItem('msw-enabled', next)
+        }
     }, [mswEnabled])
 
     // Fetch user info on mount
