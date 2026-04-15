@@ -9,7 +9,42 @@ function isMswEnabled() {
     return enabled
 }
 
-// Mock account data
+// Mock users for auth
+const mockUsers = [
+    {
+        id: '1',
+        email: 'teacher@latrobe.edu.au',
+        password: 'password123',
+        fullName: 'Dr. Jane Smith',
+        role: 'teacher',
+        phone: '+61 412 345 678',
+        institution: 'La Trobe University',
+        is2FAEnabled: false,
+        notificationsEnabled: true
+    },
+    {
+        id: '2',
+        email: 'student@latrobe.edu.au',
+        password: 'password123',
+        fullName: 'Alex Johnson',
+        role: 'student',
+        phone: '+61 423 456 789',
+        institution: 'Melbourne High School',
+        is2FAEnabled: false,
+        notificationsEnabled: true
+    }
+]
+
+// In-memory session store (persists during session)
+let currentSession = null
+
+// Helper to get current user from session
+function getCurrentUser() {
+    if (!currentSession) return null
+    return mockUsers.find(u => u.id === currentSession.userId) || null
+}
+
+// Mock account data (legacy - now derived from user)
 const mockAccount = {
     fullName: 'Dr. Jane Smith',
     email: 'jane.smith@latrobe.edu.au',
@@ -284,6 +319,21 @@ const mockSpaceObjects = [
     }
 ]
 
+// Session storage key for persistence across reloads
+const SESSION_KEY = 'horizon-session'
+
+// Initialize session from storage on load
+if (typeof window !== 'undefined') {
+    const stored = sessionStorage.getItem(SESSION_KEY)
+    if (stored) {
+        try {
+            currentSession = JSON.parse(stored)
+        } catch {
+            currentSession = null
+        }
+    }
+}
+
 // Match any host (localhost, 127.0.0.1, production domains, etc.)
 const apiUrl = (path) => {
     // Match both full URLs (http/https) and relative paths
@@ -293,12 +343,96 @@ const apiUrl = (path) => {
 }
 
 export const handlers = [
+    // POST /api/auth/login - authenticate user
+    http.post(apiUrl('/api/auth/login'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(500)
+
+        const body = await request.json()
+        const { email, password } = body
+
+        const user = mockUsers.find(u => u.email.toLowerCase() === email?.toLowerCase())
+
+        if (!user || user.password !== password) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Invalid email or password'
+            }, { status: 401 })
+        }
+
+        // Create session
+        currentSession = {
+            userId: user.id,
+            email: user.email,
+            createdAt: new Date().toISOString()
+        }
+
+        // Persist to sessionStorage
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession))
+        }
+
+        // Return user info (without password)
+        const { password: _, ...userWithoutPassword } = user
+        return HttpResponse.json({
+            success: true,
+            user: userWithoutPassword
+        })
+    }),
+
+    // POST /api/auth/logout - clear session
+    http.post(apiUrl('/api/auth/logout'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(200)
+
+        currentSession = null
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem(SESSION_KEY)
+        }
+
+        return HttpResponse.json({ success: true })
+    }),
+
+    // GET /api/auth/session - check current session
+    http.get(apiUrl('/api/auth/session'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(200)
+
+        const user = getCurrentUser()
+
+        if (!user) {
+            return HttpResponse.json({
+                authenticated: false
+            }, { status: 401 })
+        }
+
+        const { password: _, ...userWithoutPassword } = user
+        return HttpResponse.json({
+            authenticated: true,
+            user: userWithoutPassword
+        })
+    }),
+
     // GET /api/account - fetch user profile
     http.get(apiUrl('/api/account'), async ({ request }) => {
         if (!isMswEnabled()) {
             return passthrough()
         }
         await delay(300)
+
+        const user = getCurrentUser()
+        if (user) {
+            const { password: _, ...userWithoutPassword } = user
+            return HttpResponse.json(userWithoutPassword)
+        }
+
+        // Fallback to legacy mock data if no session
         return HttpResponse.json(mockAccount)
     }),
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import AppLogo from './AppLogo'
+import { useAuth } from '../contexts/useAuth'
 import './TopBar.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -23,11 +24,10 @@ const accountLinks = [
 ]
 
 function TopBar({ activePath }) {
+    const { user, logout } = useAuth()
     const [accountOpen, setAccountOpen] = useState(false)
     const [liveViewOpen, setLiveViewOpen] = useState(false)
     const [avatarOpen, setAvatarOpen] = useState(false)
-    const [fullName, setFullName] = useState('')
-    const [userRole, setUserRole] = useState('')
     const [mswEnabled, setMswEnabled] = useState(() => {
         const stored = localStorage.getItem('msw-enabled')
         return stored === null ? true : stored === 'true'
@@ -35,6 +35,10 @@ function TopBar({ activePath }) {
     const accountDropdownRef = useRef(null)
     const liveViewDropdownRef = useRef(null)
     const avatarDropdownRef = useRef(null)
+
+    // Derive user info from auth context
+    const fullName = user?.fullName || ''
+    const userRole = user?.role || ''
 
     // Persist MSW toggle state and reload to apply changes
     useEffect(() => {
@@ -47,27 +51,6 @@ function TopBar({ activePath }) {
             localStorage.setItem('msw-enabled', next)
         }
     }, [mswEnabled])
-
-    // Fetch user info on mount
-    useEffect(() => {
-        async function fetchUser() {
-            try {
-                const response = await fetch(`${API_BASE}/api/account`, {
-                    headers: { 'Accept': 'application/json' },
-                    credentials: 'include',
-                })
-                if (response.ok) {
-                    const data = await response.json()
-                    setFullName(data.fullName || '')
-                    setUserRole(data.role || '')
-                }
-            } catch (err) {
-                // Silently fail - avatar will show placeholder
-                console.error('Failed to fetch user:', err)
-            }
-        }
-        fetchUser()
-    }, [])
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -90,19 +73,8 @@ function TopBar({ activePath }) {
     const isLiveViewActive = navLinks[0].children.some(link => link.path === activePath)
 
     const handleLogout = async () => {
-        try {
-            const response = await fetch(`${API_BASE}/api/auth/logout`, {
-                method: 'POST',
-                credentials: 'include',
-            })
-            if (response.ok) {
-                window.location.href = '/login'
-            } else {
-                console.error('Logout failed')
-            }
-        } catch (err) {
-            console.error('Logout error:', err)
-        }
+        await logout()
+        window.location.href = '/login'
     }
 
     return (

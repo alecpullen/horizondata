@@ -1,22 +1,20 @@
-import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/auth/AuthShell'
 import LoadingSkeleton from '../components/auth/LoadingSkeleton'
 import { useToast } from '../components/ui/ToastProvider'
-import { validateEmail, validateRequired, AUTH_ERROR_TYPES, getAuthErrorMessage } from '../utils/validation'
-import { useMockSession } from '../hooks/useLocalStorage'
+import { validateEmail, validateRequired, getAuthErrorMessage } from '../utils/validation'
+import { useAuth } from '../contexts/useAuth'
 import { useRedirectAfterAuth } from '../hooks/useRedirectAfterAuth'
 import './Login.css'
 
-// Error types for different auth failure scenarios
-const ERROR_VARIANTS = Object.keys(AUTH_ERROR_TYPES)
-
 function Login() {
     const { showToast } = useToast()
-    const { login: mockLogin, isAuthenticated, session, checkSession } = useMockSession()
+    const { login: authLogin, isAuthenticated, isLoading: isAuthLoading } = useAuth()
     const { redirect, getRedirectUrl } = useRedirectAfterAuth()
+    const navigate = useNavigate()
 
-    // Loading state for session check
+    // Loading state for session check (just use auth loading state)
     const [isCheckingSession, setIsCheckingSession] = useState(true)
 
     // Form state
@@ -25,14 +23,14 @@ function Login() {
     const [showPassword, setShowPassword] = useState(false)
     const [rememberMe, setRememberMe] = useState(false)
 
-    // Validation state
+    // Validation state - store as simple state and compute errors
     const [touched, setTouched] = useState({ email: false, password: false })
-    const [errors, setErrors] = useState({ email: '', password: '' })
 
     // UI state
     const [isLoading, setIsLoading] = useState(false)
     const [bannerError, setBannerError] = useState('')
     const [rateLimitEnd, setRateLimitEnd] = useState(null)
+    const [now, setNow] = useState(Date.now)
 
     // Success animation state
     const [showSuccess, setShowSuccess] = useState(false)
@@ -40,21 +38,42 @@ function Login() {
     // Refs
     const emailInputRef = useRef(null)
 
+    // Time ticker for rate limiting
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 1000)
+        return () => clearInterval(interval)
+    }, [])
+
+    // Clear rate limit when it expires using timeout
+    useEffect(() => {
+        if (!rateLimitEnd) return
+
+        const remaining = rateLimitEnd - Date.now()
+
+        const timeoutId = setTimeout(() => {
+            if (Date.now() >= rateLimitEnd) {
+                setRateLimitEnd(null)
+            }
+        }, Math.max(0, remaining))
+
+        return () => clearTimeout(timeoutId)
+    }, [rateLimitEnd])
+
     // Check for existing session on mount
     useEffect(() => {
         const checkExistingSession = async () => {
-            // Simulate a brief loading delay for UX
-            await new Promise(r => setTimeout(r, 600))
+            // Wait for auth context to finish loading
+            if (isAuthLoading) {
+                return
+            }
 
-            const hasValidSession = checkSession()
-
-            if (hasValidSession) {
+            if (isAuthenticated) {
                 showToast({
                     type: 'info',
-                    message: `Welcome back, ${session.email}!`
+                    message: 'Welcome back!'
                 })
                 // Redirect to saved URL or default
-                window.location.href = getRedirectUrl()
+                navigate(getRedirectUrl())
                 return
             }
 
@@ -62,7 +81,7 @@ function Login() {
         }
 
         checkExistingSession()
-    }, [checkSession, session, showToast, getRedirectUrl])
+    }, [isAuthLoading, isAuthenticated, showToast, getRedirectUrl, navigate])
 
     // Auto-focus email field when form is shown
     useEffect(() => {
@@ -71,48 +90,40 @@ function Login() {
         }
     }, [isCheckingSession, isAuthenticated])
 
-    // Rate limit countdown
-    useEffect(() => {
-        if (!rateLimitEnd) return
-
-        const interval = setInterval(() => {
-            if (Date.now() >= rateLimitEnd) {
-                setRateLimitEnd(null)
-                clearInterval(interval)
-            }
-        }, 1000)
-
-        return () => clearInterval(interval)
-    }, [rateLimitEnd])
-
-    // Real-time validation
-    useEffect(() => {
+    // Compute validation errors
+    const errors = useMemo(() => {
         const newErrors = {}
 
         if (touched.email) {
             const emailValidation = validateEmail(email)
             newErrors.email = emailValidation.isValid ? '' : emailValidation.error
+        } else {
+            newErrors.email = ''
         }
 
         if (touched.password) {
             const pwdValidation = validateRequired(password, 'Password')
             newErrors.password = pwdValidation.isValid ? '' : pwdValidation.error
+        } else {
+            newErrors.password = ''
         }
 
-        setErrors(newErrors)
+        return newErrors
     }, [email, password, touched])
 
-    const handleBlur = (field) => {
+    const handleBlur = useCallback((field) => {
         setTouched(prev => ({ ...prev, [field]: true }))
-    }
+    }, [])
 
-    const getRateLimitCountdown = () => {
+    const getRateLimitCountdown = useCallback(() => {
         if (!rateLimitEnd) return ''
-        const seconds = Math.ceil((rateLimitEnd - Date.now()) / 1000)
+        const seconds = Math.ceil((rateLimitEnd - now) / 1000)
         const mins = Math.floor(seconds / 60)
         const secs = seconds % 60
         return `${mins}:${secs.toString().padStart(2, '0')}`
-    }
+    }, [rateLimitEnd, now])
+
+    const isRateLimited = rateLimitEnd && now < rateLimitEnd
 
     // TODO: AAF (Australian Access Federation) SSO integration
     const handleAAFLogin = () => {
@@ -139,41 +150,34 @@ function Login() {
         }
 
         // Check rate limiting
-        if (rateLimitEnd && Date.now() < rateLimitEnd) {
+        if (isRateLimited) {
             return
         }
 
         setIsLoading(true)
 
         try {
-            // TEMP: Mock login with random error simulation for testing
-            // Remove this random error logic when BetterAuth is integrated
-            await new Promise(r => setTimeout(r, 800))
+            const result = await authLogin(email, password)
 
-            // Simulate occasional errors for testing (30% chance)
-            if (Math.random() < 0.3) {
-                const randomError = ERROR_VARIANTS[Math.floor(Math.random() * ERROR_VARIANTS.length)]
-
-                if (randomError === 'RATE_LIMITED') {
-                    // Set 1 minute rate limit for demo
-                    setRateLimitEnd(Date.now() + 60 * 1000)
-                }
-
-                setBannerError(randomError)
+            if (!result.success) {
+                // Map error to banner type
+                const errorType = result.error?.toLowerCase().includes('password')
+                    ? 'INVALID_CREDENTIALS'
+                    : 'UNKNOWN'
+                setBannerError(errorType)
                 showToast({
                     type: 'error',
-                    message: getAuthErrorMessage(randomError)
+                    message: result.error || 'Login failed'
                 })
                 setIsLoading(false)
                 return
             }
 
-            // Simulate successful login
-            mockLogin(email, rememberMe)
+            // Successful login
             setShowSuccess(true)
             showToast({
                 type: 'success',
-                message: 'Login successful!'
+                message: `Welcome back, ${result.user.fullName}!`
             })
 
             // Redirect after success animation
@@ -181,7 +185,7 @@ function Login() {
                 redirect()
             }, 1200)
 
-        } catch (err) {
+        } catch {
             setBannerError('UNKNOWN')
             showToast({
                 type: 'error',
@@ -274,7 +278,7 @@ function Login() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         onBlur={() => handleBlur('email')}
-                        disabled={isLoading || (rateLimitEnd && Date.now() < rateLimitEnd)}
+                        disabled={isLoading || isRateLimited}
                         autoComplete="email"
                     />
                     {errors.email && touched.email && (
@@ -299,7 +303,7 @@ function Login() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             onBlur={() => handleBlur('password')}
-                            disabled={isLoading || (rateLimitEnd && Date.now() < rateLimitEnd)}
+                            disabled={isLoading || isRateLimited}
                             autoComplete="current-password"
                         />
                         <button
@@ -345,7 +349,7 @@ function Login() {
                 <button
                     type="submit"
                     className="login-submit"
-                    disabled={isLoading || (rateLimitEnd && Date.now() < rateLimitEnd)}
+                    disabled={isLoading || isRateLimited}
                 >
                     {isLoading ? (
                         <span className="login-submit__loading">
