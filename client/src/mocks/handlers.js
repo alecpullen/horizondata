@@ -4,7 +4,9 @@ import { http, HttpResponse, delay, passthrough } from 'msw'
 function isMswEnabled() {
     // Default to true if not set
     const stored = localStorage.getItem('msw-enabled')
-    return stored === null ? true : stored === 'true'
+    const enabled = stored === null ? true : stored === 'true'
+    console.log('[MSW] isMswEnabled:', enabled, '(stored:', stored, ')')
+    return enabled
 }
 
 // Mock account data
@@ -282,10 +284,12 @@ const mockSpaceObjects = [
     }
 ]
 
-// Match any host (localhost, 127.0.0.1, etc.)
+// Match any host (localhost, 127.0.0.1, production domains, etc.)
 const apiUrl = (path) => {
-    // Match both full URLs and relative paths
-    return new RegExp(`^(http://[^/]+)?${path}(\\?.*)?$`)
+    // Match both full URLs (http/https) and relative paths
+    // In production (Vercel), requests may be full https:// URLs
+    // In development, they may be relative paths or http:// URLs
+    return new RegExp(`^(https?://[^/]+)?${path}(\\?.*)?$`)
 }
 
 export const handlers = [
@@ -311,10 +315,13 @@ export const handlers = [
 
     // GET /api/bookings - fetch user bookings
     http.get(apiUrl('/api/bookings'), async ({ request }) => {
+        console.log('[MSW] Intercepted /api/bookings')
         if (!isMswEnabled()) {
+            console.log('[MSW] Passthrough /api/bookings')
             return passthrough()
         }
         await delay(400)
+        console.log('[MSW] Returning mock bookings')
         return HttpResponse.json(mockBookings)
     }),
 
@@ -525,7 +532,9 @@ export const handlers = [
 
     // GET /api/visibility/objects - get currently visible celestial objects
     http.get(apiUrl('/api/visibility/objects'), async ({ request }) => {
+        console.log('[MSW] Intercepted /api/visibility/objects')
         if (!isMswEnabled()) {
+            console.log('[MSW] Passthrough /api/visibility/objects')
             return passthrough()
         }
         await delay(400)
