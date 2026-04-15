@@ -1,0 +1,1324 @@
+/* New Booking Page Layout */
+.new-booking-page {
+    min-height: calc(100vh - 64px);
+    background: var(--bg);
+    padding: 24px 40px;
+}
+
+.new-booking-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--elev);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+/* Header */
+.new-booking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.new-booking-title {
+    font-family: var(--disp);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0;
+}
+
+.new-booking-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--t3);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.new-booking-close:hover {
+    background: var(--bg);
+    color: var(--t1);
+}
+
+/* Step Indicator */
+.step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 24px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.step-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--surf);
+    border: 2px solid var(--border);
+    color: var(--t3);
+    transition: all 0.2s ease;
+}
+
+.step-item--active .step-number {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg);
+}
+
+.step-item--completed .step-number {
+    background: var(--green);
+    border-color: var(--green);
+    color: var(--bg);
+}
+
+.step-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--t3);
+    transition: color 0.2s ease;
+}
+
+.step-item--active .step-label {
+    color: var(--teal);
+    font-weight: 600;
+}
+
+.step-item--completed .step-label {
+    color: var(--green);
+}
+
+.step-connector {
+    width: 60px;
+    height: 2px;
+    background: var(--border);
+    margin: 0 16px;
+    transition: background 0.2s ease;
+}
+
+.step-item--completed + .step-item .step-connector,
+.step-item--completed .step-connector {
+    background: var(--green);
+}
+
+/* Step Content */
+.step-content {
+    padding: 24px;
+    min-height: 400px;
+}
+
+/* Footer */
+.step-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.step-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: none;
+}
+
+.step-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.step-btn--primary {
+    background: var(--teal);
+    color: var(--bg);
+}
+
+.step-btn--primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(94, 234, 212, 0.25);
+}
+
+.step-btn--secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--t2);
+}
+
+.step-btn--secondary:hover:not(:disabled) {
+    border-color: var(--tbr);
+    color: var(--t1);
+    background: var(--surf);
+}
+
+.step-btn-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--bg);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== */
+/* STEP 1: Select Target */
+/* ==================== */
+
+.step-1 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Filter Bar */
+.filter-bar {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.filter-select {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    color: var(--t1);
+    font-size: 13px;
+    min-width: 140px;
+    cursor: pointer;
+    outline: none;
+}
+
+.filter-select:focus {
+    border-color: var(--teal);
+}
+
+.filter-group--checkbox {
+    padding-bottom: 8px;
+}
+
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.filter-checkbox input {
+    display: none;
+}
+
+.filter-checkmark {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.filter-checkbox input:checked + .filter-checkmark {
+    background: var(--teal);
+    border-color: var(--teal);
+}
+
+.filter-checkbox input:checked + .filter-checkmark::after {
+    content: '';
+    width: 5px;
+    height: 8px;
+    border: solid var(--bg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.filter-group--range {
+    min-width: 160px;
+}
+
+.range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.range-inputs input[type="range"] {
+    flex: 1;
+    accent-color: var(--teal);
+}
+
+.filter-group--search {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    color: var(--t1);
+    font-size: 13px;
+    outline: none;
+}
+
+.filter-input:focus {
+    border-color: var(--teal);
+}
+
+.filter-input::placeholder {
+    color: var(--t3);
+}
+
+.filter-apply-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--teal);
+    color: var(--bg);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.filter-apply-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(94, 234, 212, 0.3);
+}
+
+/* Target List */
+.target-list-container {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.targets-loading,
+.targets-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    color: var(--t2);
+}
+
+.targets-loading__spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+}
+
+.targets-empty__icon {
+    color: var(--t3);
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.targets-empty h3 {
+    font-family: var(--disp);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0 0 8px 0;
+}
+
+.targets-empty p {
+    font-size: 14px;
+    color: var(--t2);
+    margin: 0;
+}
+
+/* Target Table */
+.target-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.target-table thead {
+    position: sticky;
+    top: 0;
+    background: var(--surf);
+    z-index: 10;
+}
+
+.target-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--border);
+}
+
+.target-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--t1);
+}
+
+.target-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.target-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.target-table tbody tr.target-row--selected {
+    background: var(--tdim);
+}
+
+.target-table tbody tr.target-row--selected td {
+    border-bottom-color: var(--tbr);
+}
+
+.target-name-main {
+    font-weight: 600;
+    color: var(--t1);
+}
+
+.target-name-catalog {
+    font-size: 11px;
+    color: var(--t3);
+    margin-top: 2px;
+}
+
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.type-badge--planetary {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.type-badge--deep {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+}
+
+.type-badge--stellar {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+
+.type-badge--galaxy {
+    background: rgba(236, 72, 153, 0.15);
+    color: #f472b6;
+}
+
+.type-badge--nebula {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+.type-badge--unknown {
+    background: var(--surf);
+    color: var(--t3);
+}
+
+.mag-value--bright {
+    color: #fbbf24;
+}
+
+.mag-value--medium {
+    color: #a3e635;
+}
+
+.mag-value--dim {
+    color: #94a3b8;
+}
+
+.mag-value--unknown {
+    color: var(--t3);
+}
+
+.target-select-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--t2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.target-select-btn:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+}
+
+.target-select-btn--selected {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg);
+}
+
+.target-select-btn--selected:hover {
+    background: var(--teal);
+    color: var(--bg);
+}
+
+/* Target Details Panel */
+.target-details-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.target-details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.target-details-title {
+    font-family: var(--disp);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0;
+}
+
+.target-details-content {
+    display: flex;
+    gap: 20px;
+}
+
+.target-image {
+    flex-shrink: 0;
+    width: 200px;
+    height: 150px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surf);
+}
+
+.target-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.target-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 24px;
+    flex: 1;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.detail-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--t1);
+    font-family: var(--mono);
+}
+
+.target-description {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    color: var(--t2);
+    line-height: 1.5;
+    margin: 0;
+    margin-top: 8px;
+}
+
+/* ==================== */
+/* STEP 1: Schedule - Weekly Calendar Grid (Night Window) */
+/* ==================== */
+
+.calendar-grid-section {
+    padding: 24px;
+}
+
+.calendar-grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.calendar-grid-section .schedule-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.calendar-grid-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.calendar-week-range {
+    font-family: var(--disp);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--t1);
+    min-width: 160px;
+    text-align: center;
+}
+
+.calendar-today-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    color: var(--t2);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: 8px;
+}
+
+.calendar-today-btn:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+    background: var(--tdim);
+}
+
+/* Night Window Label */
+.night-window-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #a78bfa;
+    margin-bottom: 16px;
+}
+
+.night-window-label svg {
+    stroke: #a78bfa;
+}
+
+/* Days Header Row */
+.calendar-days-row {
+    display: grid;
+    grid-template-columns: 70px repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+}
+
+.calendar-time-header {
+    /* Empty header cell above time labels */
+}
+
+.calendar-day-header {
+    text-align: center;
+    padding: 6px 4px;
+}
+
+.calendar-day-header.today {
+    background: var(--tdim);
+    border-radius: 8px;
+    border: 1px solid var(--tbr);
+}
+
+.calendar-day-header .day-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.calendar-day-header.today .day-name {
+    color: var(--teal);
+}
+
+.calendar-day-header .day-date {
+    font-family: var(--disp);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--t1);
+}
+
+.calendar-day-header.today .day-date {
+    color: var(--teal);
+}
+
+/* Time Slots Grid - Scrollable Container */
+.calendar-slots-container {
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-right: 4px;
+}
+
+/* Custom scrollbar */
+.calendar-slots-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.calendar-slots-container::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 3px;
+}
+
+.calendar-slots-container::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.calendar-slots-container::-webkit-scrollbar-thumb:hover {
+    background: var(--t3);
+}
+
+.calendar-time-row {
+    display: grid;
+    grid-template-columns: 70px repeat(7, 1fr);
+    gap: 4px;
+    align-items: center;
+}
+
+.calendar-time-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--t3);
+    text-align: right;
+    padding-right: 6px;
+    font-family: var(--mono);
+}
+
+.calendar-cells-row {
+    display: contents;
+}
+
+.calendar-cell {
+    height: 32px;
+    min-height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.calendar-cell:hover:not(.disabled) {
+    border-color: var(--teal);
+    background: var(--tdim);
+}
+
+.calendar-cell.selected {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg);
+}
+
+.calendar-cell.disabled {
+    background: var(--bg);
+    border-color: var(--border);
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.calendar-cell.booked {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.5);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.calendar-cell.booked:hover {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: rgba(248, 113, 113, 0.7);
+}
+
+.calendar-cell svg {
+    stroke: currentColor;
+}
+
+/* Selection Summary */
+.selection-summary {
+    padding: 20px 24px;
+    background: var(--tdim);
+    border: 1px solid var(--tbr);
+}
+
+.selection-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.selection-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--teal);
+    color: var(--bg);
+    flex-shrink: 0;
+}
+
+.selection-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.selection-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+}
+
+.selection-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--t1);
+}
+
+/* ==================== */
+/* STEP 2: Select Target */
+/* ==================== */
+
+.step-2 {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.target-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--tdim);
+    border: 1px solid var(--tbr);
+    border-radius: 12px;
+}
+
+.target-summary-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+}
+
+.target-summary-name {
+    font-family: var(--disp);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--t1);
+}
+
+.schedule-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.schedule-section {
+    padding: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.schedule-section-title {
+    font-family: var(--disp);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0 0 16px 0;
+}
+
+.date-picker {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.date-input {
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    color: var(--t1);
+    font-size: 15px;
+    font-family: var(--mono);
+    outline: none;
+    cursor: pointer;
+}
+
+.date-input:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--tdim);
+}
+
+.date-helpers {
+    display: flex;
+    gap: 8px;
+}
+
+.date-quick-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--t2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.date-quick-btn:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+    background: var(--tdim);
+}
+
+.time-picker-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.time-picker-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.time-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+}
+
+.time-input {
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    color: var(--t1);
+    font-size: 15px;
+    font-family: var(--mono);
+    outline: none;
+    cursor: pointer;
+}
+
+.time-input:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--tdim);
+}
+
+.time-separator {
+    padding-bottom: 12px;
+    font-size: 14px;
+    color: var(--t3);
+}
+
+.time-helpers {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.time-helpers-label {
+    font-size: 12px;
+    color: var(--t3);
+}
+
+.time-quick-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--t2);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.time-quick-btn:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+}
+
+.time-validation-error {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--red);
+}
+
+.visibility-info {
+    padding: 20px;
+    background: var(--tdim);
+    border: 1px solid var(--tbr);
+    border-radius: 12px;
+}
+
+.visibility-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--disp);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--teal);
+    margin: 0 0 8px 0;
+}
+
+.visibility-note {
+    font-size: 13px;
+    color: var(--t2);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ==================== */
+/* STEP 3: Confirm */
+/* ==================== */
+
+.step-3 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.confirm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.confirm-section {
+    padding: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.confirm-section-title {
+    font-family: var(--disp);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0 0 16px 0;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-field + .form-field {
+    margin-top: 16px;
+}
+
+.form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t2);
+}
+
+.form-input {
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    color: var(--t1);
+    font-size: 14px;
+    outline: none;
+}
+
+.form-input:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--tdim);
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--t3);
+}
+
+.form-textarea {
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surf);
+    color: var(--t1);
+    font-size: 14px;
+    outline: none;
+    resize: vertical;
+    min-height: 100px;
+    font-family: var(--sans);
+}
+
+.form-textarea:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--tdim);
+}
+
+.summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-label {
+    font-size: 13px;
+    color: var(--t3);
+}
+
+.summary-value {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--t1);
+}
+
+.summary-value strong {
+    font-weight: 600;
+}
+
+.summary-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
+.confirm-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.note-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--t2);
+}
+
+.note-item svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--teal);
+}
+
+/* ==================== */
+/* Responsive */
+/* ==================== */
+
+@media (max-width: 768px) {
+    .new-booking-page {
+        padding: 16px;
+    }
+
+    .step-indicator {
+        padding: 16px;
+    }
+
+    .step-label {
+        display: none;
+    }
+
+    .step-connector {
+        width: 20px;
+    }
+
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group--search {
+        min-width: auto;
+    }
+
+    .target-details-content {
+        flex-direction: column;
+    }
+
+    .target-image {
+        width: 100%;
+        height: 200px;
+    }
+
+    .target-details-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .time-picker-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .time-separator {
+        text-align: center;
+        padding: 0;
+    }
+
+    .date-picker {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .step-footer {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .step-btn {
+        width: 100%;
+    }
+}

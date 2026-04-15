@@ -186,7 +186,7 @@ function MyBookings() {
                         <h1 className="bookings-title">My Bookings</h1>
                         <button
                             className="bookings-new-btn"
-                            onClick={() => window.location.href = '/scheduling'}
+                            onClick={() => window.location.href = '/bookings/new'}
                         >
                             <span>+</span>
                             New Booking
@@ -257,7 +257,7 @@ function MyBookings() {
                                 {activeTab !== 'past' && (
                                     <button
                                         className="bookings-empty__btn"
-                                        onClick={() => window.location.href = '/scheduling'}
+                                        onClick={() => window.location.href = '/bookings/new'}
                                     >
                                         Create New Booking
                                     </button>
@@ -286,7 +286,7 @@ function MyBookings() {
                                 {activeTab !== 'past' && (
                                     <button
                                         className="bookings-empty__btn"
-                                        onClick={() => window.location.href = '/scheduling'}
+                                        onClick={() => window.location.href = '/bookings/new'}
                                     >
                                         Create New Booking
                                     </button>
