@@ -1,0 +1,116 @@
+/* Content container */
+.pending-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    text-align: center;
+}
+
+/* Icon */
+.pending-icon {
+    width: 80px;
+    height: 80px;
+    color: var(--gold);
+    animation: iconBounce 2s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.pending-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Status badge */
+.pending-status__badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Info section */
+.pending-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 340px;
+}
+
+.pending-info__text {
+    font-size: 14px;
+    color: var(--t2);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.pending-info__details {
+    padding: 16px;
+    background: var(--elev);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+
+.pending-info__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.pending-info__list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+    color: var(--t3);
+    line-height: 1.8;
+}
+
+.pending-info__list li {
+    margin-bottom: 4px;
+}
+
+.pending-info__list li:last-child {
+    margin-bottom: 0;
+}
+
+.pending-info__list strong {
+    color: var(--teal);
+}
+
+/* Contact link */
+.pending-contact {
+    font-size: 13px;
+    color: var(--t3);
+    margin: 0;
+}
+
+/* Sign out button in footer */
+.pending-signout {
+    background: none;
+    border: none;
+    color: var(--red);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background 0.15s ease;
+}
+
+.pending-signout:hover {
+    background: rgba(248, 113, 113, 0.1);
+}
