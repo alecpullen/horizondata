@@ -323,8 +323,12 @@
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 12px;
-    overflow: hidden;
+    overflow: auto;
     min-height: 0;
+}
+
+.target-list-container table {
+    width: 100%;
 }
 
 .targets-loading,
@@ -372,16 +376,13 @@
 .target-table {
     width: 100%;
     border-collapse: collapse;
-    display: block;
-    max-height: 100%;
-    overflow-y: auto;
+    display: table;
+    table-layout: fixed;
 }
 
 .target-table thead {
-    position: sticky;
-    top: 0;
+    display: table-header-group;
     background: var(--surf);
-    z-index: 10;
 }
 
 .target-table th {
@@ -396,27 +397,27 @@
     white-space: nowrap;
 }
 
-.target-table th:first-child {
-    width: 36px;
-    text-align: center;
-    padding-left: 8px;
-    padding-right: 8px;
-}
-
-.target-table td:first-child {
-    text-align: center;
-}
-
 .target-table td {
     padding: 10px 8px;
     border-bottom: 1px solid var(--border);
     font-size: 12px;
     color: var(--t1);
+    vertical-align: middle;
 }
 
 .target-table tbody {
-    display: table;
-    width: 100%;
+    display: table-row-group;
+}
+
+/* Column widths */
+.target-table .col-num {
+    width: 40px;
+    text-align: center;
+}
+
+.target-table .col-action {
+    width: 80px;
+    text-align: center;
 }
 
 .target-table tbody tr {
@@ -1039,29 +1040,6 @@
     flex: 1;
 }
 
-.target-selection-counter {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    flex-shrink: 0;
-}
-
-.target-count-badge {
-    font-family: var(--mono);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--teal);
-}
-
-.target-count-hint {
-    font-size: 11px;
-    color: var(--t3);
-}
-
 /* Right side: compact queue panel */
 .target-queue-panel {
     width: 200px;
@@ -1092,11 +1070,22 @@
     letter-spacing: 0.02em;
 }
 
-.target-queue-time {
+.target-queue-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.target-queue-count-badge {
     font-family: var(--mono);
     font-size: 11px;
+    font-weight: 600;
     color: var(--teal);
-    font-weight: 500;
+}
+
+.target-queue-time {
+    font-size: 10px;
+    color: var(--t3);
 }
 
 .target-queue-empty {
@@ -1258,21 +1247,6 @@
     font-size: 11px;
     font-weight: 600;
     margin: 0 auto;
-}
-
-/* Column widths for compact table */
-.target-table .col-num {
-    width: 36px;
-    text-align: center;
-    padding-left: 8px;
-    padding-right: 8px;
-}
-
-.target-table .col-action {
-    width: 70px;
-    text-align: center;
-    padding-left: 8px;
-    padding-right: 8px;
 }
 
 .target-summary {

@@ -80,13 +80,6 @@ function Step2SelectTarget({
                                 </div>
                             </div>
                         </div>
-
-                        <div className="target-selection-counter">
-                            <span className="target-count-badge">
-                                {selectedTargets.length}/{maxTargets}
-                            </span>
-                            <span className="target-count-hint">targets</span>
-                        </div>
                     </div>
 
                     {/* Target List */}
@@ -210,7 +203,12 @@ function Step2SelectTarget({
                 <div className="target-queue-panel">
                     <div className="target-queue-header">
                         <span className="target-queue-title">Queue</span>
-                        <span className="target-queue-time">{selectedTargets.length * 5} min</span>
+                        <div className="target-queue-count">
+                            <span className="target-queue-count-badge">
+                                {selectedTargets.length}/{maxTargets}
+                            </span>
+                            <span className="target-queue-time">{selectedTargets.length * 5} min</span>
+                        </div>
                     </div>
 
                     {selectedTargets.length === 0 ? (
