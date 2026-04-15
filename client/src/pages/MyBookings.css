@@ -381,3 +381,62 @@
         width: 100%;
     }
 }
+
+/* Loading state */
+.bookings-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    color: var(--t2);
+}
+
+.bookings-loading__spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error state */
+.bookings-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+}
+
+.bookings-error__icon {
+    color: var(--orange);
+    margin-bottom: 16px;
+    opacity: 0.8;
+}
+
+.bookings-error__title {
+    font-family: var(--disp);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0 0 8px 0;
+}
+
+.bookings-error__text {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--t2);
+    margin: 0;
+    max-width: 400px;
+}

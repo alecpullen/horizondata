@@ -1,33 +1,122 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
 import { useToast } from '../components/ui/ToastProvider'
 import './MyAccount.css'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
 function MyAccount() {
     const { showToast } = useToast()
     const [isEditing, setIsEditing] = useState(false)
-    const [is2FAEnabled, setIs2FAEnabled] = useState(false)
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState(null)
 
     const [formData, setFormData] = useState({
-        fullName: 'Dr. Jane Smith',
-        email: 'jane.smith@latrobe.edu.au',
+        fullName: '',
+        email: '',
         phone: '',
-        institution: 'La Trobe University'
+        institution: '',
+        is2FAEnabled: false,
+        notificationsEnabled: true
     })
+
+    const [originalData, setOriginalData] = useState(null)
+
+    // Fetch account data on mount
+    useEffect(() => {
+        async function fetchAccount() {
+            try {
+                setIsLoading(true)
+                const response = await fetch(`${API_BASE}/api/account`, {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    credentials: 'include',
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+                }
+
+                const data = await response.json()
+                setFormData({
+                    fullName: data.fullName || '',
+                    email: data.email || '',
+                    phone: data.phone || '',
+                    institution: data.institution || '',
+                    is2FAEnabled: data.is2FAEnabled || false,
+                    notificationsEnabled: data.notificationsEnabled !== false
+                })
+                setOriginalData(data)
+            } catch (err) {
+                setError(err.message)
+                showToast({
+                    type: 'error',
+                    message: 'Failed to load account information'
+                })
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchAccount()
+    }, [showToast])
 
     const handleSave = async () => {
         setIsSaving(true)
-        // Simulate API call
-        await new Promise(r => setTimeout(r, 800))
-        setIsSaving(false)
+        try {
+            const response = await fetch(`${API_BASE}/api/account`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    fullName: formData.fullName,
+                    email: formData.email,
+                    phone: formData.phone,
+                    institution: formData.institution,
+                    is2FAEnabled: formData.is2FAEnabled,
+                    notificationsEnabled: formData.notificationsEnabled
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            }
+
+            const data = await response.json()
+            setOriginalData(data)
+            setIsEditing(false)
+            showToast({
+                type: 'success',
+                message: 'Profile updated successfully!'
+            })
+        } catch (err) {
+            showToast({
+                type: 'error',
+                message: `Failed to save changes: ${err.message}`
+            })
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleCancel = () => {
+        if (originalData) {
+            setFormData({
+                fullName: originalData.fullName || '',
+                email: originalData.email || '',
+                phone: originalData.phone || '',
+                institution: originalData.institution || '',
+                is2FAEnabled: originalData.is2FAEnabled || false,
+                notificationsEnabled: originalData.notificationsEnabled !== false
+            })
+        }
         setIsEditing(false)
-        showToast({
-            type: 'success',
-            message: 'Profile updated successfully!'
-        })
     }
 
     const handleChangePassword = () => {
@@ -50,22 +139,40 @@ function MyAccount() {
                     <div className="account-profile-card">
                         <div className="account-profile-left">
                             <div className="account-avatar">
-                                <span>JS</span>
+                                <span>
+                                    {formData.fullName
+                                        .split(' ')
+                                        .map(n => n[0])
+                                        .join('')
+                                        .toUpperCase()
+                                        .slice(0, 2)}
+                                </span>
                             </div>
                             <div className="account-profile-details">
                                 <h2 className="account-profile-name">{formData.fullName}</h2>
                                 <p className="account-profile-email">{formData.email}</p>
-                                <span className="account-role-badge">Teacher</span>
-                            </div>
-                        </div>
-                        <div className="account-profile-right">
-                            <div className="account-status">
-                                <span className="account-status-dot active" />
-                                <span className="account-status-text">Active</span>
                             </div>
                         </div>
                     </div>
 
+                    {isLoading ? (
+                        <div className="account-loading">
+                            <div className="account-loading__spinner" />
+                            <p>Loading account information...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="account-error">
+                            <div className="account-error__icon">
+                                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                            </div>
+                            <h3 className="account-error__title">Failed to load account</h3>
+                            <p className="account-error__text">{error}</p>
+                        </div>
+                    ) : (
                     <div className="account-content">
                         {/* Personal Information */}
                         <section className="account-section">
@@ -169,7 +276,7 @@ function MyAccount() {
                                     </button>
                                     <button
                                         className="account-btn account-btn--secondary"
-                                        onClick={() => setIsEditing(false)}
+                                        onClick={handleCancel}
                                         disabled={isSaving}
                                     >
                                         Cancel
@@ -200,7 +307,7 @@ function MyAccount() {
                                     <div className="account-setting-info">
                                         <h4 className="account-setting-title">Two-Factor Authentication</h4>
                                         <p className="account-setting-desc">
-                                            {is2FAEnabled
+                                            {formData.is2FAEnabled
                                                 ? 'Your account is protected with 2FA'
                                                 : 'Add an extra layer of security to your account'}
                                         </p>
@@ -208,8 +315,9 @@ function MyAccount() {
                                     <label className="account-toggle">
                                         <input
                                             type="checkbox"
-                                            checked={is2FAEnabled}
-                                            onChange={(e) => setIs2FAEnabled(e.target.checked)}
+                                            checked={formData.is2FAEnabled}
+                                            onChange={(e) => setFormData({ ...formData, is2FAEnabled: e.target.checked })}
+                                            disabled={!isEditing}
                                         />
                                         <span className="account-toggle-slider" />
                                     </label>
@@ -232,8 +340,9 @@ function MyAccount() {
                                     <label className="account-toggle">
                                         <input
                                             type="checkbox"
-                                            checked={notificationsEnabled}
-                                            onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                                            checked={formData.notificationsEnabled}
+                                            onChange={(e) => setFormData({ ...formData, notificationsEnabled: e.target.checked })}
+                                            disabled={!isEditing}
                                         />
                                         <span className="account-toggle-slider" />
                                     </label>
@@ -257,6 +366,7 @@ function MyAccount() {
                             </div>
                         </section>
                     </div>
+                    )}
                 </div>
             </main>
         </div>

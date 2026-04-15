@@ -1,51 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
 import './MyBookings.css'
 
-// Mock booking data - one confirmed, one pending, one past
-const mockBookings = {
-    upcoming: [
-        {
-            id: 1,
-            date: '14/04/2026',
-            time: '09:00 - 10:30',
-            status: 'Confirmed',
-            statusColor: 'confirmed',
-            title: 'Year 9 Science Class',
-            description: 'Introduction to telescope operation and lunar observation. Students will learn basic telescope controls and capture images of the Moon.'
-        }
-    ],
-    past: [
-        {
-            id: 3,
-            date: '08/04/2026',
-            time: '10:00 - 11:30',
-            status: 'Completed',
-            statusColor: 'completed',
-            title: 'Year 10 - Jupiter Observation',
-            description: 'Planetary observation session. Students captured 12 images of Jupiter and its Galilean moons.',
-            captureCount: 12
-        }
-    ],
-    pending: [
-        {
-            id: 2,
-            date: '22/04/2026',
-            time: '19:30 - 21:00',
-            status: 'Pending',
-            statusColor: 'pending',
-            title: 'Evening Star Party',
-            description: 'After-school astronomy club session. Deep sky objects including nebulae and star clusters.'
-        }
-    ]
-}
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-const tabs = [
-    { id: 'upcoming', label: 'Upcoming', count: mockBookings.upcoming.length },
-    { id: 'past', label: 'Past', count: mockBookings.past.length },
-    { id: 'pending', label: 'Pending', count: mockBookings.pending.length }
-]
 
 const statusColors = {
     confirmed: 'var(--teal)',
@@ -91,12 +50,10 @@ function getTimeUntilStart(sessionDate, sessionTime) {
 
 function BookingCard({ booking, isPast }) {
     const handleStartSession = () => {
-        // Navigate to teacher live view - session code generated on the telescope
         window.location.href = '/live/teacher'
     }
 
     const handleManage = () => {
-        // Navigate to session management page
         console.log('Manage booking:', booking.id)
     }
 
@@ -178,9 +135,45 @@ function BookingCard({ booking, isPast }) {
 
 function MyBookings() {
     const [activeTab, setActiveTab] = useState('upcoming')
+    const [bookings, setBookings] = useState({ upcoming: [], past: [], pending: [] })
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
-    const currentBookings = mockBookings[activeTab]
+    useEffect(() => {
+        async function fetchBookings() {
+            try {
+                setLoading(true)
+                const response = await fetch(`${API_BASE}/api/bookings`, {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    credentials: 'include',
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+                }
+
+                const data = await response.json()
+                setBookings(data)
+            } catch (err) {
+                setError(err.message)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchBookings()
+    }, [])
+
+    const currentBookings = bookings[activeTab] || []
     const isPast = activeTab === 'past'
+
+    const tabs = [
+        { id: 'upcoming', label: 'Upcoming', count: bookings.upcoming.length },
+        { id: 'past', label: 'Past', count: bookings.past.length },
+        { id: 'pending', label: 'Pending', count: bookings.pending.length }
+    ]
 
     return (
         <div className="page-shell">
@@ -214,7 +207,28 @@ function MyBookings() {
                     </nav>
 
                     <div className="bookings-list">
-                        {currentBookings.length > 0 ? (
+                        {loading && (
+                            <div className="bookings-loading">
+                                <div className="bookings-loading__spinner" />
+                                <p>Loading bookings...</p>
+                            </div>
+                        )}
+
+                        {error && !loading && (
+                            <div className="bookings-error">
+                                <div className="bookings-error__icon">
+                                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                    </svg>
+                                </div>
+                                <h3 className="bookings-error__title">Failed to load bookings</h3>
+                                <p className="bookings-error__text">{error}</p>
+                            </div>
+                        )}
+
+                        {!loading && !error && currentBookings.length > 0 ? (
                             currentBookings.map(booking => (
                                 <BookingCard
                                     key={booking.id}
@@ -223,6 +237,35 @@ function MyBookings() {
                                 />
                             ))
                         ) : (
+                            <div className="bookings-empty">
+                                <div className="bookings-empty__icon">
+                                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                    </svg>
+                                </div>
+                                <h3 className="bookings-empty__title">No {activeTab} bookings</h3>
+                                <p className="bookings-empty__text">
+                                    {activeTab === 'upcoming'
+                                        ? "You don't have any upcoming sessions scheduled."
+                                        : activeTab === 'past'
+                                            ? "You haven't completed any sessions yet."
+                                            : "You don't have any pending approvals."}
+                                </p>
+                                {activeTab !== 'past' && (
+                                    <button
+                                        className="bookings-empty__btn"
+                                        onClick={() => window.location.href = '/scheduling'}
+                                    >
+                                        Create New Booking
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {!loading && !error && currentBookings.length === 0 && (
                             <div className="bookings-empty">
                                 <div className="bookings-empty__icon">
                                     <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5">
