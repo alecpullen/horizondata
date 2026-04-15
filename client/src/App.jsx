@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Landing      from './pages/Landing'
+import Login        from './pages/Login'
 import MyBookings   from './pages/MyBookings'
 import TeacherView  from './pages/TeacherView'
 import StudentView  from './pages/StudentView'
@@ -11,6 +12,7 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/"              element={<Landing />}         />
+                <Route path="/login"         element={<Login />}          />
                 <Route path="/bookings"      element={<MyBookings />}   />
                 <Route path="/live/teacher"  element={<TeacherView />}  />
                 <Route path="/live/student"  element={<StudentView />}  />

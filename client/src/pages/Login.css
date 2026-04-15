@@ -1,0 +1,333 @@
+.login-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+}
+
+/* ambient blobs */
+.login-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.12;
+    animation: loginFloat 10s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+
+.login-blob--1 {
+    width: 600px;
+    height: 600px;
+    background: var(--teal);
+    top: -160px;
+    left: -180px;
+    animation-delay: 0s;
+}
+
+.login-blob--2 {
+    width: 500px;
+    height: 500px;
+    background: var(--gold);
+    bottom: -140px;
+    right: -140px;
+    animation-delay: -5s;
+}
+
+@keyframes loginFloat {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(40px, 28px) scale(1.06); }
+}
+
+/* content layout */
+.login-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 420px;
+}
+
+.login-logo-wrap {
+    margin-bottom: 8px;
+}
+
+/* card */
+.login-card {
+    width: 100%;
+    padding: 40px 36px;
+    border-radius: 20px;
+    background: var(--surf);
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+}
+
+.login-title {
+    font-family: var(--disp);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--t1);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.login-subtitle {
+    font-size: 14px;
+    color: var(--t3);
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+/* error message */
+.login-error {
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--red);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* form fields */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.login-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.login-forgot-link {
+    font-size: 12px;
+    color: var(--teal);
+    text-decoration: none;
+    text-transform: none;
+    letter-spacing: 0;
+    transition: opacity 0.15s ease;
+}
+
+.login-forgot-link:hover {
+    opacity: 0.8;
+}
+
+.login-input {
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--elev);
+    color: var(--t1);
+    font-size: 15px;
+    font-family: var(--sans);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+}
+
+.login-input::placeholder {
+    color: var(--t3);
+}
+
+.login-input:focus {
+    border-color: var(--tbr);
+    box-shadow: 0 0 0 3px var(--tdim);
+}
+
+/* remember me checkbox */
+.login-remember {
+    display: flex;
+    align-items: center;
+}
+
+.login-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--t2);
+    cursor: pointer;
+    user-select: none;
+}
+
+.login-checkbox input {
+    display: none;
+}
+
+.login-checkmark {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--elev);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.login-checkmark::after {
+    content: '';
+    width: 5px;
+    height: 8px;
+    border: solid var(--bg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.login-checkbox input:checked + .login-checkmark {
+    background: var(--teal);
+    border-color: var(--teal);
+}
+
+.login-checkbox input:checked + .login-checkmark::after {
+    opacity: 1;
+}
+
+/* submit button */
+.login-submit {
+    padding: 14px 24px;
+    border-radius: 12px;
+    border: none;
+    background: var(--teal);
+    color: var(--bg);
+    font-family: var(--disp);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    margin-top: 4px;
+}
+
+.login-submit:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(94, 234, 212, 0.25);
+}
+
+.login-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* divider */
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 24px 0;
+    font-size: 13px;
+    color: var(--t3);
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* social login */
+.login-social {
+    display: flex;
+    gap: 12px;
+}
+
+.login-social-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--elev);
+    color: var(--t1);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.login-social-btn:hover {
+    background: var(--surf);
+    border-color: var(--tbr);
+    transform: translateY(-1px);
+}
+
+.login-social-btn svg {
+    flex-shrink: 0;
+}
+
+/* footer */
+.login-footer {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 14px;
+    color: var(--t3);
+}
+
+.login-link {
+    color: var(--teal);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.15s ease;
+}
+
+.login-link:hover {
+    opacity: 0.8;
+}
+
+/* back button */
+.login-back {
+    background: none;
+    border: none;
+    color: var(--t3);
+    font-size: 14px;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: color 0.15s ease;
+    padding: 8px 16px;
+}
+
+.login-back:hover {
+    color: var(--t1);
+}
+
+/* responsive */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 32px 24px;
+    }
+
+    .login-title {
+        font-size: 24px;
+    }
+
+    .login-social {
+        flex-direction: column;
+    }
+}
