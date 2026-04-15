@@ -1,0 +1,111 @@
+.slob-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+}
+
+.slob-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    animation: slobBlobFloat 8s ease-in-out infinite alternate;
+}
+
+.slob-blob--1 {
+    width: 500px;
+    height: 500px;
+    background: var(--teal);
+    top: -100px;
+    left: -150px;
+}
+
+.slob-blob--2 {
+    width: 400px;
+    height: 400px;
+    background: #6366f1;
+    bottom: -100px;
+    right: -100px;
+    animation-delay: -4s;
+}
+
+@keyframes slobBlobFloat {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.05); }
+}
+
+.slob-card {
+    position: relative;
+    z-index: 1;
+    background: var(--surf);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+}
+
+.slob-spinner {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 4px solid var(--border);
+    border-top-color: var(--teal);
+    animation: slobSpin 1s linear infinite;
+    margin-top: 8px;
+}
+
+@keyframes slobSpin {
+    to { transform: rotate(360deg); }
+}
+
+.slob-heading {
+    font-family: var(--disp);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--t1);
+    text-align: center;
+    margin: 0;
+}
+
+.slob-sub {
+    font-size: 14px;
+    color: var(--t3);
+    text-align: center;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.slob-error {
+    font-size: 13px;
+    color: var(--red);
+    text-align: center;
+}
+
+.slob-leave-btn {
+    margin-top: 8px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--t3);
+    font-family: var(--disp);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.slob-leave-btn:hover {
+    color: var(--t1);
+    border-color: var(--tbr);
+}

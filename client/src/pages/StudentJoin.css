@@ -110,6 +110,51 @@
     color: var(--teal);
 }
 
+.sj-name-input {
+    width: 100%;
+    padding: 14px 16px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: var(--elev);
+    color: var(--t1);
+    font-family: var(--disp);
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    transition: border-color 0.15s;
+}
+
+.sj-name-input::placeholder {
+    color: var(--t3);
+    font-weight: 400;
+}
+
+.sj-name-input:focus {
+    outline: none;
+    border-color: var(--tbr);
+    background: var(--tdim);
+}
+
+.sj-back-btn {
+    background: none;
+    border: none;
+    color: var(--t3);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 8px;
+    transition: color 0.15s;
+}
+
+.sj-back-btn:hover:not(:disabled) {
+    color: var(--t1);
+}
+
+.sj-back-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Error */
 .sj-error {
     font-size: 13px;

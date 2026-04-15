@@ -422,10 +422,18 @@ if (typeof window !== 'undefined') {
 
 // Match any host (localhost, 127.0.0.1, production domains, etc.)
 const apiUrl = (path) => {
-    // Match both full URLs (http/https) and relative paths
-    // In production (Vercel), requests may be full https:// URLs
-    // In development, they may be relative paths or http:// URLs
-    return new RegExp(`^(https?://[^/]+)?${path}(\\?.*)?$`)
+    // Convert Express-style :params to wildcard segments so the RegExp
+    // actually matches real URLs. MSW doesn't populate handler `params`
+    // from RegExp routes, so handlers must extract values from request.url.
+    const pattern = path.replace(/:[a-zA-Z_][a-zA-Z0-9_]*/g, '[^/]+')
+    return new RegExp(`^(https?://[^/]+)?${pattern}(\\?.*)?$`)
+}
+
+// Extract the Nth segment of the request URL's pathname (0-based).
+// e.g. /api/sessions/99/start -> segment(2) === '99'
+function pathSegment(request, index) {
+    const { pathname } = new URL(request.url)
+    return pathname.split('/').filter(Boolean)[index]
 }
 
 export const handlers = [
@@ -586,32 +594,9 @@ export const handlers = [
         }, { status: 201 })
     }),
 
-    // GET /api/bookings/:id - get a single booking
-    http.get(apiUrl('/api/bookings/:id'), async ({ request, params }) => {
-        if (!isMswEnabled()) {
-            return passthrough()
-        }
-        await delay(300)
-
-        const bookingId = parseInt(params.id)
-        const allBookings = [
-            ...mockBookings.upcoming,
-            ...mockBookings.pending,
-            ...mockBookings.past
-        ]
-        const booking = allBookings.find(b => b.id === bookingId)
-
-        if (!booking) {
-            return HttpResponse.json({
-                success: false,
-                error: 'Booking not found'
-            }, { status: 404 })
-        }
-
-        return HttpResponse.json(booking)
-    }),
-
     // GET /api/bookings/availability - get available time slots for a date range
+    // Must be registered BEFORE /api/bookings/:id so the wildcard :id
+    // handler doesn't shadow the "availability" segment.
     http.get(apiUrl('/api/bookings/availability'), async ({ request }) => {
         if (!isMswEnabled()) {
             return passthrough()
@@ -710,6 +695,31 @@ export const handlers = [
             total: availableSlots.length,
             range: { startDate, endDate }
         })
+    }),
+
+    // GET /api/bookings/:id - get a single booking
+    http.get(apiUrl('/api/bookings/:id'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(300)
+
+        const bookingId = parseInt(pathSegment(request, 2), 10)
+        const allBookings = [
+            ...mockBookings.upcoming,
+            ...mockBookings.pending,
+            ...mockBookings.past
+        ]
+        const booking = allBookings.find(b => b.id === bookingId)
+
+        if (!booking) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Booking not found'
+            }, { status: 404 })
+        }
+
+        return HttpResponse.json(booking)
     }),
 
     // GET /api/space-objects - search/filter celestial objects
@@ -1037,13 +1047,13 @@ export const handlers = [
     }),
 
     // GET /api/visibility/objects/<name> - get specific object visibility
-    http.get(apiUrl('/api/visibility/objects/:name'), async ({ request, params }) => {
+    http.get(apiUrl('/api/visibility/objects/:name'), async ({ request }) => {
         if (!isMswEnabled()) {
             return passthrough()
         }
         await delay(300)
 
-        const objectName = params.name
+        const objectName = decodeURIComponent(pathSegment(request, 3))
 
         // Get all visible objects
         const url = new URL(request.url)
@@ -1108,15 +1118,15 @@ export const handlers = [
     }),
 
     // POST /api/sessions/:id/join - student joins a session with join code
-    http.post(apiUrl('/api/sessions/:id/join'), async ({ request, params }) => {
+    http.post(apiUrl('/api/sessions/:id/join'), async ({ request }) => {
         if (!isMswEnabled()) {
             return passthrough()
         }
         await delay(300)
 
-        const bookingId = parseInt(params.id, 10)
+        const bookingId = parseInt(pathSegment(request, 2), 10)
         const body = await request.json()
-        const { joinCode } = body
+        const { joinCode, name } = body
 
         const session = activeSessions.get(bookingId)
 
@@ -1134,33 +1144,11 @@ export const handlers = [
             }, { status: 403 })
         }
 
-        // Get current user from session
-        const user = getCurrentUser()
-        if (!user) {
-            return HttpResponse.json({
-                success: false,
-                error: 'Not authenticated'
-            }, { status: 401 })
-        }
-
-        // Check if already joined
-        const alreadyJoined = session.participants.find(p => p.id === user.id)
-        if (alreadyJoined) {
-            return HttpResponse.json({
-                success: true,
-                message: 'Already joined',
-                session: {
-                    bookingId: session.bookingId,
-                    joinCode: session.joinCode,
-                    status: session.status
-                }
-            })
-        }
-
-        // Add participant
+        // Anonymous students: no auth required. Generate a participant id
+        // so reloads/rejoins each show up as a separate student in the mock.
         const participant = {
-            id: user.id,
-            name: user.fullName,
+            id: `anon-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            name: name?.trim() || `Student ${session.participants.length + 1}`,
             joinedAt: new Date().toISOString()
         }
         session.participants.push(participant)
@@ -1177,13 +1165,13 @@ export const handlers = [
     }),
 
     // GET /api/sessions/:id/participants - list participants in a session
-    http.get(apiUrl('/api/sessions/:id/participants'), async ({ params }) => {
+    http.get(apiUrl('/api/sessions/:id/participants'), async ({ request }) => {
         if (!isMswEnabled()) {
             return passthrough()
         }
         await delay(200)
 
-        const bookingId = parseInt(params.id, 10)
+        const bookingId = parseInt(pathSegment(request, 2), 10)
         console.log('[MSW] GET /api/sessions/:id/participants - bookingId:', bookingId)
 
         const session = activeSessions.get(bookingId)
@@ -1206,13 +1194,13 @@ export const handlers = [
     }),
 
     // GET /api/sessions/:id - get session details (join code, status)
-    http.get(apiUrl('/api/sessions/:id'), async ({ params }) => {
+    http.get(apiUrl('/api/sessions/:id'), async ({ request }) => {
         if (!isMswEnabled()) {
             return passthrough()
         }
         await delay(200)
 
-        const bookingId = parseInt(params.id, 10)
+        const bookingId = parseInt(pathSegment(request, 2), 10)
         console.log('[MSW] GET /api/sessions/:id - bookingId:', bookingId)
         console.log('[MSW] activeSessions:', Array.from(activeSessions.entries()))
 
@@ -1266,13 +1254,13 @@ export const handlers = [
     }),
 
     // POST /api/sessions/:id/start - start the session (teacher)
-    http.post(apiUrl('/api/sessions/:id/start'), async ({ params }) => {
+    http.post(apiUrl('/api/sessions/:id/start'), async ({ request }) => {
         if (!isMswEnabled()) {
             return passthrough()
         }
         await delay(300)
 
-        const bookingId = parseInt(params.id, 10)
+        const bookingId = parseInt(pathSegment(request, 2), 10)
         const session = activeSessions.get(bookingId)
 
         if (!session) {

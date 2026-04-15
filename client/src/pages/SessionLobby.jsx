@@ -171,7 +171,14 @@ function SessionLobby() {
                     <h1 className="lobby-session-title">{loading ? 'Loading...' : sessionTitle}</h1>
                     <div className="lobby-session-info">{sessionInfo}</div>
                 </div>
-                <div className="lobby-header-spacer" />
+                <button
+                    type="button"
+                    className="lobby-close-btn"
+                    aria-label="Cancel and return to bookings"
+                    onClick={() => navigate('/bookings')}
+                >
+                    ×
+                </button>
             </header>
 
             <div className="lobby-body">

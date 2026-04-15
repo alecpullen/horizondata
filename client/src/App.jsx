@@ -14,6 +14,7 @@ import MyAccount    from './pages/MyAccount'
 import TeacherView  from './pages/TeacherView'
 import StudentView  from './pages/StudentView'
 import StudentJoin  from './pages/StudentJoin'
+import StudentLobby from './pages/StudentLobby'
 import SessionLobby from './pages/SessionLobby'
 import NewBooking from './pages/NewBooking'
 import { AuthProvider } from './contexts/AuthContext'
@@ -66,6 +67,7 @@ function AppRoutes() {
                 <Route path="/verify-email"    element={<VerifyEmail />}       />
                 <Route path="/pending-approval" element={<PendingApproval />} />
                 <Route path="/join"            element={<StudentJoin />}       />
+                <Route path="/student/lobby/:bookingId" element={<StudentLobby />} />
 
                 {/* Protected routes - require authentication */}
                 <Route path="/bookings" element={
@@ -80,9 +82,8 @@ function AppRoutes() {
                 <Route path="/live/teacher" element={
                     <ProtectedRoute><TeacherView /></ProtectedRoute>
                 } />
-                <Route path="/live/student" element={
-                    <ProtectedRoute><StudentView /></ProtectedRoute>
-                } />
+                {/* Students are anonymous — no auth required */}
+                <Route path="/live/student" element={<StudentView />} />
                 <Route path="/lobby/:bookingId?" element={
                     <ProtectedRoute><SessionLobby /></ProtectedRoute>
                 } />

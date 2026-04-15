@@ -22,8 +22,23 @@
     gap: 4px;
 }
 
-.lobby-header-spacer {
+.lobby-close-btn {
     width: 120px; /* Match AppLogo width for centering */
+    background: none;
+    border: none;
+    color: var(--t3);
+    font-size: 32px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    transition: color 0.15s;
+}
+
+.lobby-close-btn:hover {
+    color: var(--t1);
 }
 
 .lobby-session-title {
