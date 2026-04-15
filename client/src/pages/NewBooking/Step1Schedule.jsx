@@ -42,7 +42,8 @@ function Step1Schedule({
     startTime,
     setStartTime,
     endTime,
-    setEndTime
+    setEndTime,
+    onDurationChange
 }) {
     const [currentWeekStart, setCurrentWeekStart] = useState(() => {
         const today = new Date()
@@ -55,6 +56,19 @@ function Step1Schedule({
     const [availableSlots, setAvailableSlots] = useState([])
     const [isLoadingSlots, setIsLoadingSlots] = useState(false)
     const [error, setError] = useState(null)
+
+    // Calculate duration between two time strings in minutes
+    const calculateDuration = (start, end) => {
+        const [startH, startM] = start.split(':').map(Number)
+        const [endH, endM] = end.split(':').map(Number)
+        let startMinutes = startH * 60 + startM
+        let endMinutes = endH * 60 + endM
+        // Handle crossing midnight
+        if (endMinutes < startMinutes) {
+            endMinutes += 24 * 60
+        }
+        return endMinutes - startMinutes
+    }
 
     // Calculate end time based on start time
     const calculateEndTime = (start) => {
@@ -128,10 +142,26 @@ function Step1Schedule({
         const selectedDate = new Date(currentWeekStart)
         selectedDate.setDate(currentWeekStart.getDate() + dayIndex)
         const dateStr = selectedDate.toISOString().split('T')[0]
+        const calculatedEndTime = calculateEndTime(slot.time)
         setSessionDate(dateStr)
         setStartTime(slot.time)
-        setEndTime(calculateEndTime(slot.time))
+        setEndTime(calculatedEndTime)
+
+        // Report duration to parent
+        if (onDurationChange) {
+            const duration = calculateDuration(slot.time, calculatedEndTime)
+            onDurationChange(duration)
+        }
     }
+
+    // Report initial duration if time is already set
+    useEffect(() => {
+        if (startTime && endTime && onDurationChange) {
+            const duration = calculateDuration(startTime, endTime)
+            onDurationChange(duration)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     // Check if a cell is selected
     const isCellSelected = (dayIndex, slot) => {
@@ -216,19 +246,29 @@ function Step1Schedule({
     }
 
     return (
-        <div className="step-1">
+        <div className="step-1 step-1--schedule">
             {/* Weekly Schedule Grid */}
-            <div className="schedule-section calendar-grid-section">
+            <div className="schedule-section calendar-grid-section calendar-grid-section--flexible">
                 <div className="calendar-grid-header">
-                    <h3 className="schedule-section-title">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                            <line x1="16" y1="2" x2="16" y2="6" />
-                            <line x1="8" y1="2" x2="8" y2="6" />
-                            <line x1="3" y1="10" x2="21" y2="10" />
-                        </svg>
-                        Select Date & Time
-                    </h3>
+                    <div className="calendar-header-left">
+                        <h3 className="schedule-section-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            Select Date & Time
+                        </h3>
+                        {/* Selection Summary - Merged into header */}
+                        <div className="selection-badge">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            <span className="selection-badge-text">{formatSelection()}</span>
+                        </div>
+                    </div>
                     <div className="calendar-grid-nav">
                         <button className="calendar-nav-btn" onClick={handlePrevWeek} disabled={isLoadingSlots}>
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
@@ -264,14 +304,6 @@ function Step1Schedule({
                         <span>Loading available slots...</span>
                     </div>
                 )}
-
-                {/* Night Observation Window Label */}
-                <div className="night-window-label">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                    </svg>
-                    Night Observation Window: 6:00 PM - 6:00 AM
-                </div>
 
                 {/* Days Header */}
                 <div className="calendar-days-row">
@@ -316,38 +348,6 @@ function Step1Schedule({
                         </div>
                     ))}
                 </div>
-            </div>
-
-            {/* Selection Summary */}
-            <div className="schedule-section selection-summary">
-                <div className="selection-info">
-                    <div className="selection-icon">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                    </div>
-                    <div className="selection-details">
-                        <div className="selection-label">Selected Session (30 min)</div>
-                        <div className="selection-value">{formatSelection()}</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Visibility Info */}
-            <div className="visibility-info">
-                <h3 className="visibility-title">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                    </svg>
-                    Night Observation Schedule
-                </h3>
-                <p className="visibility-note">
-                    Observation sessions are available during night hours (6:00 PM - 6:00 AM) when celestial objects are visible.
-                    Each session is 30 minutes. Booked slots are shown as unavailable. You can book multiple consecutive sessions for longer observations.
-                    Target visibility will be verified before session start.
-                </p>
             </div>
         </div>
     )

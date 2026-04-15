@@ -331,6 +331,11 @@ export const handlers = [
         const [year, month, day] = newBooking.date.split('-')
         const formattedDate = `${day}/${month}/${year}`
 
+        // Handle multiple targets
+        const targets = newBooking.targets || []
+        const targetNames = targets.map(t => t.name).join(', ')
+        const targetCount = targets.length
+
         const booking = {
             id: bookingId,
             date: formattedDate,
@@ -338,9 +343,10 @@ export const handlers = [
             status: 'Pending',
             statusColor: 'pending',
             title: newBooking.title,
-            description: newBooking.description || `Observation session targeting ${newBooking.targetName}`,
-            targetId: newBooking.targetId,
-            targetName: newBooking.targetName
+            description: newBooking.description || `Observation session targeting ${targetNames}`,
+            targetCount: targetCount,
+            targets: targets,
+            targetNames: targetNames
         }
 
         // Add to upcoming bookings
@@ -514,6 +520,336 @@ export const handlers = [
             items: filtered,
             total: filtered.length,
             filters: { scope, visibleNow, popular, minMag, maxMag, search }
+        })
+    }),
+
+    // GET /api/visibility/objects - get currently visible celestial objects
+    http.get(apiUrl('/api/visibility/objects'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(400)
+
+        const url = new URL(request.url)
+        const objectType = url.searchParams.get('type')
+        const constellation = url.searchParams.get('constellation')
+        const minElevation = parseFloat(url.searchParams.get('min_elevation')) || 20
+        const limit = parseInt(url.searchParams.get('limit')) || null
+        const timeParam = url.searchParams.get('time')
+
+        // Parse requested time or use current time
+        const requestedTime = timeParam ? new Date(timeParam) : new Date()
+        const hour = requestedTime.getHours()
+
+        // Calculate a progression through the night (0 = 6pm, 1 = 6am)
+        // Night window is 6pm (18:00) to 6am (06:00)
+        let nightProgress
+        if (hour >= 18) {
+            nightProgress = (hour - 18) / 12 // Evening: 18-24 -> 0.0 to 0.5
+        } else if (hour <= 6) {
+            nightProgress = (hour + 6) / 12 // Early morning: 0-6 -> 0.5 to 1.0
+        } else {
+            nightProgress = 0.5 // Daytime - assume midnight
+        }
+
+        // Mock visibility data matching server API format
+        // Elevation varies based on time of night to simulate realistic positions
+        let visibleObjects = [
+            // Planets
+            {
+                name: "Jupiter",
+                type: "Planet",
+                baseElevation: 45,
+                elevationVariation: 15,
+                coordinates: { ra: 22.75, dec: -12.58, azimuth: 220.8 },
+                visibility: { is_visible: true, magnitude: -2.5, rise_time: null, set_time: null },
+                metadata: { constellation: "Aquarius", distance: "365-601 million km", catalog_id: null, description: "Jupiter is a planet in our solar system" }
+            },
+            {
+                name: "Saturn",
+                type: "Planet",
+                baseElevation: 35,
+                elevationVariation: 20,
+                coordinates: { ra: 21.25, dec: -18.75, azimuth: 205.6 },
+                visibility: { is_visible: true, magnitude: 0.7, rise_time: null, set_time: null },
+                metadata: { constellation: "Capricornus", distance: "1.2 billion km", catalog_id: null, description: "Saturn is a planet in our solar system" }
+            },
+            {
+                name: "Mars",
+                type: "Planet",
+                baseElevation: 50,
+                elevationVariation: 25,
+                coordinates: { ra: 14.26, dec: 19.18, azimuth: 180.5 },
+                visibility: { is_visible: true, magnitude: -2.1, rise_time: null, set_time: null },
+                metadata: { constellation: "Virgo", distance: "54.6-401 million km", catalog_id: null, description: "Mars is a planet in our solar system" }
+            },
+            {
+                name: "Venus",
+                type: "Planet",
+                baseElevation: 20,
+                elevationVariation: 15,
+                coordinates: { ra: 16.37, dec: -22.31, azimuth: 195.3 },
+                visibility: { is_visible: true, magnitude: -4.2, rise_time: null, set_time: null },
+                metadata: { constellation: "Scorpius", distance: "38-261 million km", catalog_id: null, description: "Venus is a planet in our solar system" }
+            },
+            // Bright Stars
+            {
+                name: "Sirius",
+                type: "Star",
+                baseElevation: 40,
+                elevationVariation: 35,
+                coordinates: { ra: 6.75, dec: -16.72, azimuth: 120.3 },
+                visibility: { is_visible: true, magnitude: -1.46, rise_time: null, set_time: null },
+                metadata: { constellation: "Canis Major", distance: "8.6 ly", catalog_id: null, description: "Sirius is a bright star" }
+            },
+            {
+                name: "Vega",
+                type: "Star",
+                baseElevation: 70,
+                elevationVariation: 25,
+                coordinates: { ra: 18.62, dec: 38.78, azimuth: 295.4 },
+                visibility: { is_visible: true, magnitude: 0.03, rise_time: null, set_time: null },
+                metadata: { constellation: "Lyra", distance: "25 ly", catalog_id: null, description: "Vega is a bright star" }
+            },
+            {
+                name: "Betelgeuse",
+                type: "Star",
+                baseElevation: 55,
+                elevationVariation: 20,
+                coordinates: { ra: 5.92, dec: 7.41, azimuth: 85.2 },
+                visibility: { is_visible: true, magnitude: 0.50, rise_time: null, set_time: null },
+                metadata: { constellation: "Orion", distance: "650 ly", catalog_id: null, description: "Betelgeuse is a bright star" }
+            },
+            {
+                name: "Rigel",
+                type: "Star",
+                baseElevation: 45,
+                elevationVariation: 25,
+                coordinates: { ra: 5.24, dec: -8.20, azimuth: 95.7 },
+                visibility: { is_visible: true, magnitude: 0.13, rise_time: null, set_time: null },
+                metadata: { constellation: "Orion", distance: "860 ly", catalog_id: null, description: "Rigel is a bright star" }
+            },
+            // Nebulae
+            {
+                name: "Orion Nebula",
+                type: "Emission Nebula",
+                baseElevation: 40,
+                elevationVariation: 30,
+                coordinates: { ra: 5.59, dec: -5.39, azimuth: 95.2 },
+                visibility: { is_visible: true, magnitude: 4.0, rise_time: null, set_time: null },
+                metadata: { constellation: "Orion", distance: "1344 ly", catalog_id: "M42", description: "Orion Nebula is a emission nebula" }
+            },
+            {
+                name: "Ring Nebula",
+                type: "Planetary Nebula",
+                baseElevation: 55,
+                elevationVariation: 20,
+                coordinates: { ra: 18.89, dec: 33.03, azimuth: 275.4 },
+                visibility: { is_visible: true, magnitude: 8.8, rise_time: null, set_time: null },
+                metadata: { constellation: "Lyra", distance: "2300 ly", catalog_id: "M57", description: "Ring Nebula is a planetary nebula" }
+            },
+            {
+                name: "Eagle Nebula",
+                type: "Emission Nebula",
+                baseElevation: 35,
+                elevationVariation: 25,
+                coordinates: { ra: 18.32, dec: -13.83, azimuth: 245.8 },
+                visibility: { is_visible: true, magnitude: 6.4, rise_time: null, set_time: null },
+                metadata: { constellation: "Serpens", distance: "7000 ly", catalog_id: "M16", description: "Eagle Nebula is a emission nebula" }
+            },
+            // Galaxies
+            {
+                name: "Andromeda Galaxy",
+                type: "Spiral Galaxy",
+                baseElevation: 55,
+                elevationVariation: 25,
+                coordinates: { ra: 0.71, dec: 41.27, azimuth: 35.7 },
+                visibility: { is_visible: true, magnitude: 3.4, rise_time: null, set_time: null },
+                metadata: { constellation: "Andromeda", distance: "2.5 Mly", catalog_id: "M31", description: "Andromeda Galaxy is a spiral galaxy" }
+            },
+            {
+                name: "Large Magellanic Cloud",
+                type: "Irregular Galaxy",
+                baseElevation: 40,
+                elevationVariation: 30,
+                coordinates: { ra: 5.24, dec: -69.00, azimuth: 185.3 },
+                visibility: { is_visible: true, magnitude: 0.9, rise_time: null, set_time: null },
+                metadata: { constellation: "Dorado", distance: "160000 ly", catalog_id: "LMC", description: "Large Magellanic Cloud is a irregular galaxy" }
+            },
+            {
+                name: "Whirlpool Galaxy",
+                type: "Spiral Galaxy",
+                baseElevation: 30,
+                elevationVariation: 20,
+                coordinates: { ra: 13.50, dec: 47.20, azimuth: 315.7 },
+                visibility: { is_visible: true, magnitude: 8.4, rise_time: null, set_time: null },
+                metadata: { constellation: "Canes Venatici", distance: "23 Mly", catalog_id: "M51", description: "Whirlpool Galaxy is a spiral galaxy" }
+            },
+            // Star Clusters
+            {
+                name: "Omega Centauri",
+                type: "Globular Cluster",
+                baseElevation: 35,
+                elevationVariation: 30,
+                coordinates: { ra: 13.45, dec: -47.48, azimuth: 165.4 },
+                visibility: { is_visible: true, magnitude: 3.7, rise_time: null, set_time: null },
+                metadata: { constellation: "Centaurus", distance: "15800 ly", catalog_id: "NGC 5139", description: "Omega Centauri is a globular cluster" }
+            },
+            {
+                name: "The Pleiades",
+                type: "Open Cluster",
+                baseElevation: 65,
+                elevationVariation: 20,
+                coordinates: { ra: 3.79, dec: 24.12, azimuth: 70.5 },
+                visibility: { is_visible: true, magnitude: 1.6, rise_time: null, set_time: null },
+                metadata: { constellation: "Taurus", distance: "444 ly", catalog_id: "M45", description: "The Pleiades is a open cluster" }
+            },
+            {
+                name: "Jewel Box Cluster",
+                type: "Open Cluster",
+                baseElevation: 25,
+                elevationVariation: 25,
+                coordinates: { ra: 12.74, dec: -59.86, azimuth: 175.3 },
+                visibility: { is_visible: true, magnitude: 4.2, rise_time: null, set_time: null },
+                metadata: { constellation: "Crux", distance: "6440 ly", catalog_id: "NGC 4755", description: "Jewel Box Cluster is a open cluster" }
+            }
+        ]
+
+        // Calculate elevation for each object based on time of night
+        // Using a sine wave pattern: starts at base - variation, peaks at transit (midpoint), ends at base - variation
+        visibleObjects = visibleObjects.map(obj => {
+            // Calculate elevation using sine wave: peak at middle of night (0.5)
+            // Objects rise in east (lower elevation early), transit (highest), set in west (lower elevation late)
+            const angle = (nightProgress - 0.5) * Math.PI // -PI/2 to PI/2
+            const elevation = obj.baseElevation + Math.cos(angle) * obj.elevationVariation
+
+            // Calculate rise/set times based on the mock progression
+            const sessionDate = new Date(requestedTime)
+            const riseTime = new Date(sessionDate)
+            riseTime.setHours(18 + (0.5 - obj.elevationVariation/100) * 6) // Earlier for high variation
+            const setTime = new Date(sessionDate)
+            setTime.setHours(18 + 12 - (0.5 - obj.elevationVariation/100) * 6) // Later for high variation
+
+            return {
+                ...obj,
+                coordinates: {
+                    ...obj.coordinates,
+                    elevation: Math.max(0, elevation) // Don't go below horizon
+                },
+                visibility: {
+                    ...obj.visibility,
+                    elevation: Math.max(0, elevation),
+                    is_visible: elevation > 20,
+                    rise_time: elevation > 20 ? riseTime.toISOString() : null,
+                    set_time: elevation > 20 ? setTime.toISOString() : null
+                }
+            }
+        })
+
+        // Filter by type if specified
+        if (objectType) {
+            visibleObjects = visibleObjects.filter(obj =>
+                obj.type.toLowerCase().includes(objectType.toLowerCase())
+            )
+        }
+
+        // Filter by constellation if specified
+        if (constellation) {
+            visibleObjects = visibleObjects.filter(obj =>
+                obj.metadata.constellation.toLowerCase() === constellation.toLowerCase()
+            )
+        }
+
+        // Filter by minimum elevation
+        visibleObjects = visibleObjects.filter(obj =>
+            obj.coordinates.elevation >= minElevation
+        )
+
+        // Sort by elevation (highest first)
+        visibleObjects.sort((a, b) => b.coordinates.elevation - a.coordinates.elevation)
+
+        // Apply limit
+        if (limit) {
+            visibleObjects = visibleObjects.slice(0, limit)
+        }
+
+        return HttpResponse.json({
+            timestamp: requestedTime.toISOString(),
+            location: { latitude: -37.7214, longitude: 145.0489, name: "Melbourne, Australia" },
+            objects: visibleObjects,
+            totalCount: visibleObjects.length,
+            filters: { type: objectType, constellation, min_elevation: minElevation, limit, time: timeParam }
+        })
+    }),
+
+    // GET /api/visibility/objects/<name> - get specific object visibility
+    http.get(apiUrl('/api/visibility/objects/:name'), async ({ request, params }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(300)
+
+        const objectName = params.name
+
+        // Get all visible objects
+        const url = new URL(request.url)
+        const baseUrl = url.origin + '/api/visibility/objects'
+        const allResponse = await fetch(baseUrl)
+        const allData = await allResponse.json()
+        const allObjects = allData.objects || []
+
+        // Find specific object
+        const objectInfo = allObjects.find(obj =>
+            obj.name.toLowerCase() === objectName.toLowerCase()
+        )
+
+        if (!objectInfo) {
+            return HttpResponse.json({
+                success: false,
+                error: 'object_not_visible',
+                message: `Object "${objectName}" is not currently visible or not found`
+            }, { status: 404 })
+        }
+
+        return HttpResponse.json({
+            timestamp: new Date().toISOString(),
+            object: objectInfo
+        })
+    }),
+
+    // GET /api/visibility/types - get available object types
+    http.get(apiUrl('/api/visibility/types'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(200)
+
+        const types = ["Planet", "Star", "Emission Nebula", "Planetary Nebula", "Dark Nebula",
+                      "Spiral Galaxy", "Irregular Galaxy", "Elliptical Galaxy",
+                      "Globular Cluster", "Open Cluster"]
+
+        return HttpResponse.json({
+            success: true,
+            types: types,
+            totalTypes: types.length
+        })
+    }),
+
+    // GET /api/visibility/constellations - get constellations with visible objects
+    http.get(apiUrl('/api/visibility/constellations'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(200)
+
+        const constellations = ["Aquarius", "Andromeda", "Canes Venatici", "Canis Major",
+                               "Capricornus", "Centaurus", "Crux", "Dorado", "Leo",
+                               "Lyra", "Orion", "Serpens", "Scorpius", "Taurus", "Virgo"]
+
+        return HttpResponse.json({
+            success: true,
+            constellations: constellations,
+            totalConstellations: constellations.length
         })
     }),
 ]

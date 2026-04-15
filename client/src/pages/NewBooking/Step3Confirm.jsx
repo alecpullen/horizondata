@@ -1,5 +1,5 @@
 function Step3Confirm({
-    selectedTarget,
+    selectedTargets,
     sessionDate,
     startTime,
     endTime,
@@ -8,6 +8,8 @@ function Step3Confirm({
     sessionDescription,
     setSessionDescription
 }) {
+    const OBSERVATION_MINUTES_PER_TARGET = 5
+
     // Format date for display
     const formatDate = (dateStr) => {
         if (!dateStr) return 'Not selected'
@@ -25,6 +27,9 @@ function Step3Confirm({
         if (!timeStr) return '--:--'
         return timeStr
     }
+
+    // Calculate total duration
+    const totalObservationTime = selectedTargets.length * OBSERVATION_MINUTES_PER_TARGET
 
     return (
         <div className="step-3">
@@ -57,37 +62,52 @@ function Step3Confirm({
                     </div>
                 </div>
 
+                {/* Targets Summary */}
+                <div className="confirm-section">
+                    <h3 className="confirm-section-title">Observation Plan</h3>
+
+                    <div className="targets-summary-header">
+                        <span className="targets-summary-count">
+                            {selectedTargets.length} target{selectedTargets.length !== 1 ? 's' : ''} selected
+                        </span>
+                        <span className="targets-summary-time">
+                            {totalObservationTime} minutes total ({OBSERVATION_MINUTES_PER_TARGET} min each)
+                        </span>
+                    </div>
+
+                    <div className="targets-list-confirm">
+                        {selectedTargets.map((target, index) => (
+                            <div key={target.id} className="target-confirm-item">
+                                <div className="target-confirm-number">{index + 1}</div>
+                                <div className="target-confirm-info">
+                                    <div className="target-confirm-name">{target.name}</div>
+                                    <div className="target-confirm-meta">
+                                        <span className={`type-badge type-badge--${(target.type || 'unknown').toLowerCase().replace(/\s+.*$/, '')}`}>
+                                            {target.type || 'Unknown'}
+                                        </span>
+                                        {target.constellation && (
+                                            <span className="target-confirm-constellation">{target.constellation}</span>
+                                        )}
+                                        {target.magnitude !== undefined && (
+                                            <span className="target-confirm-magnitude">Mag {target.magnitude.toFixed(1)}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="target-confirm-quality">
+                                    <span className={`quality-elevation quality-elevation--${target.quality}`}>
+                                        {target.trend?.direction} {target.altitude}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Booking Summary */}
                 <div className="confirm-section">
-                    <h3 className="confirm-section-title">Booking Summary</h3>
+                    <h3 className="confirm-section-title">Schedule</h3>
 
                     <div className="summary-card">
-                        <div className="summary-item summary-item--target">
-                            <span className="summary-label">Target</span>
-                            <div className="summary-value">
-                                <strong>{selectedTarget?.name}</strong>
-                                <span className={`type-badge type-badge--${selectedTarget?.type?.toLowerCase() || 'unknown'}`}>
-                                    {selectedTarget?.type || 'Unknown'}
-                                </span>
-                            </div>
-                        </div>
-
-                        {selectedTarget?.constellation && (
-                            <div className="summary-item">
-                                <span className="summary-label">Constellation</span>
-                                <span className="summary-value">{selectedTarget.constellation}</span>
-                            </div>
-                        )}
-
-                        {selectedTarget?.magnitude !== undefined && (
-                            <div className="summary-item">
-                                <span className="summary-label">Magnitude</span>
-                                <span className="summary-value">{selectedTarget.magnitude.toFixed(2)}</span>
-                            </div>
-                        )}
-
-                        <div className="summary-divider" />
-
                         <div className="summary-item">
                             <span className="summary-label">Date</span>
                             <span className="summary-value">{formatDate(sessionDate)}</span>
@@ -99,14 +119,18 @@ function Step3Confirm({
                         </div>
 
                         <div className="summary-item">
-                            <span className="summary-label">Duration</span>
+                            <span className="summary-label">Session Duration</span>
                             <span className="summary-value">
                                 {startTime && endTime ? (
                                     (() => {
                                         const [startH, startM] = startTime.split(':').map(Number)
                                         const [endH, endM] = endTime.split(':').map(Number)
-                                        const startMin = startH * 60 + startM
-                                        const endMin = endH * 60 + endM
+                                        let startMin = startH * 60 + startM
+                                        let endMin = endH * 60 + endM
+                                        // Handle crossing midnight
+                                        if (endMin < startMin) {
+                                            endMin += 24 * 60
+                                        }
                                         const durationMin = endMin - startMin
                                         const hours = Math.floor(durationMin / 60)
                                         const mins = durationMin % 60
@@ -114,6 +138,11 @@ function Step3Confirm({
                                     })()
                                 ) : '—'}
                             </span>
+                        </div>
+
+                        <div className="summary-item">
+                            <span className="summary-label">Observation Time</span>
+                            <span className="summary-value">{totalObservationTime} minutes</span>
                         </div>
                     </div>
                 </div>
