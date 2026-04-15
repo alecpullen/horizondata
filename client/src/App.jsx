@@ -9,6 +9,7 @@ import ResetPassword from './pages/ResetPassword'
 import VerifyEmail  from './pages/VerifyEmail'
 import PendingApproval from './pages/PendingApproval'
 import MyBookings   from './pages/MyBookings'
+import MyAccount    from './pages/MyAccount'
 import TeacherView  from './pages/TeacherView'
 import StudentView  from './pages/StudentView'
 import StudentJoin  from './pages/StudentJoin'
@@ -64,6 +65,7 @@ function App() {
                         <Route path="/verify-email"    element={<VerifyEmail />}       />
                         <Route path="/pending-approval" element={<PendingApproval />} />
                         <Route path="/bookings"        element={<MyBookings />}        />
+                        <Route path="/account"         element={<MyAccount />}         />
                         <Route path="/live/teacher"    element={<TeacherView />}       />
                         <Route path="/live/student"    element={<StudentView />}       />
                         <Route path="/join"            element={<StudentJoin />}       />

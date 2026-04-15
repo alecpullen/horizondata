@@ -5,6 +5,10 @@
     padding: 32px 40px;
 }
 
+.bookings-page--with-subnav {
+    min-height: calc(100vh - 112px);
+}
+
 .bookings-container {
     max-width: 900px;
     margin: 0 auto;

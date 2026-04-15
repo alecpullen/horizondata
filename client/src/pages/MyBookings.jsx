@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import TopBar from '../components/TopBar'
+import AccountNav from '../components/auth/AccountNav'
 import './MyBookings.css'
 
 // Mock booking data
@@ -162,8 +163,9 @@ function MyBookings() {
     return (
         <div className="page-shell">
             <TopBar activePath="/bookings" />
+            <AccountNav activePath="/bookings" />
 
-            <main className="bookings-page">
+            <main className="bookings-page bookings-page--with-subnav">
                 <div className="bookings-container">
                     <header className="bookings-header">
                         <h1 className="bookings-title">My Bookings</h1>
