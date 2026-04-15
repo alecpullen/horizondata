@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import AppLogo from './AppLogo'
 import './TopBar.css'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
 const navLinks = [
     {
         label: 'Live View',
@@ -23,8 +25,29 @@ const accountLinks = [
 function TopBar({ activePath }) {
     const [accountOpen, setAccountOpen] = useState(false)
     const [liveViewOpen, setLiveViewOpen] = useState(false)
+    const [fullName, setFullName] = useState('')
     const accountDropdownRef = useRef(null)
     const liveViewDropdownRef = useRef(null)
+
+    // Fetch user info on mount
+    useEffect(() => {
+        async function fetchUser() {
+            try {
+                const response = await fetch(`${API_BASE}/api/account`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include',
+                })
+                if (response.ok) {
+                    const data = await response.json()
+                    setFullName(data.fullName || '')
+                }
+            } catch (err) {
+                // Silently fail - avatar will show placeholder
+                console.error('Failed to fetch user:', err)
+            }
+        }
+        fetchUser()
+    }, [])
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -139,7 +162,11 @@ function TopBar({ activePath }) {
                     <span className="status-dot online" />
                     ONLINE
                 </div>
-                <div className="avatar">MM</div>
+                <div className="avatar">
+                    {fullName
+                        ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        : '??'}
+                </div>
             </div>
 
         </header>
