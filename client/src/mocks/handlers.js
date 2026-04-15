@@ -54,9 +54,36 @@ const mockAccount = {
     notificationsEnabled: true
 }
 
+// Helper to format date as DD/MM/YYYY
+function formatDate(date) {
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+}
+
+// Helper to format time as HH:MM
+function formatTime(date) {
+    return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0')
+}
+
+// Calculate a session starting in a few minutes (for testing the start workflow)
+const now = new Date()
+const sessionStart = new Date(now.getTime() + 5 * 60000) // 5 minutes from now
+const sessionEnd = new Date(sessionStart.getTime() + 90 * 60000) // 1.5 hours later
+
 // Mock bookings data
 const mockBookings = {
     upcoming: [
+        {
+            id: 99,
+            date: formatDate(sessionStart),
+            time: `${formatTime(sessionStart)} - ${formatTime(sessionEnd)}`,
+            status: 'Confirmed',
+            statusColor: 'confirmed',
+            title: 'Test Session - Starting Soon',
+            description: 'This mock session starts in 5 minutes.'
+        },
         {
             id: 1,
             date: '18/04/2026',
@@ -322,6 +349,65 @@ const mockSpaceObjects = [
 // Session storage key for persistence across reloads
 const SESSION_KEY = 'horizon-session'
 
+// Active sessions with join codes and participants (in-memory store)
+// Key: bookingId, Value: { joinCode, participants[], createdAt }
+const activeSessions = new Map()
+
+// Helper to generate a 6-digit join code
+function generateJoinCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// Helper to get or create a session for a booking
+function getOrCreateSession(bookingId) {
+    if (!activeSessions.has(bookingId)) {
+        const joinCode = generateJoinCode()
+        activeSessions.set(bookingId, {
+            bookingId: bookingId,
+            joinCode: joinCode,
+            participants: [],
+            createdAt: new Date().toISOString(),
+            status: 'waiting' // waiting, active, ended
+        })
+    }
+    return activeSessions.get(bookingId)
+}
+
+// Initialize mock sessions with sample data for UX testing
+function initializeMockSessions() {
+    // Mock students for testing
+    const mockStudents = [
+        { id: '101', name: 'Emma Wilson', joinedAt: new Date(Date.now() - 5 * 60000).toISOString() },
+        { id: '102', name: 'Liam Chen', joinedAt: new Date(Date.now() - 3 * 60000).toISOString() },
+        { id: '103', name: 'Sophia Patel', joinedAt: new Date(Date.now() - 2 * 60000).toISOString() },
+        { id: '104', name: 'Noah Martinez', joinedAt: new Date(Date.now() - 1 * 60000).toISOString() },
+    ]
+
+    // Create a session for booking 99 (Test Session - Starting Soon) with pre-joined students
+    activeSessions.set(99, {
+        bookingId: 99,
+        joinCode: '123456',
+        participants: [...mockStudents],
+        createdAt: new Date(Date.now() - 10 * 60000).toISOString(),
+        status: 'waiting'
+    })
+
+    // Create a session for booking 1 (Year 9 Science Class) with a couple students
+    activeSessions.set(1, {
+        bookingId: 1,
+        joinCode: '789012',
+        participants: [
+            { id: '201', name: 'Oliver Brown', joinedAt: new Date(Date.now() - 8 * 60000).toISOString() },
+            { id: '202', name: 'Ava Kim', joinedAt: new Date(Date.now() - 4 * 60000).toISOString() },
+        ],
+        createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
+        status: 'waiting'
+    })
+}
+
+// Initialize mock data
+initializeMockSessions()
+
 // Initialize session from storage on load
 if (typeof window !== 'undefined') {
     const stored = sessionStorage.getItem(SESSION_KEY)
@@ -498,6 +584,31 @@ export const handlers = [
             id: bookingId,
             booking: booking
         }, { status: 201 })
+    }),
+
+    // GET /api/bookings/:id - get a single booking
+    http.get(apiUrl('/api/bookings/:id'), async ({ request, params }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(300)
+
+        const bookingId = parseInt(params.id)
+        const allBookings = [
+            ...mockBookings.upcoming,
+            ...mockBookings.pending,
+            ...mockBookings.past
+        ]
+        const booking = allBookings.find(b => b.id === bookingId)
+
+        if (!booking) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Booking not found'
+            }, { status: 404 })
+        }
+
+        return HttpResponse.json(booking)
     }),
 
     // GET /api/bookings/availability - get available time slots for a date range
@@ -993,6 +1104,195 @@ export const handlers = [
             success: true,
             constellations: constellations,
             totalConstellations: constellations.length
+        })
+    }),
+
+    // POST /api/sessions/:id/join - student joins a session with join code
+    http.post(apiUrl('/api/sessions/:id/join'), async ({ request, params }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(300)
+
+        const bookingId = parseInt(params.id, 10)
+        const body = await request.json()
+        const { joinCode } = body
+
+        const session = activeSessions.get(bookingId)
+
+        if (!session) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Session not found'
+            }, { status: 404 })
+        }
+
+        if (session.joinCode !== joinCode) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Invalid join code'
+            }, { status: 403 })
+        }
+
+        // Get current user from session
+        const user = getCurrentUser()
+        if (!user) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Not authenticated'
+            }, { status: 401 })
+        }
+
+        // Check if already joined
+        const alreadyJoined = session.participants.find(p => p.id === user.id)
+        if (alreadyJoined) {
+            return HttpResponse.json({
+                success: true,
+                message: 'Already joined',
+                session: {
+                    bookingId: session.bookingId,
+                    joinCode: session.joinCode,
+                    status: session.status
+                }
+            })
+        }
+
+        // Add participant
+        const participant = {
+            id: user.id,
+            name: user.fullName,
+            joinedAt: new Date().toISOString()
+        }
+        session.participants.push(participant)
+
+        return HttpResponse.json({
+            success: true,
+            message: 'Joined session successfully',
+            session: {
+                bookingId: session.bookingId,
+                joinCode: session.joinCode,
+                status: session.status
+            }
+        })
+    }),
+
+    // GET /api/sessions/:id/participants - list participants in a session
+    http.get(apiUrl('/api/sessions/:id/participants'), async ({ params }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(200)
+
+        const bookingId = parseInt(params.id, 10)
+        console.log('[MSW] GET /api/sessions/:id/participants - bookingId:', bookingId)
+
+        const session = activeSessions.get(bookingId)
+
+        if (!session) {
+            console.log('[MSW] No session found, returning empty participants')
+            return HttpResponse.json({
+                success: true,
+                participants: [],
+                total: 0
+            })
+        }
+
+        console.log('[MSW] Returning participants:', session.participants)
+        return HttpResponse.json({
+            success: true,
+            participants: session.participants,
+            total: session.participants.length
+        })
+    }),
+
+    // GET /api/sessions/:id - get session details (join code, status)
+    http.get(apiUrl('/api/sessions/:id'), async ({ params }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(200)
+
+        const bookingId = parseInt(params.id, 10)
+        console.log('[MSW] GET /api/sessions/:id - bookingId:', bookingId)
+        console.log('[MSW] activeSessions:', Array.from(activeSessions.entries()))
+
+        const session = getOrCreateSession(bookingId)
+        console.log('[MSW] Returning session:', session)
+
+        return HttpResponse.json({
+            success: true,
+            session: {
+                bookingId: session.bookingId,
+                joinCode: session.joinCode,
+                status: session.status,
+                participantCount: session.participants.length,
+                createdAt: session.createdAt
+            }
+        })
+    }),
+
+    // POST /api/sessions/lookup - find session by join code
+    http.post(apiUrl('/api/sessions/lookup'), async ({ request }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(200)
+
+        const body = await request.json()
+        const { joinCode } = body
+
+        if (!joinCode) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Join code required'
+            }, { status: 400 })
+        }
+
+        // Search through active sessions to find matching join code
+        for (const [bookingId, session] of activeSessions) {
+            if (session.joinCode === joinCode) {
+                return HttpResponse.json({
+                    success: true,
+                    bookingId: bookingId,
+                    status: session.status
+                })
+            }
+        }
+
+        return HttpResponse.json({
+            success: false,
+            error: 'Invalid join code'
+        }, { status: 404 })
+    }),
+
+    // POST /api/sessions/:id/start - start the session (teacher)
+    http.post(apiUrl('/api/sessions/:id/start'), async ({ params }) => {
+        if (!isMswEnabled()) {
+            return passthrough()
+        }
+        await delay(300)
+
+        const bookingId = parseInt(params.id, 10)
+        const session = activeSessions.get(bookingId)
+
+        if (!session) {
+            return HttpResponse.json({
+                success: false,
+                error: 'Session not found'
+            }, { status: 404 })
+        }
+
+        session.status = 'active'
+        session.startedAt = new Date().toISOString()
+
+        return HttpResponse.json({
+            success: true,
+            session: {
+                bookingId: session.bookingId,
+                joinCode: session.joinCode,
+                status: session.status,
+                startedAt: session.startedAt
+            }
         })
     }),
 ]

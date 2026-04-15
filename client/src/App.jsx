@@ -83,7 +83,7 @@ function AppRoutes() {
                 <Route path="/live/student" element={
                     <ProtectedRoute><StudentView /></ProtectedRoute>
                 } />
-                <Route path="/lobby" element={
+                <Route path="/lobby/:bookingId?" element={
                     <ProtectedRoute><SessionLobby /></ProtectedRoute>
                 } />
             </Routes>

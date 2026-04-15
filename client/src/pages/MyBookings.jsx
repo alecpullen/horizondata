@@ -50,7 +50,7 @@ function getTimeUntilStart(sessionDate, sessionTime) {
 
 function BookingCard({ booking, isPast }) {
     const handleStartSession = () => {
-        window.location.href = '/live/teacher'
+        window.location.href = `/lobby/${booking.id}`
     }
 
     const handleManage = () => {
