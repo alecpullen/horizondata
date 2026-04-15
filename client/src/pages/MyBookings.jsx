@@ -3,7 +3,7 @@ import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
 import './MyBookings.css'
 
-// Mock booking data
+// Mock booking data - one confirmed, one pending, one past
 const mockBookings = {
     upcoming: [
         {
@@ -13,62 +13,30 @@ const mockBookings = {
             status: 'Confirmed',
             statusColor: 'confirmed',
             title: 'Year 9 Science Class',
-            description: 'Introduction to telescope operation and lunar observation. Students will learn basic telescope controls and capture images of the Moon.',
-            sessionCode: 'ABC-123'
-        },
-        {
-            id: 2,
-            date: '16/04/2026',
-            time: '14:00 - 15:30',
-            status: 'Confirmed',
-            statusColor: 'confirmed',
-            title: 'Year 10 Astronomy',
-            description: 'Planetary observation session focusing on Jupiter and its moons. Students will practice tracking and image capture.',
-            sessionCode: 'DEF-456'
-        },
+            description: 'Introduction to telescope operation and lunar observation. Students will learn basic telescope controls and capture images of the Moon.'
+        }
+    ],
+    past: [
         {
             id: 3,
+            date: '08/04/2026',
+            time: '10:00 - 11:30',
+            status: 'Completed',
+            statusColor: 'completed',
+            title: 'Year 10 - Jupiter Observation',
+            description: 'Planetary observation session. Students captured 12 images of Jupiter and its Galilean moons.',
+            captureCount: 12
+        }
+    ],
+    pending: [
+        {
+            id: 2,
             date: '22/04/2026',
             time: '19:30 - 21:00',
             status: 'Pending',
             statusColor: 'pending',
             title: 'Evening Star Party',
-            description: 'After-school astronomy club session. Deep sky objects including nebulae and star clusters.',
-            sessionCode: null
-        }
-    ],
-    past: [
-        {
-            id: 4,
-            date: '01/04/2026',
-            time: '10:00 - 11:30',
-            status: 'Completed',
-            statusColor: 'completed',
-            title: 'Year 8 Science - Moon Phase',
-            description: 'Students observed and documented different moon phases. 12 images captured and downloaded.',
-            sessionCode: null
-        },
-        {
-            id: 5,
-            date: '28/03/2026',
-            time: '09:00 - 10:30',
-            status: 'Completed',
-            statusColor: 'completed',
-            title: 'Year 9 - Solar Observation',
-            description: 'Safe solar observation using neutral density filters. Students learned about sunspots and solar features.',
-            sessionCode: null
-        }
-    ],
-    pending: [
-        {
-            id: 6,
-            date: '25/04/2026',
-            time: '20:00 - 22:00',
-            status: 'Awaiting Approval',
-            statusColor: 'awaiting',
-            title: 'Weekend Astrophotography Workshop',
-            description: 'Advanced session for year 11/12 students. Focus on long-exposure imaging and image processing.',
-            sessionCode: null
+            description: 'After-school astronomy club session. Deep sky objects including nebulae and star clusters.'
         }
     ]
 }
@@ -86,11 +54,45 @@ const statusColors = {
     awaiting: 'var(--orange)'
 }
 
+// Parse date and time string to Date object
+function parseSessionTime(dateStr, timeStr) {
+    // Expected format: date '14/04/2026', time '09:00 - 10:30'
+    const [day, month, year] = dateStr.split('/').map(Number)
+    const startTime = timeStr.split(' - ')[0]
+    const [hours, minutes] = startTime.split(':').map(Number)
+
+    return new Date(year, month - 1, day, hours, minutes)
+}
+
+// Check if session can be started (within 10 minutes of start time)
+function canStartSession(sessionDate, sessionTime) {
+    const sessionStartTime = parseSessionTime(sessionDate, sessionTime)
+    const now = new Date()
+    const diffMs = sessionStartTime - now
+    const diffMinutes = diffMs / (1000 * 60)
+
+    // Can start if within 10 minutes before the session start time
+    return diffMinutes <= 10 && diffMinutes > -120 // Allow up to 2 hours after start
+}
+
+// Get time until session can be started
+function getTimeUntilStart(sessionDate, sessionTime) {
+    const sessionStartTime = parseSessionTime(sessionDate, sessionTime)
+    const now = new Date()
+    const diffMs = sessionStartTime - now
+    const diffMinutes = Math.ceil(diffMs / (1000 * 60)) - 10
+
+    if (diffMinutes <= 0) return 'Available now'
+    if (diffMinutes < 60) return `Available in ${diffMinutes} min`
+    const hours = Math.floor(diffMinutes / 60)
+    const mins = diffMinutes % 60
+    return `Available in ${hours}h ${mins}m`
+}
+
 function BookingCard({ booking, isPast }) {
-    const handleJoin = () => {
-        if (booking.sessionCode) {
-            window.location.href = `/join?code=${booking.sessionCode}`
-        }
+    const handleStartSession = () => {
+        // Navigate to teacher live view - session code generated on the telescope
+        window.location.href = '/live/teacher'
     }
 
     const handleManage = () => {
@@ -98,11 +100,13 @@ function BookingCard({ booking, isPast }) {
         console.log('Manage booking:', booking.id)
     }
 
+    const isStartable = canStartSession(booking.date, booking.time)
+    const timeUntilStart = getTimeUntilStart(booking.date, booking.time)
+
     return (
         <div className="booking-card">
             <div className="booking-card__header">
                 <div className="booking-card__date">
-                    <span className="booking-card__date-icon">📅</span>
                     <span className="booking-card__date-text">{booking.date}</span>
                     <span className="booking-card__time">{booking.time}</span>
                 </div>
@@ -117,22 +121,35 @@ function BookingCard({ booking, isPast }) {
             <div className="booking-card__content">
                 <h3 className="booking-card__title">{booking.title}</h3>
                 <p className="booking-card__description">{booking.description}</p>
-                {booking.sessionCode && (
-                    <div className="booking-card__code">
-                        <span className="booking-card__code-label">Session Code:</span>
-                        <span className="booking-card__code-value">{booking.sessionCode}</span>
+                {isPast && booking.captureCount > 0 && (
+                    <div className="booking-card__captures">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        <span>{booking.captureCount} captures</span>
                     </div>
                 )}
             </div>
 
             <div className="booking-card__actions">
-                {!isPast && booking.statusColor !== 'awaiting' && (
+                {!isPast && booking.statusColor === 'confirmed' && (
                     <button
                         className="booking-card__btn booking-card__btn--primary"
-                        onClick={handleJoin}
-                        disabled={!booking.sessionCode}
+                        onClick={handleStartSession}
+                        disabled={!isStartable}
+                        title={!isStartable ? timeUntilStart : ''}
                     >
-                        {booking.sessionCode ? 'Join Session' : 'Not Started'}
+                        Start Session
+                    </button>
+                )}
+                {!isPast && booking.statusColor === 'pending' && (
+                    <button
+                        className="booking-card__btn booking-card__btn--primary"
+                        disabled
+                    >
+                        Awaiting Approval
                     </button>
                 )}
                 {isPast && (
@@ -150,6 +167,11 @@ function BookingCard({ booking, isPast }) {
                     {isPast ? 'Details' : 'Manage'}
                 </button>
             </div>
+            {!isPast && booking.statusColor === 'confirmed' && !isStartable && (
+                <div className="booking-card__start-hint">
+                    {timeUntilStart}
+                </div>
+            )}
         </div>
     )
 }
@@ -202,7 +224,14 @@ function MyBookings() {
                             ))
                         ) : (
                             <div className="bookings-empty">
-                                <div className="bookings-empty__icon">📅</div>
+                                <div className="bookings-empty__icon">
+                                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                    </svg>
+                                </div>
                                 <h3 className="bookings-empty__title">No {activeTab} bookings</h3>
                                 <p className="bookings-empty__text">
                                     {activeTab === 'upcoming'
