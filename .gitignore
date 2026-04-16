@@ -33,6 +33,9 @@ CLAUDE.md
 
 # ── Claude Code ────────────────────────────
 .claude/
+.remember/
+.agents/
+skills-lock.json
 
 # ── Aider ──────────────────────────────────
 .aider.chat.history.md
