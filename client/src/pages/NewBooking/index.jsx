@@ -80,65 +80,132 @@ function NewBooking() {
     async function fetchTargets() {
         setIsLoading(true)
         try {
-            // Build query params from filters for visibility API
-            const params = new URLSearchParams()
-            if (filters.type && filters.type !== 'all') params.append('type', filters.type)
+            let transformedTargets = []
+            let sessionInfo = null
 
-            // Include selected session time for accurate visibility calculation
-            if (sessionDate && startTime) {
-                const sessionDateTime = new Date(`${sessionDate}T${startTime}`)
-                params.append('time', sessionDateTime.toISOString())
-            }
-
-            const response = await fetch(`${API_BASE}/api/visibility/objects?${params}`, {
-                headers: { 'Accept': 'application/json' },
-                credentials: 'include',
-            })
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`)
-            }
-
-            const data = await response.json()
-
-            // Transform visibility API response to target format
-            let transformedTargets = (data.objects || []).map(obj => {
-                const elevation = obj.coordinates?.elevation ?? 0
-                const riseTime = obj.visibility?.rise_time ? new Date(obj.visibility.rise_time) : null
-                const setTime = obj.visibility?.set_time ? new Date(obj.visibility.set_time) : null
-
-                // Calculate trend and transit info
-                const sessionTime = sessionDate && startTime ? new Date(`${sessionDate}T${startTime}`) : new Date()
-                const trend = calculateTrend(sessionTime, riseTime, setTime)
-                const transitTime = calculateTransitTime(riseTime, setTime)
-
-                // Quality based on elevation: green (>45°), yellow (20-45°), red (<20°)
-                const quality = elevation > 45 ? 'good' : elevation > 20 ? 'fair' : 'poor'
-
-                return {
-                    id: obj.name.toLowerCase().replace(/\s+/g, '-'),
-                    name: obj.name,
-                    type: obj.type,
-                    // Map coordinates
-                    rightAscension: obj.coordinates?.ra ? `${obj.coordinates.ra.toFixed(2)}h` : null,
-                    declination: obj.coordinates?.dec ? `${obj.coordinates.dec > 0 ? '+' : ''}${obj.coordinates.dec.toFixed(2)}°` : null,
-                    altitude: elevation.toFixed(1) + '°',
-                    elevation: elevation, // numeric for sorting
-                    azimuth: obj.coordinates?.azimuth ? `${obj.coordinates.azimuth.toFixed(1)}°` : null,
-                    // Map visibility data
-                    magnitude: obj.visibility?.magnitude ?? null,
-                    isVisible: obj.visibility?.is_visible ?? false,
-                    // Quality indicators
-                    trend,
-                    transitTime,
-                    quality,
-                    // Map metadata
-                    constellation: obj.metadata?.constellation || 'Unknown',
-                    catalog: obj.metadata?.catalog_id || null,
-                    description: obj.metadata?.description || null,
-                    distance: obj.metadata?.distance || null,
+            // Use session-aware API if we have date and times
+            if (sessionDate && startTime && endTime) {
+                // Convert local date/time to UTC ISO format
+                const startDateTime = new Date(`${sessionDate}T${startTime}`)
+                const endDateTime = new Date(`${sessionDate}T${endTime}`)
+                
+                // Handle crossing midnight
+                if (endDateTime < startDateTime) {
+                    endDateTime.setDate(endDateTime.getDate() + 1)
                 }
-            })
+
+                const params = new URLSearchParams({
+                    start_time: startDateTime.toISOString(),
+                    end_time: endDateTime.toISOString(),
+                    min_elevation: '30'
+                })
+
+                const response = await fetch(`${API_BASE}/api/visibility/session?${params}`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include',
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`)
+                }
+
+                const data = await response.json()
+                sessionInfo = data.session
+
+                // Transform session API response to target format
+                transformedTargets = (data.targets || []).map(target => {
+                    // Quality mapping: excellent/good/fair/poor to our display system
+                    const qualityMap = {
+                        'excellent': 'good',
+                        'good': 'good',
+                        'fair': 'fair',
+                        'poor': 'poor',
+                        'not_visible': 'poor'
+                    }
+
+                    return {
+                        id: target.name.toLowerCase().replace(/\s+/g, '-'),
+                        name: target.name,
+                        type: target.type,
+                        // Coordinates
+                        rightAscension: target.coordinates?.ra || null,
+                        declination: target.coordinates?.dec || null,
+                        ra: target.coordinates?.ra_hours?.toFixed(2) + 'h',
+                        dec: target.coordinates?.dec_degrees?.toFixed(2) + '°',
+                        altitude: target.elevation_max?.toFixed(1) + '°',
+                        elevation: target.elevation_max,
+                        azimuth: null,
+                        // Magnitude
+                        magnitude: target.magnitude ?? null,
+                        isVisible: target.quality_grade !== 'not_visible',
+                        // Session-aware quality data
+                        quality: qualityMap[target.quality_grade] || 'poor',
+                        qualityGrade: target.quality_grade,
+                        qualityScore: target.quality_score,
+                        elevationStart: target.elevation_start,
+                        elevationEnd: target.elevation_end,
+                        elevationMin: target.elevation_min,
+                        elevationMax: target.elevation_max,
+                        transitsDuringSession: target.transits_during_session,
+                        transitTime: target.transit_time,
+                        visibleEntireSession: target.visible_entire_session,
+                        setsDuringSession: target.sets_during_session,
+                        bestTime: target.best_time,
+                        recommendation: target.recommendation,
+                        // Metadata
+                        constellation: target.constellation || 'Unknown',
+                        catalog: target.catalog_id || null,
+                        description: null,
+                        distance: null,
+                        // Trend (simplified for session view)
+                        trend: target.transits_during_session 
+                            ? { direction: '●', label: 'Transits during session' }
+                            : target.sets_during_session
+                                ? { direction: '↘', label: 'Setting' }
+                                : { direction: '↗', label: 'Rising' }
+                    }
+                })
+            } else {
+                // Fallback to basic visibility API if no session times
+                const params = new URLSearchParams()
+                if (filters.type && filters.type !== 'all') params.append('type', filters.type)
+
+                const response = await fetch(`${API_BASE}/api/visibility/objects?${params}`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include',
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`)
+                }
+
+                const data = await response.json()
+
+                transformedTargets = (data.objects || []).map(obj => {
+                    const elevation = obj.coordinates?.elevation ?? 0
+                    const quality = elevation > 45 ? 'good' : elevation > 20 ? 'fair' : 'poor'
+
+                    return {
+                        id: obj.name.toLowerCase().replace(/\s+/g, '-'),
+                        name: obj.name,
+                        type: obj.type,
+                        rightAscension: obj.coordinates?.ra ? `${obj.coordinates.ra.toFixed(2)}h` : null,
+                        declination: obj.coordinates?.dec ? `${obj.coordinates.dec > 0 ? '+' : ''}${obj.coordinates.dec.toFixed(2)}°` : null,
+                        altitude: elevation.toFixed(1) + '°',
+                        elevation: elevation,
+                        azimuth: obj.coordinates?.azimuth ? `${obj.coordinates.azimuth.toFixed(1)}°` : null,
+                        magnitude: obj.visibility?.magnitude ?? null,
+                        isVisible: obj.visibility?.is_visible ?? false,
+                        quality,
+                        qualityGrade: null,
+                        qualityScore: null,
+                        constellation: obj.metadata?.constellation || 'Unknown',
+                        catalog: obj.metadata?.catalog_id || null,
+                        trend: { direction: '●', label: 'Current position' },
+                        transitTime: null
+                    }
+                })
+            }
 
             // Client-side search filtering
             if (filters.search) {
@@ -150,10 +217,20 @@ function NewBooking() {
                 )
             }
 
-            // Sort by elevation (highest first) - best viewing first
-            transformedTargets.sort((a, b) => b.elevation - a.elevation)
+            // Sort by quality score (highest first) if available, otherwise by elevation
+            transformedTargets.sort((a, b) => {
+                if (a.qualityScore !== null && b.qualityScore !== null) {
+                    return b.qualityScore - a.qualityScore
+                }
+                return b.elevation - a.elevation
+            })
 
             setTargets(transformedTargets)
+            
+            // Store session info for display (moon phase, etc.)
+            if (sessionInfo) {
+                window.sessionVisibilityInfo = sessionInfo
+            }
         } catch (err) {
             showToast({ type: 'error', message: 'Failed to load targets' })
             console.error('Failed to fetch targets:', err)

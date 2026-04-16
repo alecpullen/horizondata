@@ -3,13 +3,31 @@
 
 from flask import Blueprint, request, jsonify
 from app.services.visibility_service import get_visibility_service
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
 # Create blueprint
 visibility_bp = Blueprint('visibility', __name__, url_prefix='/api/visibility')
+
+
+def convert_numpy(obj):
+    """Convert numpy types to Python native types for JSON serialization"""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.bool_, np.bool)):
+        return bool(obj)
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    if isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    if isinstance(obj, dict):
+        return {k: convert_numpy(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [convert_numpy(v) for v in obj]
+    return obj
 
 
 def create_error_response(error_code: str, message: str, status_code: int = 400):
@@ -24,7 +42,7 @@ def create_error_response(error_code: str, message: str, status_code: int = 400)
 def create_success_response(data: dict):
     """Create standardized success response"""
     response = {'success': True}
-    response.update(data)
+    response.update(convert_numpy(data))
     return jsonify(response)
 
 
@@ -106,8 +124,10 @@ def get_visible_objects():
         return create_success_response(response_data)
         
     except Exception as e:
+        import traceback
         logger.error(f"Error getting visible objects: {e}")
-        return create_error_response('internal_error', 'Failed to calculate visible objects', 500)
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return create_error_response('internal_error', f'Failed to calculate visible objects: {str(e)}', 500)
 
 
 @visibility_bp.route('/objects/<object_name>', methods=['GET'])
@@ -243,3 +263,66 @@ def force_visibility_update():
     except Exception as e:
         logger.error(f"Error forcing visibility update: {e}")
         return create_error_response('internal_error', 'Failed to force visibility update', 500)
+
+
+@visibility_bp.route('/session', methods=['GET'])
+def get_session_targets():
+    """
+    Get celestial targets optimized for a specific observation session window.
+    
+    Query Parameters:
+    - start_time: ISO8601 UTC timestamp (required)
+    - end_time: ISO8601 UTC timestamp (required)
+    - min_elevation: Minimum elevation in degrees (optional, default: 30, max: 90)
+    
+    Returns targets categorized by quality grade with session metadata including
+    moon phase information.
+    """
+    try:
+        # Parse query parameters
+        start_time_str = request.args.get('start_time')
+        end_time_str = request.args.get('end_time')
+        min_elevation = request.args.get('min_elevation', default=30.0, type=float)
+        
+        # Validate required parameters
+        if not start_time_str:
+            return create_error_response('missing_parameter', 'start_time is required')
+        if not end_time_str:
+            return create_error_response('missing_parameter', 'end_time is required')
+        
+        # Parse timestamps
+        try:
+            start_time = parse_iso_timestamp(start_time_str)
+            end_time = parse_iso_timestamp(end_time_str)
+        except ValueError as e:
+            return create_error_response('invalid_format', 'Use ISO 8601 format (e.g., 2026-04-25T10:00:00Z)')
+        
+        # Validate elevation
+        if min_elevation > 90:
+            return create_error_response('invalid_elevation', 'min_elevation cannot exceed 90 degrees')
+        if min_elevation < 0:
+            return create_error_response('invalid_elevation', 'min_elevation cannot be negative')
+        
+        # Additional validation
+        current_time = datetime.now(timezone.utc)
+        if start_time < current_time - timedelta(hours=24):
+            return create_error_response('past_date', 'Cannot calculate visibility for dates more than 24 hours in the past')
+        
+        max_duration = timedelta(hours=8)
+        if (end_time - start_time) > max_duration:
+            return create_error_response('session_too_long', 'Maximum session duration is 8 hours')
+        
+        if end_time <= start_time:
+            return create_error_response('invalid_range', 'end_time must be after start_time')
+        
+        # Get visibility service and calculate session targets
+        visibility_service = get_visibility_service()
+        result = visibility_service.get_session_targets(start_time, end_time, min_elevation)
+        
+        return create_success_response(result)
+        
+    except ValueError as e:
+        return create_error_response('validation_error', str(e))
+    except Exception as e:
+        logger.error(f"Error getting session targets: {e}")
+        return create_error_response('internal_error', 'Failed to calculate session targets', 500)

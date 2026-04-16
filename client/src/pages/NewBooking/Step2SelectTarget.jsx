@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 function Step2SelectTarget({
     targets,
@@ -10,6 +10,17 @@ function Step2SelectTarget({
     onApplyFilters,
     isLoading
 }) {
+    const [showAllObjects, setShowAllObjects] = useState(false)
+    
+    // Get session info from global (set by parent)
+    const sessionInfo = typeof window !== 'undefined' ? window.sessionVisibilityInfo : null
+    
+    // Filter targets by quality for recommendations
+    const recommendedTargets = targets.filter(t => t.qualityGrade === 'excellent' || t.qualityGrade === 'good')
+    const otherTargets = showAllObjects ? targets : targets.filter(t => t.qualityGrade !== 'excellent' && t.qualityGrade !== 'good')
+    
+    // Display targets based on toggle
+    const displayTargets = showAllObjects ? targets : (recommendedTargets.length > 0 ? recommendedTargets : targets)
     const isSelected = (target) => selectedTargets.some(t => t.id === target.id)
 
     const canAddMore = selectedTargets.length < maxTargets
@@ -45,8 +56,61 @@ function Step2SelectTarget({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters.type, filters.search])
 
+    // Get quality badge class
+    const getQualityBadgeClass = (grade) => {
+        switch (grade) {
+            case 'excellent': return 'quality-badge--excellent'
+            case 'good': return 'quality-badge--good'
+            case 'fair': return 'quality-badge--fair'
+            case 'poor': return 'quality-badge--poor'
+            default: return 'quality-badge--unknown'
+        }
+    }
+
     return (
         <div className="step-2">
+            {/* Session Info Banner */}
+            {sessionInfo && (
+                <div className="session-info-banner">
+                    <div className="session-info-content">
+                        <div className="session-time">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            {new Date(sessionInfo.local_start).toLocaleString('en-AU', { 
+                                weekday: 'short', 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })} - {new Date(sessionInfo.local_end).toLocaleTimeString('en-AU', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            })}
+                        </div>
+                        {sessionInfo.moon && (
+                            <div className="moon-info" title={`Moon ${sessionInfo.moon.phase_name}, ${sessionInfo.moon.illumination_percent?.toFixed(0)}% illuminated`}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                                </svg>
+                                Moon: {sessionInfo.moon.phase_name} ({sessionInfo.moon.illumination_percent?.toFixed(0)}%)
+                            </div>
+                        )}
+                    </div>
+                    <div className="recommended-toggle">
+                        <label className="toggle-label">
+                            <input 
+                                type="checkbox" 
+                                checked={showAllObjects}
+                                onChange={(e) => setShowAllObjects(e.target.checked)}
+                            />
+                            <span>Show all {targets.length} objects</span>
+                        </label>
+                    </div>
+                </div>
+            )}
+
             <div className="target-selection-layout">
                 {/* Left side: Target selection area */}
                 <div className="target-selection-main">
@@ -87,7 +151,7 @@ function Step2SelectTarget({
                         {isLoading ? (
                             <div className="targets-loading">
                                 <div className="targets-loading__spinner" />
-                                <p>Loading targets...</p>
+                                <p>Calculating optimal targets for your session...</p>
                             </div>
                         ) : targets.length === 0 ? (
                             <div className="targets-empty">
@@ -99,7 +163,7 @@ function Step2SelectTarget({
                                     </svg>
                                 </div>
                                 <h3>No targets found</h3>
-                                <p>Try adjusting your filters or search query</p>
+                                <p>No astronomical targets are optimally positioned for this time slot. Try selecting a different time or extending your session.</p>
                             </div>
                         ) : (
                             <table className="target-table">
@@ -108,13 +172,14 @@ function Step2SelectTarget({
                                         <th className="col-num">#</th>
                                         <th>Target Name</th>
                                         <th>Type</th>
-                                        <th>At Session Time</th>
+                                        <th>Quality</th>
+                                        <th>Best Time</th>
                                         <th>Mag</th>
                                         <th className="col-action">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {targets.map((target) => {
+                                    {displayTargets.map((target) => {
                                         const selected = isSelected(target)
                                         const selectionIndex = selectedTargets.findIndex(t => t.id === target.id)
 
@@ -142,12 +207,36 @@ function Step2SelectTarget({
                                                     </span>
                                                 </td>
                                                 <td className="target-quality">
-                                                    <div className={`quality-elevation quality-elevation--${target.quality}`}>
-                                                        {target.trend?.direction} {target.altitude}
-                                                    </div>
-                                                    <div className="quality-label" title={target.trend?.label}>
-                                                        {target.trend?.label === 'Highest point' ? `● Transit ${target.transitTime}` : target.trend?.label}
-                                                    </div>
+                                                    {target.qualityGrade ? (
+                                                        <>
+                                                            <div className={`quality-badge ${getQualityBadgeClass(target.qualityGrade)}`}>
+                                                                {target.qualityGrade}
+                                                            </div>
+                                                            <div className="quality-score" title={target.recommendation}>
+                                                                Score: {target.qualityScore}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className={`quality-elevation quality-elevation--${target.quality}`}>
+                                                            {target.trend?.direction} {target.altitude}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="target-best-time">
+                                                    {target.bestTime ? (
+                                                        <div className="best-time">
+                                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <circle cx="12" cy="12" r="10" />
+                                                                <polyline points="12 6 12 12 16 14" />
+                                                            </svg>
+                                                            {target.bestTime}
+                                                            {target.transitsDuringSession && (
+                                                                <span className="transit-badge">transit</span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="best-time-unknown">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="target-magnitude">
                                                     {target.magnitude !== null && target.magnitude !== undefined ? (
@@ -290,6 +379,18 @@ function Step2SelectTarget({
                     </div>
 
                     <div className="target-details-content">
+                        {/* Quality & Session Info */}
+                        {selectedTargets[selectedTargets.length - 1].qualityGrade && (
+                            <div className="target-session-quality">
+                                <div className={`quality-badge-large ${getQualityBadgeClass(selectedTargets[selectedTargets.length - 1].qualityGrade)}`}>
+                                    {selectedTargets[selectedTargets.length - 1].qualityGrade} ({selectedTargets[selectedTargets.length - 1].qualityScore}/100)
+                                </div>
+                                <p className="recommendation-text">
+                                    {selectedTargets[selectedTargets.length - 1].recommendation}
+                                </p>
+                            </div>
+                        )}
+
                         <div className="target-details-grid">
                             <div className="detail-item">
                                 <span className="detail-label">Constellation</span>
@@ -300,9 +401,9 @@ function Step2SelectTarget({
                                 <span className="detail-value">{selectedTargets[selectedTargets.length - 1].magnitude?.toFixed(2) || 'N/A'}</span>
                             </div>
                             <div className="detail-item">
-                                <span className="detail-label">At Session Start</span>
-                                <span className={`detail-value quality-text--${selectedTargets[selectedTargets.length - 1].quality}`}>
-                                    {selectedTargets[selectedTargets.length - 1].trend?.direction} {selectedTargets[selectedTargets.length - 1].altitude}
+                                <span className="detail-label">Elevation Range</span>
+                                <span className="detail-value">
+                                    {selectedTargets[selectedTargets.length - 1].elevationMin?.toFixed(1)}° - {selectedTargets[selectedTargets.length - 1].elevationMax?.toFixed(1)}°
                                 </span>
                             </div>
                             <div className="detail-item">

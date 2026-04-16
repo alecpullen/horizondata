@@ -33,6 +33,7 @@ CLAUDE.md
 
 # ── Claude Code ────────────────────────────
 .claude/
+.remember/
 
 # ── OS ─────────────────────────────────────
 .DS_Store
