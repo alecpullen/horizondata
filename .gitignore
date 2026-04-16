@@ -31,6 +31,17 @@ server/.env
 *.swo
 CLAUDE.md
 
+# ── Claude Code ────────────────────────────
+.claude/
+.remember/
+.agents/
+skills-lock.json
+
+# ── Aider ──────────────────────────────────
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.*/
+
 # ── OS ─────────────────────────────────────
 .DS_Store
 Thumbs.db
