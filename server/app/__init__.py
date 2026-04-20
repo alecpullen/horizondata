@@ -11,6 +11,7 @@ from .routes.space_objects import space_objects_bp
 from .routes.observability import observability_bp
 from .routes.visibility import visibility_bp
 from .routes.captures import captures_bp
+from .routes.db import db_bp  # Import the database blueprint
 
 def create_app():
     """
@@ -32,7 +33,6 @@ def create_app():
     app.register_blueprint(observability_bp)
     app.register_blueprint(visibility_bp)
     app.register_blueprint(captures_bp)
-
-
+    app.register_blueprint(db_bp)  # Register the database blueprint
 
     return app
