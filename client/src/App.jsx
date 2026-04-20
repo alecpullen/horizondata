@@ -3,8 +3,8 @@ import ToastProvider from './components/ui/ToastProvider'
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import Landing      from './pages/Landing'
-import Login        from './pages/Login'
-import Register     from './pages/Register'
+import TeacherLogin from './pages/TeacherLogin'
+import TeacherSignup from './pages/TeacherSignup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import VerifyEmail  from './pages/VerifyEmail'
@@ -60,8 +60,8 @@ function AppRoutes() {
             <Routes>
                 {/* Public routes */}
                 <Route path="/"                 element={<Landing />}           />
-                <Route path="/login"           element={<Login />}             />
-                <Route path="/register"        element={<Register />}          />
+                <Route path="/login"           element={<TeacherLogin />}      />
+                <Route path="/signup"          element={<TeacherSignup />}     />
                 <Route path="/forgot-password" element={<ForgotPassword />}    />
                 <Route path="/reset-password"  element={<ResetPassword />}     />
                 <Route path="/verify-email"    element={<VerifyEmail />}       />
