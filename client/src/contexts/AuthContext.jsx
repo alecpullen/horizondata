@@ -1,110 +1,242 @@
-import { createContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const AuthContext = createContext(null);
 
-const AuthContext = createContext({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    login: async () => {},
-    logout: async () => {}
-})
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
-export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null)
-    const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
+export const AuthProvider = ({ children }) => {
+  const [userType, setUserType] = useState(null);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Check for existing session on mount
-    useEffect(() => {
-        async function checkSession() {
-            try {
-                const response = await fetch(`${API_BASE}/api/auth/session`, {
-                    headers: { 'Accept': 'application/json' },
-                    credentials: 'include'
-                })
+  // Load auth state from localStorage on mount
+  useEffect(() => {
+    const loadAuthState = () => {
+      const storedUserType = localStorage.getItem('userType');
+      const storedToken = localStorage.getItem('token');
+      const storedSessionId = localStorage.getItem('sessionId');
+      const storedUser = localStorage.getItem('user');
 
-                if (response.ok) {
-                    const data = await response.json()
-                    if (data.authenticated && data.user) {
-                        setUser(data.user)
-                        setIsAuthenticated(true)
-                    }
-                }
-            } catch (err) {
-                console.error('Session check failed:', err)
-            } finally {
-                setIsLoading(false)
-            }
-        }
+      if (storedUserType === 'teacher' && storedToken) {
+        setUserType('teacher');
+        setToken(storedToken);
+        setUser(storedUser ? JSON.parse(storedUser) : null);
+        setIsAuthenticated(true);
+      } else if (storedUserType === 'student' && storedSessionId) {
+        setUserType('student');
+        setSessionId(storedSessionId);
+        setUser(storedUser ? JSON.parse(storedUser) : null);
+        setIsAuthenticated(true);
+      }
 
-        checkSession()
-    }, [])
+      setIsLoading(false);
+    };
 
-    const login = useCallback(async (email, password) => {
-        try {
-            const response = await fetch(`${API_BASE}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({ email, password })
-            })
+    loadAuthState();
+  }, []);
 
-            const data = await response.json()
+  // Teacher signup
+  const signupTeacher = useCallback(async (email, password, name) => {
+    const response = await api.post('/api/auth/teacher/signup', {
+      email,
+      password,
+      name,
+    });
 
-            if (!response.ok) {
-                return {
-                    success: false,
-                    error: data.error || 'Login failed'
-                }
-            }
+    const { user, token, refresh_token } = response.data;
 
-            setUser(data.user)
-            setIsAuthenticated(true)
+    // Store auth state
+    localStorage.setItem('userType', 'teacher');
+    localStorage.setItem('token', token);
+    localStorage.setItem('refreshToken', refresh_token);
+    localStorage.setItem('user', JSON.stringify(user));
 
-            return {
-                success: true,
-                user: data.user
-            }
-        } catch (e) {
-            console.error('Login error:', e)
-            return {
-                success: false,
-                error: 'Network error. Please try again.'
-            }
-        }
-    }, [])
+    setUserType('teacher');
+    setToken(token);
+    setUser(user);
+    setIsAuthenticated(true);
 
-    const logout = useCallback(async () => {
-        try {
-            await fetch(`${API_BASE}/api/auth/logout`, {
-                method: 'POST',
-                credentials: 'include'
-            })
-        } catch (e) {
-            console.error('Logout error:', e)
-        } finally {
-            setUser(null)
-            setIsAuthenticated(false)
-        }
-    }, [])
+    return response.data;
+  }, []);
 
-    const value = {
-        user,
-        isAuthenticated,
-        isLoading,
-        login,
-        logout
+  // Teacher login
+  const loginTeacher = useCallback(async (email, password) => {
+    const response = await api.post('/api/auth/teacher/login', {
+      email,
+      password,
+    });
+
+    const { user, token, refresh_token } = response.data;
+
+    // Store auth state
+    localStorage.setItem('userType', 'teacher');
+    localStorage.setItem('token', token);
+    localStorage.setItem('refreshToken', refresh_token);
+    localStorage.setItem('user', JSON.stringify(user));
+
+    setUserType('teacher');
+    setToken(token);
+    setUser(user);
+    setIsAuthenticated(true);
+
+    return response.data;
+  }, []);
+
+  // Teacher logout
+  const logoutTeacher = useCallback(async () => {
+    try {
+      await api.post('/api/auth/teacher/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
 
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    )
-}
+    // Clear auth state
+    localStorage.removeItem('userType');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
 
-export { AuthContext }
+    setUserType(null);
+    setToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+  }, []);
+
+  // Student join session
+  const joinAsStudent = useCallback(async (displayName, sessionCode) => {
+    const response = await api.post('/api/auth/student/join', {
+      display_name: displayName,
+      session_code: sessionCode,
+    });
+
+    const { session_id, display_name, observation_session_id } = response.data;
+
+    const studentUser = {
+      id: session_id,
+      display_name: display_name,
+      observation_session_id: observation_session_id,
+      user_type: 'student',
+    };
+
+    // Store auth state
+    localStorage.setItem('userType', 'student');
+    localStorage.setItem('sessionId', session_id);
+    localStorage.setItem('user', JSON.stringify(studentUser));
+
+    setUserType('student');
+    setSessionId(session_id);
+    setUser(studentUser);
+    setIsAuthenticated(true);
+
+    return response.data;
+  }, []);
+
+  // Student leave session
+  const leaveAsStudent = useCallback(async () => {
+    try {
+      await api.post('/api/auth/student/leave');
+    } catch (error) {
+      console.error('Leave error:', error);
+    }
+
+    // Clear auth state
+    localStorage.removeItem('userType');
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('user');
+
+    setUserType(null);
+    setSessionId(null);
+    setUser(null);
+    setIsAuthenticated(false);
+  }, []);
+
+  // Refresh token (for teachers)
+  const refreshToken = useCallback(async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return null;
+
+    try {
+      const response = await api.post('/api/auth/teacher/refresh', {
+        refresh_token: refreshToken,
+      });
+
+      const { token, refresh_token } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refresh_token);
+      setToken(token);
+
+      return response.data;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      logoutTeacher();
+      return null;
+    }
+  }, [logoutTeacher]);
+
+  // Get current user info
+  const getCurrentUser = useCallback(async () => {
+    if (userType === 'teacher') {
+      const response = await api.get('/api/auth/teacher/me');
+      setUser(response.data.user);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      return response.data;
+    } else if (userType === 'student') {
+      const response = await api.get('/api/auth/student/me');
+      setUser(response.data.user);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      return response.data;
+    }
+  }, [userType]);
+
+  // Kick student (teacher only)
+  const kickStudent = useCallback(async (studentSessionId, reason = '') => {
+    const response = await api.post('/api/auth/teacher/kick', {
+      student_session_id: studentSessionId,
+      reason,
+    });
+    return response.data;
+  }, []);
+
+  // List participants (teacher only)
+  const listParticipants = useCallback(async (observationSessionId) => {
+    const response = await api.get('/api/auth/teacher/participants', {
+      params: { observation_session_id: observationSessionId },
+    });
+    return response.data;
+  }, []);
+
+  const value = {
+    userType,
+    user,
+    token,
+    sessionId,
+    isAuthenticated,
+    isLoading,
+    isTeacher: userType === 'teacher',
+    isStudent: userType === 'student',
+    signupTeacher,
+    loginTeacher,
+    logoutTeacher,
+    joinAsStudent,
+    leaveAsStudent,
+    refreshToken,
+    getCurrentUser,
+    kickStudent,
+    listParticipants,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export default AuthContext;

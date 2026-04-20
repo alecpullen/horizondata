@@ -4,6 +4,7 @@
 import os
 from flask import Blueprint, jsonify
 import requests
+from app.middleware.auth import require_any_auth
 
 # 1. Create a Blueprint instance.
 # The first argument is the blueprint's name.
@@ -25,6 +26,7 @@ get_dew_point_endpoint = f"{THINGSPEAK_API_BASE_URL}/channels/{THINGSPEAK_CHANNE
 # 2. Create the routes and attach them to the blueprint.
 # This route will now be accessible at /weather/feeds
 @weather_bp.route('/feeds', methods=['GET'])
+@require_any_auth
 def get_weather_feeds():
     """Fetches the complete weather feed data."""
     try:
@@ -38,6 +40,7 @@ def get_weather_feeds():
 
 # This route will now be accessible at /weather/temperature
 @weather_bp.route('/temperature', methods=['GET'])
+@require_any_auth
 def get_temperature_data():
     """Fetches only the temperature data."""
     try:
@@ -51,6 +54,7 @@ def get_temperature_data():
 
 # This route will now be accessible at /weather/humidity
 @weather_bp.route('/humidity', methods=['GET'])
+@require_any_auth
 def get_humidity_data():
     """Fetches only the humidity data."""
     try:
@@ -64,6 +68,7 @@ def get_humidity_data():
 
 # This route will now be accessible at /weather/pressure
 @weather_bp.route('/pressure', methods=['GET'])
+@require_any_auth
 def get_pressure_data():
     """Fetches only the pressure data."""
     try:
@@ -77,6 +82,7 @@ def get_pressure_data():
 
 # This route will now be accessible at /weather/dew_point
 @weather_bp.route('/dew_point', methods=['GET'])
+@require_any_auth
 def get_dew_point_data():
     """Fetches only the dew_point data."""
     try:
@@ -89,6 +95,7 @@ def get_dew_point_data():
         return jsonify({"error": "Failed to fetch dew_point data from ThingSpeak API"}), 503
     
 @weather_bp.route('/trends', methods=['GET'])
+@require_any_auth
 def get_weather_trends():
     """Fetches the last 10 readings for trend analysis."""
     try:

@@ -10,6 +10,7 @@ Requirements addressed: 1.5, 2.4
 from flask import Blueprint, jsonify
 from app.services.safety_manager import SafetyManager
 from app.services.weather_safety import WeatherSafetyService
+from app.middleware.auth import require_any_auth
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ def create_error_response(error_code: str, message: str, status_code: int = 500)
 
 
 @safety_bp.route('/status', methods=['GET'])
+@require_any_auth
 def get_safety_status():
     """
     Get current safety status of the telescope system.
@@ -49,6 +51,7 @@ def get_safety_status():
 
 
 @safety_bp.route('/viewing-window', methods=['GET'])
+@require_any_auth
 def get_viewing_window():
     """
     Get current and next viewing window information.
@@ -112,6 +115,7 @@ def get_viewing_window():
 
 
 @safety_bp.route('/next-available', methods=['GET'])
+@require_any_auth
 def get_next_available_time():
     """
     Get the next time when telescope operations will be available.
@@ -148,6 +152,7 @@ def get_next_available_time():
 
 
 @safety_bp.route('/weather', methods=['GET'])
+@require_any_auth
 def get_weather_safety():
     """
     Get detailed weather safety information.
@@ -182,6 +187,7 @@ def get_weather_safety():
 
 
 @safety_bp.route('/thresholds', methods=['GET'])
+@require_any_auth
 def get_safety_thresholds():
     """
     Get current safety thresholds configuration.
@@ -197,6 +203,7 @@ def get_safety_thresholds():
 
 
 @safety_bp.route('/comprehensive', methods=['GET'])
+@require_any_auth
 def get_comprehensive_status():
     """
     Get comprehensive safety status including detailed time and weather information.

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.services.alpaca_client import AlpacaClient, AlpacaError, AlpacaConnectionError
 from app.services.visibility_service import get_visibility_service
 from app.services.safety_manager import SafetyManager
+from app.middleware.auth import require_auth, require_teacher, require_any_auth
 import os
 import logging
 from datetime import datetime, timezone
@@ -67,6 +68,7 @@ def get_telescope_status():
 
 
 @telescope_bp.route('/status', methods=['GET'])
+@require_any_auth
 def status():
     """Get telescope status"""
     try:
@@ -79,6 +81,7 @@ def status():
 
 
 @telescope_bp.route('/connect', methods=['POST'])
+@require_teacher
 def connect():
     """Connect/disconnect telescope"""
     try:
@@ -108,6 +111,7 @@ def connect():
 
 
 @telescope_bp.route('/tracking', methods=['POST'])
+@require_teacher
 def tracking():
     """Enable/disable telescope tracking"""
     try:
@@ -141,6 +145,7 @@ def tracking():
 
 
 @telescope_bp.route('/park', methods=['POST'])
+@require_teacher
 def park():
     """Park/unpark telescope"""
     try:
@@ -179,6 +184,7 @@ def park():
 
 
 @telescope_bp.route('/abort', methods=['POST'])
+@require_teacher
 def abort():
     """Abort current telescope operation"""
     try:
@@ -198,6 +204,7 @@ def abort():
 
 
 @telescope_bp.route('/slew/coords', methods=['POST'])
+@require_teacher
 def slew_coords():
     """Slew telescope to RA/Dec coordinates"""
     try:
@@ -260,6 +267,7 @@ def slew_coords():
 
 
 @telescope_bp.route('/slew/altaz', methods=['POST'])
+@require_teacher
 def slew_altaz():
     """Slew telescope to Alt/Az coordinates"""
     try:
@@ -322,6 +330,7 @@ def slew_altaz():
 
 
 @telescope_bp.route('/visible-objects', methods=['GET'])
+@require_any_auth
 def get_visible_objects():
     """
     Get list of celestial objects visible from Melbourne with safety filtering.

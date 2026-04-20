@@ -1,6 +1,10 @@
 import os, json, time, uuid, re
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify, send_from_directory, current_app, abort
+from flask import Blueprint, request, jsonify, send_from_directory, current_app, abort, g
+
+from app.middleware.auth import require_auth, require_any_auth
+from app.services.rate_limiter import check_capture_limit
+from app.services.student_session_manager import get_student_session_manager
 
 captures_bp = Blueprint("captures", __name__, url_prefix="/api/captures")
 
@@ -16,6 +20,7 @@ def _captures_root() -> str:
     return root
 
 @captures_bp.route("", methods=["POST"])
+@require_any_auth
 def upload_capture():
     """
     multipart/form-data:
@@ -23,7 +28,22 @@ def upload_capture():
       - objectName: string
       - ra, dec, alt, az: floats (optional but recommended)
       - timestamp: ISO string (optional; server will set if missing)
+    
+    Headers (one of):
+      - Authorization: Bearer <teacher_token>
+      - X-Session-ID: <student_session_id>
+    
+    Students are rate limited to 5 captures per minute.
     """
+    # Check rate limiting for students
+    if g.user_type == 'student':
+        if not check_capture_limit(g.session_id, max_per_minute=5):
+            return jsonify({
+                'error': 'rate_limited',
+                'message': 'Capture rate limit exceeded. Maximum 5 captures per minute.',
+                'retry_after': 60
+            }), 429
+    
     if "file" not in request.files:
         return jsonify({"message": "file is required"}), 400
 
@@ -37,6 +57,7 @@ def upload_capture():
     alt = request.form.get("alt")
     az = request.form.get("az")
     ts = request.form.get("timestamp")
+    observation_session_id = request.form.get("observationSessionId")
 
     # timestamp
     if ts:
@@ -67,6 +88,11 @@ def upload_capture():
     # save image
     f.save(img_path)
 
+    # Determine who captured this
+    captured_by_teacher = g.user_type == 'teacher'
+    teacher_id = g.user.get('id') if captured_by_teacher else None
+    student_session_id = g.session_id if not captured_by_teacher else None
+
     # save metadata sidecar
     meta = {
         "id": cap_id,
@@ -79,15 +105,50 @@ def upload_capture():
             "az": float(az) if az else None,
         },
         "file": img_name,
-        "relativeDir": os.path.relpath(dest_dir, root)
+        "relativeDir": os.path.relpath(dest_dir, root),
+        "capturedBy": "teacher" if captured_by_teacher else "student",
+        "capturedByTeacherId": teacher_id,
+        "capturedByStudentSessionId": student_session_id,
+        "observationSessionId": observation_session_id
     }
     with open(meta_path, "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2)
 
+    # Store in database for student captures (attribution)
+    if not captured_by_teacher and student_session_id and observation_session_id:
+        try:
+            # Get student display name
+            session_manager = get_student_session_manager()
+            session_data = session_manager.validate_session(student_session_id)
+            if session_data:
+                # Store in database
+                import psycopg2
+                from psycopg2.extras import RealDictCursor
+                
+                db_url = os.getenv('DATABASE_URL')
+                if db_url:
+                    conn = psycopg2.connect(db_url)
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            INSERT INTO app.captures 
+                            (id, captured_by_student_session_id, observation_session_id, file_path, 
+                             object_name, coordinates, captured_at)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            (cap_id, student_session_id, observation_session_id, img_path,
+                             object_name, json.dumps(meta['coordinates']), dt)
+                        )
+                    conn.commit()
+                    conn.close()
+        except Exception as e:
+            current_app.logger.warning(f"Failed to store capture metadata in DB: {e}")
+
     return jsonify({
         "success": True,
         "id": cap_id,
-        "downloadUrl": f"/api/captures/{cap_id}/download"
+        "downloadUrl": f"/api/captures/{cap_id}/download",
+        "capturedBy": "teacher" if captured_by_teacher else "student"
     }), 201
 
 def _walk_captures():
@@ -98,29 +159,59 @@ def _walk_captures():
                 yield os.path.join(base, fn)
 
 @captures_bp.route("", methods=["GET"])
+@require_any_auth
 def list_captures():
-    """Return a flat list of captures (can add filters later)."""
+    """
+    Return a list of captures.
+    
+    Teachers: see all captures in their observation sessions
+    Students: see only their own captures
+    """
     items = []
+    user_type = g.user_type
+    
     for meta_path in _walk_captures():
         try:
             with open(meta_path, "r", encoding="utf-8") as fh:
                 meta = json.load(fh)
+            
+            # Filter based on user type
+            if user_type == 'student':
+                # Students only see their own captures
+                if meta.get('capturedByStudentSessionId') != g.session_id:
+                    continue
+            
             items.append(meta)
         except Exception as e:
             current_app.logger.warning(f"Failed reading {meta_path}: {e}")
+    
     # newest first
     items.sort(key=lambda x: x.get("timestamp",""), reverse=True)
     return jsonify({"items": items})
 
 @captures_bp.route("/<cap_id>/download", methods=["GET"])
+@require_any_auth
 def download_capture(cap_id: str):
-    """Send the image as attachment by id."""
+    """
+    Send the image as attachment by id.
+    
+    Students can only download their own captures.
+    Teachers can download any capture.
+    """
+    user_type = g.user_type
+    
     # find meta
     for meta_path in _walk_captures():
         try:
             with open(meta_path, "r", encoding="utf-8") as fh:
                 meta = json.load(fh)
+            
             if meta.get("id") == cap_id:
+                # Check permissions for students
+                if user_type == 'student':
+                    if meta.get('capturedByStudentSessionId') != g.session_id:
+                        abort(403, "You can only download your own captures")
+                
                 root = _captures_root()
                 rel = meta["relativeDir"]
                 img = meta["file"]
