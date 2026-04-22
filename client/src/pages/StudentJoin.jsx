@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import AuthShell from '../components/auth/AuthShell';
 import { useAuth } from '../contexts/AuthContext';
 
 const StudentJoin = () => {
@@ -7,7 +8,7 @@ const StudentJoin = () => {
   const [sessionCode, setSessionCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { joinAsStudent } = useAuth();
   const navigate = useNavigate();
 
@@ -15,31 +16,26 @@ const StudentJoin = () => {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (!displayName.trim()) {
       setError('Please enter your name');
       return;
     }
-
     if (displayName.length > 50) {
       setError('Name must be 50 characters or less');
       return;
     }
-
     if (!sessionCode.trim()) {
       setError('Please enter the session code');
       return;
     }
 
     setIsLoading(true);
-
     try {
       await joinAsStudent(displayName.trim(), sessionCode.trim().toUpperCase());
-      navigate('/lobby'); // Redirect to lobby after joining
+      navigate('/lobby');
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to join session';
       const code = err.response?.data?.error;
-      
+      const message = err.response?.data?.message || 'Failed to join session';
       if (code === 'session_not_found') {
         setError('Session not found or has ended. Please check the session code.');
       } else if (code === 'validation_error') {
@@ -52,59 +48,51 @@ const StudentJoin = () => {
     }
   };
 
+  const footer = (
+    <p>Are you a teacher? <Link to="/login">Sign in here</Link></p>
+  );
+
   return (
-    <div className="join-container">
-      <div className="join-card">
-        <h1>Join Observation Session</h1>
-        <p>Enter the session code provided by your teacher</p>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="displayName">Your Name</label>
-            <input
-              type="text"
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-              placeholder="Student Alex"
-              maxLength={50}
-            />
-            <small>This will be visible to your teacher and other students</small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="sessionCode">Session Code</label>
-            <input
-              type="text"
-              id="sessionCode"
-              value={sessionCode}
-              onChange={(e) => setSessionCode(e.target.value.toUpperCase())}
-              required
-              placeholder="ABC123"
-              style={{ textTransform: 'uppercase' }}
-            />
-            <small>Enter the 6-character code from your teacher</small>
-          </div>
-
-          <button 
-            type="submit" 
-            className="btn-primary"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Joining...' : 'Join Session'}
-          </button>
-        </form>
-
-        <div className="join-footer">
-          <p>
-            Are you a teacher? <Link to="/login">Sign in here</Link>
-          </p>
+    <AuthShell
+      title="Join Session"
+      subtitle="Enter the session code provided by your teacher"
+      footer={footer}
+    >
+      {error && <div className="auth-error">{error}</div>}
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <div className="auth-field">
+          <label className="auth-label" htmlFor="displayName">Your Name</label>
+          <input
+            className="auth-input"
+            type="text"
+            id="displayName"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            required
+            placeholder="Student Alex"
+            maxLength={50}
+          />
+          <span className="auth-hint">Visible to your teacher and other students</span>
         </div>
-      </div>
-    </div>
+        <div className="auth-field">
+          <label className="auth-label" htmlFor="sessionCode">Session Code</label>
+          <input
+            className="auth-input"
+            type="text"
+            id="sessionCode"
+            value={sessionCode}
+            onChange={(e) => setSessionCode(e.target.value.toUpperCase())}
+            required
+            placeholder="ABC123"
+            style={{ textTransform: 'uppercase' }}
+          />
+          <span className="auth-hint">6-character code from your teacher</span>
+        </div>
+        <button className="auth-submit" type="submit" disabled={isLoading}>
+          {isLoading ? 'Joining…' : 'Join Session'}
+        </button>
+      </form>
+    </AuthShell>
   );
 };
 
