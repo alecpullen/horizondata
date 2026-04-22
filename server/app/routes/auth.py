@@ -17,29 +17,14 @@ from app.services.rate_limiter import check_capture_limit, get_capture_remaining
 from app.middleware.auth import require_auth, require_teacher, require_any_auth
 from app.services.neon_auth_client import NeonAuthClient
 
-# Database connection - we'll create a helper function
-import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import uuid as _uuid
+
+from app.services.database import get_db
+from app.models.session import ObservationSession
 
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
-
-def get_db_connection():
-    """Get database connection"""
-    db_url = os.getenv('DATABASE_URL')
-    if db_url:
-        return psycopg2.connect(db_url)
-    # Fallback for development
-    return psycopg2.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
-        port=os.getenv('DB_PORT', 5432),
-        dbname=os.getenv('DB_NAME', 'horizon'),
-        user=os.getenv('DB_USER', 'postgres'),
-        password=os.getenv('DB_PASSWORD', 'postgres')
-    )
 
 
 def generate_session_code() -> str:
@@ -51,21 +36,16 @@ def generate_session_code() -> str:
     while True:
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         
-        # Check if code already exists
         try:
-            conn = get_db_connection()
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT 1 FROM app.observation_sessions WHERE session_code = %s AND status = 'active'",
-                    (code,)
-                )
-                if not cur.fetchone():
-                    conn.close()
+            with get_db() as db:
+                exists = db.query(ObservationSession).filter(
+                    ObservationSession.session_code == code,
+                    ObservationSession.status == "active",
+                ).first()
+                if not exists:
                     return code
-            conn.close()
         except Exception as e:
             logger.error(f"Error checking session code: {e}")
-            # Return code anyway if DB fails
             return code
 
 
@@ -320,38 +300,29 @@ def student_join():
         return jsonify({'error': 'validation_error', 'message': 'Session code is required'}), 400
     
     try:
-        # Look up observation session
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT id, status, ended_at 
-                FROM app.observation_sessions 
-                WHERE session_code = %s AND status = 'active'
-                """,
-                (session_code,)
-            )
-            session = cur.fetchone()
-        conn.close()
-        
-        if not session:
+        with get_db() as db:
+            obs_session = db.query(ObservationSession).filter(
+                ObservationSession.session_code == session_code,
+                ObservationSession.status == "active",
+            ).first()
+
+        if not obs_session:
             return jsonify({
                 'error': 'session_not_found',
                 'message': 'Session not found or has ended. Please check the session code.'
             }), 404
-        
-        # Create student session
+
         manager = get_student_session_manager()
         student_session_id = manager.create_session(
             display_name=display_name,
-            observation_session_id=str(session['id'])
+            observation_session_id=str(obs_session.id),
         )
         
         return jsonify({
             'success': True,
             'session_id': student_session_id,
             'display_name': display_name,
-            'observation_session_id': str(session['id'])
+            'observation_session_id': str(obs_session.id)
         }), 201
         
     except Exception as e:
@@ -452,23 +423,15 @@ def list_participants():
         return jsonify({'error': 'validation_error', 'message': 'observation_session_id query parameter required'}), 400
     
     try:
-        # Verify teacher owns this session
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT teacher_id FROM app.observation_sessions WHERE id = %s",
-                (observation_session_id,)
-            )
-            result = cur.fetchone()
-        conn.close()
-        
-        if not result:
+        with get_db() as db:
+            obs_session = db.query(ObservationSession).filter(
+                ObservationSession.id == _uuid.UUID(observation_session_id)
+            ).first()
+
+        if not obs_session:
             return jsonify({'error': 'not_found', 'message': 'Observation session not found'}), 404
-        
-        # Check if teacher owns this session (compare with g.user['id'])
-        # Note: teacher_id format may vary - adjust as needed
-        teacher_id = result[0]
-        if str(teacher_id) != str(g.user.get('id')):
+
+        if str(obs_session.teacher_id) != str(g.user.get('id')):
             return jsonify({'error': 'forbidden', 'message': 'You do not own this session'}), 403
         
         # Get participants
@@ -520,23 +483,17 @@ def kick_student():
         if not session:
             return jsonify({'error': 'not_found', 'message': 'Student session not found or already ended'}), 404
         
-        # Verify teacher owns the observation session
         observation_session_id = session['observation_session_id']
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT teacher_id FROM app.observation_sessions WHERE id = %s",
-                (observation_session_id,)
-            )
-            result = cur.fetchone()
-        conn.close()
-        
-        if not result:
+
+        with get_db() as db:
+            obs_session = db.query(ObservationSession).filter(
+                ObservationSession.id == _uuid.UUID(observation_session_id)
+            ).first()
+
+        if not obs_session:
             return jsonify({'error': 'not_found', 'message': 'Observation session not found'}), 404
-        
-        teacher_id = result[0]
-        if str(teacher_id) != str(g.user.get('id')):
+
+        if str(obs_session.teacher_id) != str(g.user.get('id')):
             return jsonify({'error': 'forbidden', 'message': 'You do not own this session'}), 403
         
         # Kick the student

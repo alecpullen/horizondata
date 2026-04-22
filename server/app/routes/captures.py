@@ -114,36 +114,6 @@ def upload_capture():
     with open(meta_path, "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2)
 
-    # Store in database for student captures (attribution)
-    if not captured_by_teacher and student_session_id and observation_session_id:
-        try:
-            # Get student display name
-            session_manager = get_student_session_manager()
-            session_data = session_manager.validate_session(student_session_id)
-            if session_data:
-                # Store in database
-                import psycopg2
-                from psycopg2.extras import RealDictCursor
-                
-                db_url = os.getenv('DATABASE_URL')
-                if db_url:
-                    conn = psycopg2.connect(db_url)
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            """
-                            INSERT INTO app.captures 
-                            (id, captured_by_student_session_id, observation_session_id, file_path, 
-                             object_name, coordinates, captured_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            """,
-                            (cap_id, student_session_id, observation_session_id, img_path,
-                             object_name, json.dumps(meta['coordinates']), dt)
-                        )
-                    conn.commit()
-                    conn.close()
-        except Exception as e:
-            current_app.logger.warning(f"Failed to store capture metadata in DB: {e}")
-
     return jsonify({
         "success": True,
         "id": cap_id,

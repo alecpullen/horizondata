@@ -1,3 +1,3 @@
-from .user import User
+from .session import ObservationSession
 
-__all__ = ["User"]
+__all__ = ["ObservationSession"]
