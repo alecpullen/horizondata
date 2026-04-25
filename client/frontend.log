@@ -8,3 +8,13 @@
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
 10:20:33 pm [vite] (client) hmr update /src/pages/MyBookings.jsx
+10:48:45 pm [vite] (client) hmr update /src/pages/NewBooking/Step1Schedule.jsx
+10:48:50 pm [vite] (client) hmr update /src/pages/NewBooking/Step1Schedule.jsx
+10:49:09 pm [vite] (client) hmr update /src/pages/NewBooking/index.jsx
+10:49:14 pm [vite] (client) hmr update /src/pages/NewBooking/index.jsx
+10:49:23 pm [vite] (client) hmr update /src/pages/NewBooking/index.jsx
+10:49:27 pm [vite] (client) hmr update /src/pages/NewBooking/Step1Schedule.jsx
+10:49:31 pm [vite] (client) hmr update /src/pages/NewBooking/Step1Schedule.jsx
+10:49:35 pm [vite] (client) hmr update /src/pages/NewBooking/Step1Schedule.jsx
+10:59:23 pm [vite] (client) hmr update /src/pages/NewBooking/index.jsx
+10:59:42 pm [vite] (client) hmr update /src/pages/NewBooking/index.jsx

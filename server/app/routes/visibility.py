@@ -69,8 +69,8 @@ def get_visible_objects():
         else:
             visible_objects = visibility_service.get_visible_objects(observation_time, min_elevation)
         
-        # Apply type filter
-        if object_type:
+        # Apply type filter (skip if 'all')
+        if object_type and object_type.lower() != 'all':
             visible_objects = visibility_service.get_objects_by_type(object_type, observation_time)
         
         # Apply constellation filter

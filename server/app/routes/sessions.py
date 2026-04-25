@@ -26,7 +26,11 @@ def _load_booking_owned(db, booking_id):
 
 
 def _get_or_create_session(db, booking):
-    """Return the active ObservationSession for this booking, creating one if needed."""
+    """Return the active ObservationSession for this booking, creating one if needed.
+    
+    Raises ValueError if the teacher already has an unrelated active session.
+    """
+    # 1. Return existing session for this booking
     obs = (
         db.query(ObservationSession)
         .filter(
@@ -37,6 +41,21 @@ def _get_or_create_session(db, booking):
     )
     if obs:
         return obs
+
+    # 2. Prevent multiple active sessions for the same teacher
+    existing = (
+        db.query(ObservationSession)
+        .filter(
+            ObservationSession.teacher_id == g.user["id"],
+            ObservationSession.status == "active",
+            ObservationSession.booking_id != booking.id,
+        )
+        .first()
+    )
+    if existing:
+        raise ValueError(
+            f"Teacher already has an active observation session (booking {existing.booking_id})"
+        )
 
     obs = ObservationSession(
         teacher_id=g.user["id"],
@@ -62,6 +81,9 @@ def get_session(booking_id):
 
         return jsonify({"success": True, "session": result})
 
+    except ValueError as e:
+        logger.warning(f"Session conflict for booking {booking_id}: {e}")
+        return jsonify({"error": "conflict", "message": str(e)}), 409
     except Exception as e:
         logger.error(f"Error fetching session for booking {booking_id}: {e}")
         return jsonify({"error": "internal_error", "message": "Failed to fetch session"}), 500
@@ -111,6 +133,9 @@ def start_session(booking_id):
 
         return jsonify({"success": True})
 
+    except ValueError as e:
+        logger.warning(f"Session conflict for booking {booking_id}: {e}")
+        return jsonify({"error": "conflict", "message": str(e)}), 409
     except Exception as e:
         logger.error(f"Error starting session for booking {booking_id}: {e}")
         return jsonify({"error": "internal_error", "message": "Failed to start session"}), 500

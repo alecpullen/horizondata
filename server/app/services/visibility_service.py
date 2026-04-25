@@ -18,6 +18,17 @@ from astropy.coordinates import solar_system_ephemeris
 
 logger = logging.getLogger(__name__)
 
+
+def _to_native(val):
+    """Recursively convert numpy/astropy scalars to Python native types for JSON serialization."""
+    if hasattr(val, "item"):
+        return val.item()
+    if isinstance(val, dict):
+        return {k: _to_native(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_to_native(v) for v in val]
+    return val
+
 # Melbourne coordinates (La Trobe University, Bundoora)
 MELBOURNE_LOCATION = EarthLocation(
     lat=-37.7214 * u.deg,
@@ -201,7 +212,7 @@ class VisibilityService:
             # Determine magnitude
             magnitude = self._get_object_magnitude(obj_data, astro_time)
             
-            return {
+            return _to_native({
                 "name": obj_data["name"],
                 "type": obj_data["type"],
                 "coordinates": {
@@ -223,7 +234,7 @@ class VisibilityService:
                     "catalog_id": obj_data.get("catalog_id"),
                     "description": self._generate_description(obj_data)
                 }
-            }
+            })
             
         except Exception as e:
             logger.error(f"Error calculating visibility for {obj_data['name']}: {e}")

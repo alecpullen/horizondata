@@ -8,8 +8,6 @@ import Step3Confirm from './Step3Confirm'
 import api from '../../lib/api'
 import './NewBooking.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-
 const STEPS = [
     { id: 1, label: 'Select Date/Time' },
     { id: 2, label: 'Select Targets' },
@@ -34,6 +32,7 @@ function NewBooking() {
     const [sessionDate, setSessionDate] = useState('')
     const [startTime, setStartTime] = useState('')
     const [endTime, setEndTime] = useState('')
+    const [availableSlots, setAvailableSlots] = useState([])
 
     // Step 2: Target selection (multiple targets supported)
     const [targets, setTargets] = useState([])
@@ -91,16 +90,7 @@ function NewBooking() {
                 params.append('time', sessionDateTime.toISOString())
             }
 
-            const response = await fetch(`${API_BASE}/api/visibility/objects?${params}`, {
-                headers: { 'Accept': 'application/json' },
-                credentials: 'include',
-            })
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`)
-            }
-
-            const data = await response.json()
+            const { data } = await api.get(`/api/visibility/objects?${params}`)
 
             // Transform visibility API response to target format
             let transformedTargets = (data.objects || []).map(obj => {
@@ -191,10 +181,20 @@ function NewBooking() {
         return transit.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
     }
 
+    // Validate that the selected slot is marked available by the backend
+    const isSelectedSlotAvailable = useMemo(() => {
+        if (!sessionDate || !startTime || !availableSlots || availableSlots.length === 0) {
+            return false
+        }
+        return availableSlots.some(
+            s => s.date === sessionDate && s.startTime === startTime && s.available === true
+        )
+    }, [sessionDate, startTime, availableSlots])
+
     const canProceed = useMemo(() => {
         switch (currentStep) {
             case 1:
-                return sessionDate && startTime && endTime && startTime < endTime
+                return sessionDate && startTime && endTime && startTime < endTime && isSelectedSlotAvailable
             case 2:
                 // Must have at least one target, and not exceed max
                 return selectedTargets.length > 0 && selectedTargets.length <= maxTargets
@@ -203,7 +203,7 @@ function NewBooking() {
             default:
                 return false
         }
-    }, [currentStep, sessionDate, startTime, endTime, selectedTargets, maxTargets, sessionTitle])
+    }, [currentStep, sessionDate, startTime, endTime, isSelectedSlotAvailable, selectedTargets, maxTargets, sessionTitle])
 
     const handleNext = () => {
         if (currentStep < 3) {
@@ -287,6 +287,7 @@ function NewBooking() {
                                 endTime={endTime}
                                 setEndTime={setEndTime}
                                 onDurationChange={setSessionDuration}
+                                onAvailabilityChange={setAvailableSlots}
                             />
                         )}
 
