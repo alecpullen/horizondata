@@ -1,0 +1,10 @@
+
+> horizon-data@0.0.0 dev
+> vite
+
+
+  VITE v8.0.9  ready in 104 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+10:20:33 pm [vite] (client) hmr update /src/pages/MyBookings.jsx

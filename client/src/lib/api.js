@@ -65,7 +65,15 @@ api.interceptors.response.use(
     const userType = localStorage.getItem('userType');
 
     // Students have no refresh token — clear and redirect immediately.
-    if (!storedRefreshToken || userType !== 'teacher') {
+    // Also guard against corrupted localStorage values (e.g. the string
+    // "null" or "undefined" stored by older code that received a null
+    // refresh_token from the backend).
+    if (
+      !storedRefreshToken ||
+      storedRefreshToken === 'null' ||
+      storedRefreshToken === 'undefined' ||
+      userType !== 'teacher'
+    ) {
       clearAuthAndRedirect();
       return Promise.reject(error);
     }

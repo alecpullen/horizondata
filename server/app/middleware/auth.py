@@ -39,12 +39,17 @@ def extract_session_id() -> Optional[str]:
 
 def validate_teacher(token: str) -> Optional[dict]:
     """
-    Validate a teacher's Bearer token with Neon Auth.
+    Validate a teacher's session token by querying the neon_auth schema
+    directly in the database. Neon Auth uses cookie-based sessions, so the
+    HTTP /get-session endpoint only works when the full signed cookie is
+    present. The session token from the sign-in response body is stored in
+    neon_auth.session.token, so we validate by checking that row.
+
     Results are cached for 60 s (keyed on sha256 of the token) to avoid
-    a live HTTP round-trip on every protected request.
+    a DB round-trip on every protected request.
 
     Args:
-        token: Bearer token
+        token: Session token from the sign-in / sign-up response body
 
     Returns:
         User dict if valid, None otherwise
@@ -57,28 +62,40 @@ def validate_teacher(token: str) -> Optional[dict]:
         return cached
 
     try:
-        client = get_neon_auth_client()
-        session = client.get_session(token)
+        from app.services.database import engine
+        from sqlalchemy import text
 
-        if session and session.get('user'):
-            user = session['user']
-            result = {
-                'id': user.get('id'),
-                'email': user.get('email'),
-                'name': user.get('name'),
-                'role': user.get('role', 'teacher'),
-                'user_type': 'teacher'
-            }
-            with _token_cache_lock:
-                _token_cache[cache_key] = result
-            return result
-        return None
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT u.id, u.email, u.name, u.role
+                    FROM neon_auth.session s
+                    JOIN neon_auth.user u ON u.id = s."userId"
+                    WHERE s.token = :token
+                      AND s."expiresAt" > NOW()
+                """),
+                {"token": token},
+            )
+            row = result.fetchone()
 
-    except NeonAuthError as e:
-        logger.warning(f"Token validation failed: {e.message}")
-        return None
+        if row is None:
+            return None
+
+        result = {
+            "id": str(row.id),
+            "email": row.email,
+            "name": row.name,
+            # Neon Auth defaults role to 'user'; in this app all
+            # authenticated Neon Auth users are teachers.
+            "role": "teacher",
+            "user_type": "teacher",
+        }
+        with _token_cache_lock:
+            _token_cache[cache_key] = result
+        return result
+
     except Exception as e:
-        logger.error(f"Unexpected error validating teacher token: {e}")
+        logger.error(f"Error validating teacher token via database: {e}")
         return None
 
 

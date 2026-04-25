@@ -24,7 +24,7 @@ const accountLinks = [
 ]
 
 function TopBar({ activePath }) {
-    const { user, logout } = useAuth()
+    const { user, logoutTeacher, leaveAsStudent, isTeacher } = useAuth()
     const [accountOpen, setAccountOpen] = useState(false)
     const [liveViewOpen, setLiveViewOpen] = useState(false)
     const [avatarOpen, setAvatarOpen] = useState(false)
@@ -73,7 +73,11 @@ function TopBar({ activePath }) {
     const isLiveViewActive = navLinks[0].children.some(link => link.path === activePath)
 
     const handleLogout = async () => {
-        await logout()
+        if (isTeacher) {
+            await logoutTeacher()
+        } else {
+            await leaveAsStudent()
+        }
         window.location.href = '/login'
     }
 

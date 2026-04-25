@@ -77,11 +77,12 @@ def teacher_signup():
         client = get_neon_auth_client()
         result = client.sign_up(email, password, name, role='teacher')
         
+        token = result.get('token')
         return jsonify({
             'success': True,
             'user': result.get('user'),
-            'token': result.get('token'),
-            'refresh_token': result.get('refreshToken')
+            'token': token,
+            'refresh_token': token
         }), 201
         
     except NeonAuthError as e:
@@ -132,11 +133,12 @@ def teacher_login():
         client = get_neon_auth_client()
         result = client.sign_in(email, password)
         
+        token = result.get('token')
         return jsonify({
             'success': True,
             'user': result.get('user'),
-            'token': result.get('token'),
-            'refresh_token': result.get('refreshToken')
+            'token': token,
+            'refresh_token': token
         })
         
     except NeonAuthError as e:
@@ -201,12 +203,18 @@ def teacher_me():
 def teacher_refresh():
     """
     Refresh access token.
-    
+
+    Neon Auth (Better Auth) uses cookie-based sessions and does not expose
+    a working standalone refresh endpoint for email/password auth.  The
+    session token returned at login is valid until its DB expiresAt (7 days).
+    We "refresh" by validating the token still exists and is not expired,
+    then return the same token so the client can update its stored copy.
+
     Request Body:
         {
             "refresh_token": "..."
         }
-    
+
     Returns:
         {
             "success": true,
@@ -215,22 +223,36 @@ def teacher_refresh():
         }
     """
     data = request.get_json()
-    
+
     if not data or not data.get('refresh_token'):
         return jsonify({'error': 'invalid_request', 'message': 'Refresh token required'}), 400
-    
+
     try:
-        client = get_neon_auth_client()
-        result = client.refresh_token(data['refresh_token'])
-        
+        from app.services.database import engine
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT s.token, s."expiresAt", u.id
+                    FROM neon_auth.session s
+                    JOIN neon_auth.user u ON u.id = s."userId"
+                    WHERE s.token = :token
+                      AND s."expiresAt" > NOW()
+                """),
+                {"token": data['refresh_token']},
+            )
+            row = result.fetchone()
+
+        if row is None:
+            return jsonify({'error': 'invalid_token', 'message': 'Invalid or expired refresh token'}), 401
+
         return jsonify({
             'success': True,
-            'token': result.get('token'),
-            'refresh_token': result.get('refreshToken')
+            'token': row.token,
+            'refresh_token': row.token,
         })
-        
-    except NeonAuthError as e:
-        return jsonify({'error': 'invalid_token', 'message': 'Invalid or expired refresh token'}), 401
+
     except Exception as e:
         logger.error(f"Error refreshing token: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Token refresh failed'}), 500
@@ -484,6 +506,10 @@ def kick_student():
         logger.error(f"Error kicking student: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Failed to kick student'}), 500
 
+
+# ============================================================================
+# Account Profile Routes
+# ============================================================================
 
 # ============================================================================
 # Rate Limit Check Route (for UI display)

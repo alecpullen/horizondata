@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
 import { useToast } from '../components/ui/ToastProvider'
+import api from '../lib/api'
 import './MyAccount.css'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 function MyAccount() {
     const { showToast } = useToast()
@@ -29,18 +28,8 @@ function MyAccount() {
         async function fetchAccount() {
             try {
                 setIsLoading(true)
-                const response = await fetch(`${API_BASE}/api/account`, {
-                    headers: {
-                        'Accept': 'application/json',
-                    },
-                    credentials: 'include',
-                })
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-                }
-
-                const data = await response.json()
+                const response = await api.get('/api/account')
+                const data = response.data
                 setFormData({
                     fullName: data.fullName || '',
                     email: data.email || '',
@@ -67,28 +56,16 @@ function MyAccount() {
     const handleSave = async () => {
         setIsSaving(true)
         try {
-            const response = await fetch(`${API_BASE}/api/account`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    fullName: formData.fullName,
-                    email: formData.email,
-                    phone: formData.phone,
-                    institution: formData.institution,
-                    is2FAEnabled: formData.is2FAEnabled,
-                    notificationsEnabled: formData.notificationsEnabled
-                })
+            const response = await api.put('/api/account', {
+                fullName: formData.fullName,
+                email: formData.email,
+                phone: formData.phone,
+                institution: formData.institution,
+                is2FAEnabled: formData.is2FAEnabled,
+                notificationsEnabled: formData.notificationsEnabled
             })
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-            }
-
-            const data = await response.json()
+            const data = response.data.profile
             setOriginalData(data)
             setIsEditing(false)
             showToast({

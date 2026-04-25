@@ -45,22 +45,27 @@ class NeonAuthClient:
         url = f"{self.base_url}{endpoint}"
 
         request_headers = {
-            'Content-Type': 'application/json',
             'Accept': 'application/json',
         }
         if self.api_key:
             request_headers['Authorization'] = f'Bearer {self.api_key}'
         if headers:
             request_headers.update(headers)
-            
+
         try:
-            response = requests.request(
-                method=method,
-                url=url,
-                json=data,
-                headers=request_headers,
-                timeout=self.timeout
-            )
+            request_kwargs = {
+                'method': method,
+                'url': url,
+                'headers': request_headers,
+                'timeout': self.timeout
+            }
+            # Better Auth endpoints expect a JSON body for POST/PUT/PATCH,
+            # even if empty, when Content-Type is application/json.
+            if method.upper() != 'GET':
+                request_kwargs['json'] = data if data is not None else {}
+                request_headers.setdefault('Content-Type', 'application/json')
+
+            response = requests.request(**request_kwargs)
             
             # Parse response
             if response.content:
@@ -137,16 +142,16 @@ class NeonAuthClient:
     def get_session(self, token: str) -> Optional[Dict[str, Any]]:
         """
         Validate a session token and get user info.
-        
+
         Args:
             token: Bearer token from Authorization header
-            
+
         Returns:
             User session data or None if invalid
         """
         try:
             result = self._make_request(
-                'GET', 
+                'GET',
                 '/get-session',
                 headers={'Authorization': f'Bearer {token}'}
             )
@@ -179,16 +184,25 @@ class NeonAuthClient:
     
     def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
         """
-        Refresh an access token.
-        
+        Refresh an access token using the refresh token.
+
+        Note: Better Auth's /refresh-token endpoint now requires OAuth provider fields.
+        For email/password auth, we use /token endpoint with Bearer auth to get a new token.
+
         Args:
-            refresh_token: Refresh token from sign-in response
-            
+            refresh_token: Refresh token from sign-in response (kept for API compatibility)
+
         Returns:
-            New tokens
+            New tokens with 'token' and 'refresh_token' keys
         """
-        data = {'refreshToken': refresh_token}
-        return self._make_request('POST', '/refresh-token', data)
+        # Use /token endpoint which returns a new JWT using existing Bearer auth
+        result = self._make_request('GET', '/token', headers={'Authorization': f'Bearer {refresh_token}'})
+
+        # Map Better Auth response fields to our expected format
+        return {
+            'token': result.get('token'),
+            'refreshToken': refresh_token  # Keep the same refresh token
+        }
     
     def update_user(self, token: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """

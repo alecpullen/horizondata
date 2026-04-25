@@ -28,9 +28,16 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem('user');
 
       if (storedUserType === 'teacher' && storedToken) {
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null
+        // Normalize user data to include both 'name' and 'fullName'
+        const normalizedUser = parsedUser ? {
+          ...parsedUser,
+          fullName: parsedUser.fullName || parsedUser.name || '',
+        } : null
+
         setUserType('teacher');
         setToken(storedToken);
-        setUser(storedUser ? JSON.parse(storedUser) : null);
+        setUser(normalizedUser);
         setIsAuthenticated(true);
       } else if (storedUserType === 'student' && storedSessionId) {
         setUserType('student');
@@ -55,15 +62,21 @@ export const AuthProvider = ({ children }) => {
 
     const { user, token, refresh_token } = response.data;
 
+    // Normalize user data to include both 'name' and 'fullName'
+    const normalizedUser = {
+      ...user,
+      fullName: user.name || '',
+    }
+
     // Store auth state
     localStorage.setItem('userType', 'teacher');
     localStorage.setItem('token', token);
     localStorage.setItem('refreshToken', refresh_token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
 
     setUserType('teacher');
     setToken(token);
-    setUser(user);
+    setUser(normalizedUser);
     setIsAuthenticated(true);
 
     return response.data;
@@ -78,15 +91,21 @@ export const AuthProvider = ({ children }) => {
 
     const { user, token, refresh_token } = response.data;
 
+    // Normalize user data to include both 'name' and 'fullName'
+    const normalizedUser = {
+      ...user,
+      fullName: user.name || '',
+    }
+
     // Store auth state
     localStorage.setItem('userType', 'teacher');
     localStorage.setItem('token', token);
     localStorage.setItem('refreshToken', refresh_token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
 
     setUserType('teacher');
     setToken(token);
-    setUser(user);
+    setUser(normalizedUser);
     setIsAuthenticated(true);
 
     return response.data;
@@ -188,8 +207,14 @@ export const AuthProvider = ({ children }) => {
   const getCurrentUser = useCallback(async () => {
     if (userType === 'teacher') {
       const response = await api.get('/api/auth/teacher/me');
-      setUser(response.data.user);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const user = response.data.user
+      // Normalize user data to include both 'name' and 'fullName'
+      const normalizedUser = {
+        ...user,
+        fullName: user.name || '',
+      }
+      setUser(normalizedUser);
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
       return response.data;
     } else if (userType === 'student') {
       const response = await api.get('/api/auth/student/me');
