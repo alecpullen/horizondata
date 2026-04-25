@@ -30,7 +30,7 @@ function TopBar({ activePath }) {
     const [avatarOpen, setAvatarOpen] = useState(false)
     const [mswEnabled, setMswEnabled] = useState(() => {
         const stored = localStorage.getItem('msw-enabled')
-        return stored === null ? true : stored === 'true'
+        return stored === null ? false : stored === 'true'
     })
     const accountDropdownRef = useRef(null)
     const liveViewDropdownRef = useRef(null)

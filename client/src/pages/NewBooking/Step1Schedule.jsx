@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+import api from '../../lib/api'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -96,27 +95,19 @@ function Step1Schedule({
                 endDate: weekEnd.toISOString().split('T')[0]
             })
 
-            const response = await fetch(`${API_BASE}/api/bookings/availability?${params}`, {
-                headers: { 'Accept': 'application/json' },
-                credentials: 'include',
-            })
-
-            if (!response.ok) {
-                // If the endpoint doesn't exist yet, assume all slots are available
-                if (response.status === 404) {
-                    setAvailableSlots(null) // null means all slots are available
-                    return
-                }
-                throw new Error(`HTTP ${response.status}`)
-            }
-
-            const data = await response.json()
+            const response = await api.get(`/api/bookings/availability?${params}`)
+            const data = response.data
             // Expected format: [{ date: '2026-04-15', startTime: '20:00', endTime: '20:30' }, ...]
             setAvailableSlots(data.slots || data || [])
         } catch (err) {
-            console.error('Failed to fetch available slots:', err)
-            setError('Failed to load available time slots')
-            setAvailableSlots(null) // Fallback: allow all slots
+            // If endpoint doesn't exist yet, assume all slots are available
+            if (err.response?.status === 404) {
+                setAvailableSlots(null)
+            } else {
+                console.error('Failed to fetch available slots:', err)
+                setError('Failed to load available time slots')
+                setAvailableSlots(null) // Fallback: allow all slots
+            }
         } finally {
             setIsLoadingSlots(false)
         }

@@ -5,6 +5,7 @@ import { useToast } from '../../components/ui/ToastProvider'
 import Step1Schedule from './Step1Schedule'
 import Step2SelectTarget from './Step2SelectTarget'
 import Step3Confirm from './Step3Confirm'
+import api from '../../lib/api'
 import './NewBooking.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -221,28 +222,15 @@ function NewBooking() {
     const handleSubmit = async () => {
         setIsSubmitting(true)
         try {
-            const response = await fetch(`${API_BASE}/api/bookings`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    targets: selectedTargets.map(t => ({ id: t.id, name: t.name })),
-                    targetCount: selectedTargets.length,
-                    date: sessionDate,
-                    startTime,
-                    endTime,
-                    title: sessionTitle,
-                    description: sessionDescription
-                })
+            await api.post('/api/bookings', {
+                targets: selectedTargets.map(t => ({ id: t.id, name: t.name })),
+                targetCount: selectedTargets.length,
+                date: sessionDate,
+                startTime,
+                endTime,
+                title: sessionTitle,
+                description: sessionDescription
             })
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`)
-            }
-
             showToast({ type: 'success', message: 'Booking created successfully!' })
             navigate('/bookings')
         } catch (err) {

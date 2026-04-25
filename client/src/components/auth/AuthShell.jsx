@@ -9,7 +9,7 @@ function AuthShell({ title, subtitle, children, footer, backUrl = '/', showBackB
     // MSW toggle state - synced with localStorage
     const [mswEnabled, setMswEnabled] = useState(() => {
         const stored = localStorage.getItem('msw-enabled')
-        return stored === null ? true : stored === 'true'
+        return stored === null ? false : stored === 'true'
     })
 
     // Persist MSW toggle state and reload to apply changes

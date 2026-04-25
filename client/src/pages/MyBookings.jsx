@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
+import api from '../lib/api'
 import './MyBookings.css'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 
 const statusColors = {
@@ -143,21 +142,10 @@ function MyBookings() {
         async function fetchBookings() {
             try {
                 setLoading(true)
-                const response = await fetch(`${API_BASE}/api/bookings`, {
-                    headers: {
-                        'Accept': 'application/json',
-                    },
-                    credentials: 'include',
-                })
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-                }
-
-                const data = await response.json()
-                setBookings(data)
+                const response = await api.get('/api/bookings')
+                setBookings(response.data)
             } catch (err) {
-                setError(err.message)
+                setError(err.response?.statusText || err.message)
             } finally {
                 setLoading(false)
             }

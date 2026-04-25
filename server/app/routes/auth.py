@@ -14,6 +14,7 @@ from datetime import datetime
 from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.services.student_session_manager import get_student_session_manager
 from app.services.rate_limiter import check_capture_limit, get_capture_remaining
+from app.services.session_codes import generate_session_code
 from app.middleware.auth import require_auth
 
 import uuid as _uuid
@@ -24,22 +25,6 @@ from app.models.session import ObservationSession
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
-
-def generate_session_code() -> str:
-    """Generate a unique 6-character session code"""
-    import random
-    import string
-
-    while True:
-        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        with get_db() as db:
-            exists = db.query(ObservationSession).filter(
-                ObservationSession.session_code == code,
-                ObservationSession.status == "active",
-            ).first()
-            if not exists:
-                return code
 
 
 # ============================================================================

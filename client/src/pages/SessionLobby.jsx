@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { split } from '../utils/session'
 import AppLogo from '../components/AppLogo'
+import api from '../lib/api'
 import './SessionLobby.css'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 function SessionLobby() {
     const { bookingId } = useParams()
@@ -17,7 +16,7 @@ function SessionLobby() {
     // MSW toggle state - synced with localStorage
     const [mswEnabled, setMswEnabled] = useState(() => {
         const stored = localStorage.getItem('msw-enabled')
-        return stored === null ? true : stored === 'true'
+        return stored === null ? false : stored === 'true'
     })
 
     // Persist MSW toggle state and reload to apply changes
@@ -43,50 +42,37 @@ function SessionLobby() {
             try {
                 // Fetch booking details
                 let bookingData = null
-                const response = await fetch(`${API_BASE}/api/bookings/${bookingId}`, {
-                    headers: { 'Accept': 'application/json' },
-                    credentials: 'include',
-                })
-
-                if (response.ok) {
-                    bookingData = await response.json()
+                try {
+                    const bookingRes = await api.get(`/api/bookings/${bookingId}`)
+                    bookingData = bookingRes.data
                     setBooking(bookingData)
-                } else {
-                    // Fallback: try to get from the list endpoint
-                    const listResponse = await fetch(`${API_BASE}/api/bookings`, {
-                        headers: { 'Accept': 'application/json' },
-                        credentials: 'include',
-                    })
-                    if (listResponse.ok) {
-                        const listData = await listResponse.json()
+                } catch {
+                    // Fallback: find in list
+                    try {
+                        const listRes = await api.get('/api/bookings')
                         const allBookings = [
-                            ...(listData.upcoming || []),
-                            ...(listData.pending || [])
+                            ...(listRes.data.upcoming || []),
+                            ...(listRes.data.pending || [])
                         ]
                         const found = allBookings.find(b => String(b.id) === bookingId)
                         if (found) {
                             bookingData = found
                             setBooking(found)
                         }
-                    }
+                    } catch { /* ignore */ }
                 }
 
                 // Fetch or create session to get join code
                 console.log('[Lobby] Fetching session for bookingId:', bookingId)
-                const sessionResponse = await fetch(`${API_BASE}/api/sessions/${bookingId}`, {
-                    headers: { 'Accept': 'application/json' },
-                    credentials: 'include',
-                })
-                console.log('[Lobby] Session response status:', sessionResponse.status)
-
-                if (sessionResponse.ok) {
-                    const sessionData = await sessionResponse.json()
+                try {
+                    const sessionRes = await api.get(`/api/sessions/${bookingId}`)
+                    const sessionData = sessionRes.data
                     console.log('[Lobby] Session data:', sessionData)
                     if (sessionData.success && sessionData.session) {
                         setJoinCode(sessionData.session.joinCode)
                     }
-                } else {
-                    console.error('[Lobby] Session fetch failed:', await sessionResponse.text())
+                } catch (e) {
+                    console.error('[Lobby] Session fetch failed:', e)
                 }
             } catch (err) {
                 console.error('Failed to fetch booking or session:', err)
@@ -105,19 +91,11 @@ function SessionLobby() {
         async function fetchParticipants() {
             try {
                 console.log('[Lobby] Fetching participants for bookingId:', bookingId)
-                const response = await fetch(`${API_BASE}/api/sessions/${bookingId}/participants`, {
-                    headers: { 'Accept': 'application/json' },
-                    credentials: 'include',
-                })
-
-                if (response.ok) {
-                    const data = await response.json()
-                    console.log('[Lobby] Participants data:', data)
-                    if (data.success && data.participants) {
-                        setStudents(data.participants)
-                    }
-                } else {
-                    console.error('[Lobby] Participants fetch failed:', await response.text())
+                const res = await api.get(`/api/sessions/${bookingId}/participants`)
+                const data = res.data
+                console.log('[Lobby] Participants data:', data)
+                if (data.success && data.participants) {
+                    setStudents(data.participants)
                 }
             } catch (err) {
                 console.error('Failed to fetch participants:', err)
@@ -134,23 +112,11 @@ function SessionLobby() {
 
     const handleBeginSession = async () => {
         try {
-            const response = await fetch(`${API_BASE}/api/sessions/${bookingId}/start`, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                credentials: 'include',
-            })
-
-            if (response.ok) {
-                navigate('/live/teacher')
-            } else {
-                console.error('Failed to start session')
-                // Navigate anyway for now (in case API fails)
-                navigate('/live/teacher')
-            }
+            await api.post(`/api/sessions/${bookingId}/start`)
         } catch (err) {
             console.error('Error starting session:', err)
-            navigate('/live/teacher')
         }
+        navigate('/live/teacher')
     }
 
     const digits = split(joinCode)

@@ -2,9 +2,9 @@ import { http, HttpResponse, delay, passthrough } from 'msw'
 
 // Check if MSW is enabled (stored in localStorage)
 function isMswEnabled() {
-    // Default to true if not set
+    // Default to false if not set
     const stored = localStorage.getItem('msw-enabled')
-    const enabled = stored === null ? true : stored === 'true'
+    const enabled = stored === null ? false : stored === 'true'
     console.log('[MSW] isMswEnabled:', enabled, '(stored:', stored, ')')
     return enabled
 }
