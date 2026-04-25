@@ -5,15 +5,23 @@ Unified authentication and authorization middleware for Flask.
 Handles both teacher (BetterAuth token) and student (session ID) authentication.
 """
 
+import hashlib
 import logging
+import threading
 from functools import wraps
 from flask import request, g, jsonify
 from typing import Optional, List, Callable
+from cachetools import TTLCache
 
 from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.services.student_session_manager import get_student_session_manager
 
 logger = logging.getLogger(__name__)
+
+# Cache validated teacher tokens for 60 s to avoid a live HTTP call on every request.
+# Key: sha256(token) — avoids storing raw bearer tokens in memory.
+_token_cache: TTLCache = TTLCache(maxsize=512, ttl=60)
+_token_cache_lock = threading.Lock()
 
 
 def extract_bearer_token() -> Optional[str]:
@@ -32,28 +40,40 @@ def extract_session_id() -> Optional[str]:
 def validate_teacher(token: str) -> Optional[dict]:
     """
     Validate a teacher's Bearer token with Neon Auth.
-    
+    Results are cached for 60 s (keyed on sha256 of the token) to avoid
+    a live HTTP round-trip on every protected request.
+
     Args:
         token: Bearer token
-        
+
     Returns:
         User dict if valid, None otherwise
     """
+    cache_key = hashlib.sha256(token.encode()).hexdigest()
+
+    with _token_cache_lock:
+        cached = _token_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
         client = get_neon_auth_client()
         session = client.get_session(token)
-        
+
         if session and session.get('user'):
             user = session['user']
-            return {
+            result = {
                 'id': user.get('id'),
                 'email': user.get('email'),
                 'name': user.get('name'),
                 'role': user.get('role', 'teacher'),
                 'user_type': 'teacher'
             }
+            with _token_cache_lock:
+                _token_cache[cache_key] = result
+            return result
         return None
-        
+
     except NeonAuthError as e:
         logger.warning(f"Token validation failed: {e.message}")
         return None

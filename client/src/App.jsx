@@ -18,22 +18,29 @@ import StudentLobby from './pages/StudentLobby'
 import SessionLobby from './pages/SessionLobby'
 import NewBooking from './pages/NewBooking'
 import { AuthProvider } from './contexts/AuthContext'
-import { useAuth } from './contexts/useAuth'
+import { useAuth } from './contexts/AuthContext'
 import { useSessionTimeout } from './hooks/useSessionTimeout'
 import { useToast } from './components/ui/ToastProvider'
 
 // Component to handle session timeout for authenticated users
 function SessionTimeoutWrapper({ children }) {
-    const { isAuthenticated, logout } = useAuth()
+    const { isAuthenticated, logoutTeacher, refreshToken } = useAuth()
     const { showToast } = useToast()
 
     const { showWarning, timeLeft, extendSession: handleExtend, logout: handleLogout } = useSessionTimeout({
         isAuthenticated,
-        onExtend: () => {
-            showToast({ type: 'success', message: 'Session extended!' })
+        onExtend: async () => {
+            const result = await refreshToken()
+            if (result) {
+                showToast({ type: 'success', message: 'Session extended!' })
+            } else {
+                logoutTeacher()
+                showToast({ type: 'error', message: 'Could not extend session. Please sign in again.' })
+                window.location.href = '/login'
+            }
         },
         onLogout: () => {
-            logout()
+            logoutTeacher()
             showToast({ type: 'info', message: 'Session expired. Please sign in again.' })
             window.location.href = '/login'
         },

@@ -4,7 +4,7 @@ import AuthShell from '../components/auth/AuthShell'
 import LoadingSkeleton from '../components/auth/LoadingSkeleton'
 import { useToast } from '../components/ui/ToastProvider'
 import { validateEmail, validateRequired, getAuthErrorMessage } from '../utils/validation'
-import { useAuth } from '../contexts/useAuth'
+import { useAuth } from '../contexts/AuthContext'
 import { useRedirectAfterAuth } from '../hooks/useRedirectAfterAuth'
 import './Login.css'
 

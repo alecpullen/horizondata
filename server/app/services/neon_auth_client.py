@@ -39,14 +39,14 @@ class NeonAuthClient:
         self.api_key = api_key or os.getenv('NEON_AUTH_API_KEY')
         self.timeout = 10
         
-    def _make_request(self, method: str, endpoint: str, data: Optional[Dict] = None, 
+    def _make_request(self, method: str, endpoint: str, data: Optional[Dict] = None,
                       headers: Optional[Dict] = None) -> Dict[str, Any]:
         """Make HTTP request to Neon Auth API"""
         url = f"{self.base_url}{endpoint}"
-        
+
         request_headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
         }
         if self.api_key:
             request_headers['Authorization'] = f'Bearer {self.api_key}'
@@ -107,8 +107,6 @@ class NeonAuthClient:
             'email': email,
             'password': password,
             'name': name,
-            'role': role,
-            'callbackURL': '/dashboard'  # Redirect after email verification
         }
         
         result = self._make_request('POST', '/sign-up/email', data)

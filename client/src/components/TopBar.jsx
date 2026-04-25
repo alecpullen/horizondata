@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import AppLogo from './AppLogo'
-import { useAuth } from '../contexts/useAuth'
+import { useAuth } from '../contexts/AuthContext'
 import './TopBar.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'

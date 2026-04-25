@@ -14,8 +14,7 @@ from datetime import datetime
 from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.services.student_session_manager import get_student_session_manager
 from app.services.rate_limiter import check_capture_limit, get_capture_remaining
-from app.middleware.auth import require_auth, require_teacher, require_any_auth
-from app.services.neon_auth_client import NeonAuthClient
+from app.middleware.auth import require_auth
 
 import uuid as _uuid
 
@@ -31,22 +30,16 @@ def generate_session_code() -> str:
     """Generate a unique 6-character session code"""
     import random
     import string
-    
-    # Generate random 6-character alphanumeric code
+
     while True:
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        
-        try:
-            with get_db() as db:
-                exists = db.query(ObservationSession).filter(
-                    ObservationSession.session_code == code,
-                    ObservationSession.status == "active",
-                ).first()
-                if not exists:
-                    return code
-        except Exception as e:
-            logger.error(f"Error checking session code: {e}")
-            return code
+        with get_db() as db:
+            exists = db.query(ObservationSession).filter(
+                ObservationSession.session_code == code,
+                ObservationSession.status == "active",
+            ).first()
+            if not exists:
+                return code
 
 
 # ============================================================================
@@ -171,29 +164,27 @@ def teacher_login():
 
 
 @auth_bp.route('/teacher/logout', methods=['POST'])
-@require_auth(roles=['teacher'])
 def teacher_logout():
     """
-    Log out a teacher.
-    
+    Log out a teacher. Best-effort: always returns 200 so the client can
+    clear its token even if it has already expired.
+
     Headers:
-        Authorization: Bearer <token>
-    
+        Authorization: Bearer <token>  (optional — used to invalidate server-side session)
+
     Returns:
         {"success": true}
     """
     try:
-        token = g.auth_token
+        auth_header = request.headers.get('Authorization', '')
+        token = auth_header[7:] if auth_header.startswith('Bearer ') else None
         if token:
             client = get_neon_auth_client()
             client.sign_out(token)
-        
-        return jsonify({'success': True})
-        
     except Exception as e:
-        logger.error(f"Error during logout: {e}")
-        # Still return success - client should clear token anyway
-        return jsonify({'success': True})
+        logger.warning(f"Error during logout (non-fatal): {e}")
+
+    return jsonify({'success': True})
 
 
 @auth_bp.route('/teacher/me', methods=['GET'])

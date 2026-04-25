@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 import os
 import time
 # from .telemetry import setup_telemetry  # Temporarily disabled
@@ -21,10 +22,33 @@ def create_app():
 
     # app = setup_telemetry(app)  # Temporarily disabled
 
+    cors_origins = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
+    ).split(",")
+
+    allowed_headers = ["Content-Type", "Authorization", "X-Session-ID"]
+
+    CORS(
+        app,
+        resources={
+            r"/api/*":       {"origins": cors_origins,
+                              "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+                              "allow_headers": allowed_headers},
+            r"/weather/*":   {"origins": cors_origins,
+                              "methods": ["GET", "OPTIONS"],
+                              "allow_headers": allowed_headers},
+            r"/telescope/*": {"origins": cors_origins,
+                              "methods": ["GET", "POST", "OPTIONS"],
+                              "allow_headers": allowed_headers},
+        },
+        supports_credentials=True,
+    )
+
     @app.route("/health")
     def health():
         return {"status": "healthy", "timestamp": time.time()}
-    
+
     app.register_blueprint(docs_bp)
     app.register_blueprint(weather_bp)
     app.register_blueprint(telescope_bp)
