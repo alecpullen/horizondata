@@ -1780,3 +1780,189 @@
         width: 100%;
     }
 }
+
+/* Session-Aware Target Visibility Styles */
+
+/* Session Info Banner */
+.session-info-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    border-bottom: 1px solid var(--border);
+    color: white;
+    font-size: 13px;
+}
+
+.session-info-content {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.session-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.moon-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.9;
+}
+
+.recommended-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.9;
+    transition: opacity 0.15s ease;
+}
+
+.toggle-label:hover {
+    opacity: 1;
+}
+
+.toggle-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Quality Badges */
+.quality-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+    letter-spacing: 0.3px;
+}
+
+.quality-badge--excellent {
+    background: #10b981;
+    color: white;
+}
+
+.quality-badge--good {
+    background: #3b82f6;
+    color: white;
+}
+
+.quality-badge--fair {
+    background: #f59e0b;
+    color: white;
+}
+
+.quality-badge--poor {
+    background: #ef4444;
+    color: white;
+}
+
+.quality-badge--unknown {
+    background: #6b7280;
+    color: white;
+}
+
+.quality-score {
+    font-size: 10px;
+    color: var(--t3);
+    margin-top: 2px;
+}
+
+/* Quality Badge Large (for details panel) */
+.quality-badge-large {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: capitalize;
+    margin-bottom: 8px;
+}
+
+/* Best Time Display */
+.target-best-time {
+    white-space: nowrap;
+}
+
+.best-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--t2);
+}
+
+.transit-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    background: #8b5cf6;
+    color: white;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+.best-time-unknown {
+    color: var(--t3);
+    font-size: 12px;
+}
+
+/* Recommendation Text */
+.recommendation-text {
+    font-size: 12px;
+    color: var(--t2);
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+/* Target Session Quality Section */
+.target-session-quality {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Loading State Enhancement */
+.targets-loading p {
+    color: var(--t2);
+    font-size: 13px;
+}
+
+/* Mobile Responsiveness for Session Banner */
+@media (max-width: 768px) {
+    .session-info-banner {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .session-info-content {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .recommended-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+}

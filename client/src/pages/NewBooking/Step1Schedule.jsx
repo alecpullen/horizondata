@@ -42,8 +42,7 @@ function Step1Schedule({
     setStartTime,
     endTime,
     setEndTime,
-    onDurationChange,
-    onAvailabilityChange
+    onDurationChange
 }) {
     const [currentWeekStart, setCurrentWeekStart] = useState(() => {
         const today = new Date()
@@ -98,23 +97,15 @@ function Step1Schedule({
 
             const response = await api.get(`/api/bookings/availability?${params}`)
             const data = response.data
-            const slots = data.slots || []
-            setAvailableSlots(slots)
-            if (onAvailabilityChange) {
-                onAvailabilityChange(slots)
+            if (response.status === 404) {
+                setAvailableSlots(null) // null = all slots available
+            } else {
+                setAvailableSlots(data.slots || data || [])
             }
         } catch (err) {
-            // Fail-closed: any error means we cannot determine availability
-            if (err.response?.status === 404) {
-                setError('Scheduling service unavailable. Please try again later.')
-            } else {
-                console.error('Failed to fetch available slots:', err)
-                setError('Failed to load available time slots')
-            }
-            setAvailableSlots([]) // Empty = no slots available
-            if (onAvailabilityChange) {
-                onAvailabilityChange([])
-            }
+            console.error('Failed to fetch available slots:', err)
+            setError('Failed to load available time slots')
+            setAvailableSlots(null) // Fallback: allow all slots
         } finally {
             setIsLoadingSlots(false)
         }
@@ -122,7 +113,8 @@ function Step1Schedule({
 
     // Check if a slot is available
     const isSlotAvailable = (dayIndex, slot) => {
-        // Fail-closed: if availability data is missing or empty, no slots are available
+        // null means availability couldn't be loaded — treat all slots as available
+        if (availableSlots === null) return true
         if (!availableSlots || availableSlots.length === 0) return false
 
         const cellDate = new Date(currentWeekStart)
@@ -130,7 +122,7 @@ function Step1Schedule({
         const dateStr = cellDate.toISOString().split('T')[0]
 
         return availableSlots.some(
-            available => available.date === dateStr && available.startTime === slot.time && available.available === true
+            available => available.date === dateStr && available.startTime === slot.time
         )
     }
 

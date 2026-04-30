@@ -15,6 +15,8 @@ from astropy.coordinates import EarthLocation, SkyCoord, AltAz, get_sun, get_bod
 from astropy import units as u
 from astropy.time import Time
 from astropy.coordinates import solar_system_ephemeris
+import numpy as np
+import pytz
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +116,11 @@ class VisibilityService:
         self._visibility_cache = {}
         self._cache_timestamps = {}
         self._cache_lock = threading.RLock()
-        
+
+        # Session-specific cache storage
+        self._session_cache = {}
+        self._session_cache_timestamps = {}
+
         # Background update thread
         self._update_thread = None
         self._stop_updates = threading.Event()
@@ -634,7 +640,353 @@ class VisibilityService:
             self._visibility_cache.clear()
             self._cache_timestamps.clear()
             self._last_positions.clear()
+            self._session_cache.clear()
+            self._session_cache_timestamps.clear()
         logger.info("Visibility cache cleared")
+
+    def get_session_targets(self, start_time: datetime, end_time: datetime,
+                            min_elevation: float = 30.0) -> Dict[str, Any]:
+        """
+        Calculate visibility for all objects during a session window.
+        Caches results for 5 minutes using session window as cache key.
+        """
+        if end_time <= start_time:
+            raise ValueError("end_time must be after start_time")
+        if (end_time - start_time) > timedelta(hours=8):
+            raise ValueError("Session duration cannot exceed 8 hours")
+        if min_elevation > 90:
+            raise ValueError("min_elevation cannot exceed 90 degrees")
+
+        cache_key = self._get_session_cache_key(start_time, end_time, min_elevation)
+        current_time = datetime.now(timezone.utc)
+
+        with self._cache_lock:
+            if (cache_key in self._session_cache and
+                    cache_key in self._session_cache_timestamps):
+                cache_age = current_time - self._session_cache_timestamps[cache_key]
+                if cache_age <= self.cache_duration:
+                    logger.debug(f"Using cached session data for {cache_key}")
+                    return self._session_cache[cache_key].copy()
+
+        targets = self._calculate_session_targets(start_time, end_time, min_elevation)
+        moon_data = self._calculate_moon_phase(Time(end_time))
+        sun_data = self._calculate_sun_times(start_time, end_time)
+        is_night = self._is_nighttime_session(start_time, end_time)
+
+        result = {
+            "session": {
+                "start": start_time.isoformat(),
+                "end": end_time.isoformat(),
+                "duration_minutes": int((end_time - start_time).total_seconds() / 60),
+                "timezone": "Australia/Melbourne",
+                "local_start": start_time.astimezone(pytz.timezone("Australia/Melbourne")).isoformat(),
+                "local_end": end_time.astimezone(pytz.timezone("Australia/Melbourne")).isoformat(),
+                "is_night": is_night,
+                "sun": sun_data,
+                "moon": moon_data
+            },
+            "targets": targets,
+            "summary": self._calculate_summary(targets),
+            "cache_used": False
+        }
+
+        with self._cache_lock:
+            self._session_cache[cache_key] = result.copy()
+            self._session_cache_timestamps[cache_key] = current_time
+            self._cleanup_session_cache(current_time)
+
+        return result
+
+    def _get_session_cache_key(self, start: datetime, end: datetime, min_elev: float) -> str:
+        key_string = f"{start.isoformat()}_{end.isoformat()}_{min_elev}"
+        return hashlib.sha256(key_string.encode()).hexdigest()[:16]
+
+    def _cleanup_session_cache(self, current_time: datetime):
+        cutoff_time = current_time - (self.cache_duration * 2)
+        keys_to_remove = [
+            key for key, timestamp in self._session_cache_timestamps.items()
+            if timestamp < cutoff_time
+        ]
+        for key in keys_to_remove:
+            self._session_cache.pop(key, None)
+            self._session_cache_timestamps.pop(key, None)
+
+    def _sample_session_times(self, start: datetime, end: datetime) -> List[datetime]:
+        """Adaptive sampling: 4-12 points based on session duration."""
+        duration_sec = (end - start).total_seconds()
+        num_samples = max(4, min(12, int(duration_sec / 1800) + 1))
+        times = []
+        for i in range(num_samples):
+            fraction = i / (num_samples - 1) if num_samples > 1 else 0
+            times.append(start + timedelta(seconds=duration_sec * fraction))
+        return times
+
+    def _calculate_session_targets(self, start_time: datetime, end_time: datetime,
+                                   min_elevation: float) -> List[Dict[str, Any]]:
+        sample_times = self._sample_session_times(start_time, end_time)
+        targets = []
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for obj_data in ENHANCED_OBJECT_DATABASE:
+                try:
+                    target_info = self._calculate_target_session_data(
+                        obj_data, sample_times, min_elevation
+                    )
+                    if target_info:
+                        targets.append(target_info)
+                except Exception as e:
+                    logger.warning(f"Failed to calculate session data for {obj_data['name']}: {e}")
+                    continue
+
+        targets.sort(key=lambda x: x.get("quality_score", 0), reverse=True)
+        return targets
+
+    def _calculate_target_session_data(self, obj_data: Dict[str, Any],
+                                       sample_times: List[datetime],
+                                       min_elevation: float) -> Optional[Dict[str, Any]]:
+        mid_time = sample_times[len(sample_times) // 2]
+        astro_mid = Time(mid_time)
+
+        try:
+            if obj_data["type"] == "Planet":
+                with solar_system_ephemeris.set('builtin'):
+                    target_coords = get_body(obj_data["name"].lower(), astro_mid, self.location)
+            else:
+                target_coords = SkyCoord.from_name(obj_data["name"])
+        except Exception as e:
+            logger.error(f"Could not get coordinates for {obj_data['name']}: {e}")
+            return None
+
+        elevations = []
+        for sample_time in sample_times:
+            astro_time = Time(sample_time)
+            local_frame = AltAz(obstime=astro_time, location=self.location)
+            local_coords = target_coords.transform_to(local_frame)
+            elevations.append(float(local_coords.alt.degree))
+
+        if not elevations:
+            return None
+
+        elev_start = elevations[0]
+        elev_end = elevations[-1]
+        elev_min = min(elevations)
+        elev_max = max(elevations)
+
+        max_idx = elevations.index(elev_max)
+        transit_time = sample_times[max_idx]
+        transit_during = sample_times[0] <= transit_time <= sample_times[-1]
+
+        visible_entire = all(e > min_elevation for e in elevations)
+        sets_during = elev_start > min_elevation and elev_end < min_elevation
+
+        if elev_max < min_elevation:
+            return None
+
+        score, grade = self._calculate_quality_score(
+            elev_max, elev_min, transit_during, sets_during, min_elevation
+        )
+
+        recommendation = self._generate_session_recommendation(
+            grade, transit_during, sets_during, transit_time, elev_max, min_elevation
+        )
+        best_time = self._format_best_time(transit_time, transit_during, elev_max)
+        magnitude = self._get_object_magnitude(obj_data, astro_mid)
+
+        return {
+            "name": obj_data["name"],
+            "type": obj_data["type"],
+            "constellation": obj_data.get("constellation", "Unknown"),
+            "magnitude": magnitude,
+            "catalog_id": obj_data.get("catalog_id"),
+            "coordinates": {
+                "ra_hours": float(target_coords.ra.hour),
+                "ra": f"{int(target_coords.ra.hms[0]):02d}h {int(target_coords.ra.hms[1]):02d}m {target_coords.ra.hms[2]:05.2f}s",
+                "dec_degrees": float(target_coords.dec.degree),
+                "dec": f"{target_coords.dec.dms[0]:+03d}° {abs(int(target_coords.dec.dms[1])):02d}' {abs(target_coords.dec.dms[2]):05.2f}\""
+            },
+            "quality_score": score,
+            "quality_grade": grade,
+            "elevation_start": round(elev_start, 1),
+            "elevation_end": round(elev_end, 1),
+            "elevation_min": round(elev_min, 1),
+            "elevation_max": round(elev_max, 1),
+            "transits_during_session": transit_during,
+            "transit_time": transit_time.strftime("%H:%M") if transit_during else None,
+            "visible_entire_session": visible_entire,
+            "sets_during_session": sets_during,
+            "best_time": best_time,
+            "recommendation": recommendation
+        }
+
+    def _calculate_quality_score(self, max_elev: float, min_elev: float,
+                                  transits: bool, sets_during: bool,
+                                  min_elevation_threshold: float) -> Tuple[int, str]:
+        score = 0.0
+
+        if max_elev > 60:
+            score += 70
+        elif max_elev > 45:
+            score += 50 + (max_elev - 45)
+        elif max_elev > 30:
+            score += 30 + (max_elev - 30) * 1.33
+        else:
+            score += max_elev
+
+        if transits:
+            score += 15
+
+        if min_elev < min_elevation_threshold:
+            score -= (min_elevation_threshold - min_elev) * 3
+
+        if sets_during:
+            score -= 20
+
+        score = max(0, min(100, int(score)))
+
+        if score >= 85:
+            grade = "excellent"
+        elif score >= 70:
+            grade = "good"
+        elif score >= 50:
+            grade = "fair"
+        elif score >= 20:
+            grade = "poor"
+        else:
+            grade = "not_visible"
+
+        return score, grade
+
+    def _generate_session_recommendation(self, grade: str, transits: bool,
+                                          sets_during: bool, transit_time: datetime,
+                                          elev_max: float, min_elev: float) -> str:
+        if grade == "excellent":
+            if transits:
+                return f"Transits during session at {transit_time.strftime('%H:%M')}, high elevation throughout"
+            return f"High elevation ({elev_max:.1f}°) throughout session"
+        elif grade == "good":
+            return f"Well positioned, maximum elevation {elev_max:.1f}°"
+        elif grade == "fair":
+            return f"Moderate elevation, some portions below {min_elev}°"
+        elif sets_during:
+            return "Setting during session, observe early"
+        return f"Low elevation, challenging observation"
+
+    def _format_best_time(self, transit_time: datetime, transits: bool, elev_max: float) -> str:
+        if transits and elev_max > 30:
+            start = (transit_time - timedelta(minutes=30)).strftime("%H:%M")
+            end = (transit_time + timedelta(minutes=30)).strftime("%H:%M")
+            return f"{start}-{end}"
+        elif transits:
+            return transit_time.strftime("%H:%M")
+        return "Throughout session"
+
+    def _calculate_moon_phase(self, astro_time: Time) -> Dict[str, Any]:
+        try:
+            moon_coords = get_body('moon', astro_time, location=self.location)
+            local_frame = AltAz(obstime=astro_time, location=self.location)
+            local_moon = moon_coords.transform_to(local_frame)
+
+            sun_coords = get_sun(astro_time)
+            elongation = moon_coords.separation(sun_coords).degree
+            phase_angle = 180 - elongation
+            illumination = (1 + np.cos(np.radians(phase_angle))) / 2 * 100
+
+            if phase_angle < 22.5:
+                phase_name = "New Moon"
+            elif phase_angle < 67.5:
+                phase_name = "Waxing Crescent"
+            elif phase_angle < 112.5:
+                phase_name = "First Quarter"
+            elif phase_angle < 157.5:
+                phase_name = "Waxing Gibbous"
+            elif phase_angle < 202.5:
+                phase_name = "Full Moon"
+            elif phase_angle < 247.5:
+                phase_name = "Waning Gibbous"
+            elif phase_angle < 292.5:
+                phase_name = "Last Quarter"
+            else:
+                phase_name = "Waning Crescent"
+
+            is_interfering = illumination > 75 and local_moon.alt.degree > 0
+
+            return {
+                "phase_name": phase_name,
+                "illumination_percent": round(float(illumination), 1),
+                "phase_angle": round(float(phase_angle), 1),
+                "elevation_at_time": round(float(local_moon.alt.degree), 1),
+                "is_interfering": bool(is_interfering)
+            }
+        except Exception as e:
+            logger.warning(f"Could not calculate moon phase: {e}")
+            return {
+                "phase_name": "Unknown",
+                "illumination_percent": None,
+                "phase_angle": None,
+                "elevation_at_time": None,
+                "is_interfering": False
+            }
+
+    def _calculate_sun_times(self, start: datetime, end: datetime) -> Dict[str, Any]:
+        try:
+            melbourne_tz = pytz.timezone("Australia/Melbourne")
+            local_date = start.astimezone(melbourne_tz).date()
+
+            times = []
+            for hour in range(24):
+                t = datetime.combine(local_date, datetime.min.time().replace(hour=hour))
+                t = melbourne_tz.localize(t)
+                times.append(t.astimezone(timezone.utc))
+
+            elevations = []
+            for t in times:
+                sun = get_sun(Time(t))
+                local_frame = AltAz(obstime=Time(t), location=self.location)
+                local_sun = sun.transform_to(local_frame)
+                elevations.append(float(local_sun.alt.degree))
+
+            sunset_idx = None
+            sunrise_idx = None
+            for i, elev in enumerate(elevations):
+                if sunset_idx is None and i > 0 and elevations[i - 1] > 0 and elev <= 0:
+                    sunset_idx = i
+                if sunrise_idx is None and i > 0 and elevations[i - 1] <= 0 and elev > 0:
+                    sunrise_idx = i
+
+            return {
+                "set_time": times[sunset_idx].isoformat() if sunset_idx else None,
+                "rise_time": times[sunrise_idx].isoformat() if sunrise_idx else None,
+                "twilight_civil_end": None,
+                "twilight_civil_start": None
+            }
+        except Exception as e:
+            logger.warning(f"Could not calculate sun times: {e}")
+            return {"set_time": None, "rise_time": None}
+
+    def _is_nighttime_session(self, start: datetime, end: datetime) -> bool:
+        try:
+            mid_time = start + (end - start) / 2
+            astro_time = Time(mid_time)
+            sun = get_sun(astro_time)
+            local_frame = AltAz(obstime=astro_time, location=self.location)
+            local_sun = sun.transform_to(local_frame)
+            return bool(local_sun.alt.degree < -6)
+        except Exception:
+            return False
+
+    def _calculate_summary(self, targets: List[Dict[str, Any]]) -> Dict[str, Any]:
+        by_grade: Dict[str, int] = {}
+        for target in targets:
+            grade = target.get("quality_grade", "not_visible")
+            by_grade[grade] = by_grade.get(grade, 0) + 1
+        for grade in ["excellent", "good", "fair", "poor", "not_visible"]:
+            if grade not in by_grade:
+                by_grade[grade] = 0
+        return {
+            "total_checked": len(ENHANCED_OBJECT_DATABASE),
+            "by_grade": by_grade
+        }
 
 
 # Global visibility service instance
