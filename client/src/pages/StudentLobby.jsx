@@ -34,6 +34,8 @@ function StudentLobby() {
 
                 if (data.success && data.session?.status === 'active') {
                     navigate(`/live/student?bookingId=${bookingId}`, { replace: true })
+                } else if (data.session?.status === 'ended') {
+                    navigate('/join', { replace: true, state: { ended: true } })
                 }
             } catch (err) {
                 console.error('Student lobby poll failed:', err)

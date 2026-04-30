@@ -1,5 +1,6 @@
 import logging
 import uuid as _uuid
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, g
 
@@ -139,3 +140,38 @@ def start_session(booking_id):
     except Exception as e:
         logger.error(f"Error starting session for booking {booking_id}: {e}")
         return jsonify({"error": "internal_error", "message": "Failed to start session"}), 500
+
+
+@sessions_bp.route("/<uuid:booking_id>/end", methods=["POST"])
+@require_auth(roles=["teacher"])
+def end_session(booking_id):
+    try:
+        with get_db() as db:
+            booking, err = _load_booking_owned(db, booking_id)
+            if err:
+                return err
+
+            obs = (
+                db.query(ObservationSession)
+                .filter(
+                    ObservationSession.booking_id == booking.id,
+                    ObservationSession.status == "active",
+                )
+                .first()
+            )
+            if not obs:
+                return jsonify({"error": "not_found", "message": "No active session for this booking"}), 404
+
+            obs.status = "ended"
+            obs.ended_at = datetime.now(timezone.utc)
+            booking.status = "completed"
+            obs_id = str(obs.id)
+
+        manager = get_student_session_manager()
+        manager.end_all_for_observation(obs_id)
+
+        return jsonify({"success": True})
+
+    except Exception as e:
+        logger.error(f"Error ending session for booking {booking_id}: {e}")
+        return jsonify({"error": "internal_error", "message": "Failed to end session"}), 500

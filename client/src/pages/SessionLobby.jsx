@@ -116,7 +116,7 @@ function SessionLobby() {
         } catch (err) {
             console.error('Error starting session:', err)
         }
-        navigate('/live/teacher')
+        navigate('/live/teacher', { state: { bookingId } })
     }
 
     const digits = split(joinCode)

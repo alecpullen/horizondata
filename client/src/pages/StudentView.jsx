@@ -1,6 +1,10 @@
+import { useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import StreamView from '../components/StreamView'
 import AppLogo from '../components/AppLogo'
 import './StudentView.css'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 const SESSION = {
     object:      'Saturn',
@@ -14,6 +18,26 @@ const STUDENT = {
 }
 
 function StudentView() {
+    const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const bookingId = searchParams.get('bookingId')
+
+    useEffect(() => {
+        if (!bookingId) return
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/sessions/${bookingId}`, {
+                    headers: { Accept: 'application/json' },
+                })
+                const data = await res.json()
+                if (data.session?.status === 'ended') {
+                    navigate('/join', { replace: true, state: { ended: true } })
+                }
+            } catch { /* ignore network errors */ }
+        }, 5000)
+        return () => clearInterval(interval)
+    }, [bookingId, navigate])
+
     return (
         <div className="sv-shell">
             <header className="sv-topbar">

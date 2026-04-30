@@ -1,6 +1,9 @@
+import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import StreamView from '../components/StreamView'
 import WeatherWidget from '../components/WeatherWidget'
+import api from '../lib/api'
 import './TeacherView.css'
 
 const SESSION = {
@@ -20,6 +23,24 @@ const STUDENTS = [
 ]
 
 function TeacherView() {
+    const navigate = useNavigate()
+    const { state } = useLocation()
+    const bookingId = state?.bookingId
+    const [ending, setEnding] = useState(false)
+
+    const handleEndSession = async () => {
+        if (!bookingId || ending) return
+        setEnding(true)
+        try {
+            await api.post(`/api/sessions/${bookingId}/end`)
+        } catch (err) {
+            console.error('Failed to end session:', err)
+        } finally {
+            setEnding(false)
+            navigate('/bookings')
+        }
+    }
+
     return (
         <div className="tv-shell">
             <TopBar activePath="/live/teacher" />
@@ -74,8 +95,12 @@ function TeacherView() {
                         <button className="tv-btn tv-btn--capture">
                             Capture Image
                         </button>
-                        <button className="tv-btn tv-btn--danger">
-                            End Session
+                        <button
+                            className="tv-btn tv-btn--danger"
+                            onClick={handleEndSession}
+                            disabled={ending}
+                        >
+                            {ending ? 'Ending…' : 'End Session'}
                         </button>
                     </div>
 
