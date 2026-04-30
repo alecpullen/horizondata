@@ -9,6 +9,7 @@ import os
 import logging
 import requests
 from typing import Optional, Dict, Any
+from app.services.user_service import sync_user
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,8 @@ class NeonAuthClient:
                 '/get-session',
                 headers={'Authorization': f'Bearer {token}'}
             )
+            if result and "user" in result:
+                sync_user(result["user"])
             return result
         except NeonAuthError as e:
             if e.status_code == 401:
