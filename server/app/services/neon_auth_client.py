@@ -9,7 +9,7 @@ import os
 import logging
 import requests
 from typing import Optional, Dict, Any
-from app.services.user_service import sync_user
+from app.models.user_service import sync_user
 
 logger = logging.getLogger(__name__)
 
