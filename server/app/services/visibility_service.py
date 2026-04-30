@@ -803,7 +803,7 @@ class VisibilityService:
                 "ra_hours": float(target_coords.ra.hour),
                 "ra": f"{int(target_coords.ra.hms[0]):02d}h {int(target_coords.ra.hms[1]):02d}m {target_coords.ra.hms[2]:05.2f}s",
                 "dec_degrees": float(target_coords.dec.degree),
-                "dec": f"{target_coords.dec.dms[0]:+03d}° {abs(int(target_coords.dec.dms[1])):02d}' {abs(target_coords.dec.dms[2]):05.2f}\""
+                "dec": f"{int(target_coords.dec.dms[0]):+03d}° {abs(int(target_coords.dec.dms[1])):02d}' {abs(target_coords.dec.dms[2]):05.2f}\""
             },
             "quality_score": score,
             "quality_grade": grade,
