@@ -15,7 +15,7 @@ from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.services.student_session_manager import get_student_session_manager
 from app.services.rate_limiter import check_capture_limit, get_capture_remaining
 from app.services.session_codes import generate_session_code
-from app.middleware.auth import require_auth
+from app.middleware.auth import require_auth, invalidate_token
 
 import uuid as _uuid
 
@@ -166,8 +166,7 @@ def teacher_logout():
         auth_header = request.headers.get('Authorization', '')
         token = auth_header[7:] if auth_header.startswith('Bearer ') else None
         if token:
-            client = get_neon_auth_client()
-            client.sign_out(token)
+            invalidate_token(token)
     except Exception as e:
         logger.warning(f"Error during logout (non-fatal): {e}")
 

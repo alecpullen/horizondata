@@ -99,6 +99,24 @@ def validate_teacher(token: str) -> Optional[dict]:
         return None
 
 
+def invalidate_token(token: str) -> None:
+    """Remove a teacher token from cache and delete its session row from the DB."""
+    cache_key = hashlib.sha256(token.encode()).hexdigest()
+    with _token_cache_lock:
+        _token_cache.pop(cache_key, None)
+
+    try:
+        from app.services.database import engine
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(
+                text("DELETE FROM neon_auth.session WHERE token = :token"),
+                {"token": token},
+            )
+    except Exception as e:
+        logger.warning(f"Could not delete session from DB during logout: {e}")
+
+
 def validate_student(session_id: str) -> Optional[dict]:
     """
     Validate a student's session ID.
