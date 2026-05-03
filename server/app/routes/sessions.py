@@ -10,6 +10,7 @@ from app.services.session_codes import generate_session_code
 from app.services.student_session_manager import get_student_session_manager
 from app.models.booking import Booking
 from app.models.session import ObservationSession
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -175,3 +176,58 @@ def end_session(booking_id):
     except Exception as e:
         logger.error(f"Error ending session for booking {booking_id}: {e}")
         return jsonify({"error": "internal_error", "message": "Failed to end session"}), 500
+        
+
+def create_booking(slot_id):
+    try:
+        with get_db() as db:
+
+            # LOCK SLOT ROW
+            slot = (
+                db.query(TimeSlot)
+                .filter(TimeSlot.id == slot_id)
+                .with_for_update()
+                .first()
+            )
+
+            if not slot:
+                return jsonify({
+                    "error": "not_found",
+                    "message": "Time slot not found"
+                }), 404
+
+            # CHECK AGAIN INSIDE LOCK
+            existing = (
+                db.query(Booking)
+                .filter(Booking.time_slot_id == slot_id)
+                .first()
+            )
+
+            if existing:
+                return jsonify({
+                    "error": "slot_taken",
+                    "message": "This slot has already been booked."
+                }), 409
+
+            booking = Booking(
+                student_id=g.user["id"],
+                teacher_id=slot.teacher_id,
+                time_slot_id=slot_id,
+                status="confirmed"
+            )
+
+            db.add(booking)
+            db.flush()
+
+            return jsonify({
+                "success": True,
+                "booking_id": str(booking.id)
+            })
+
+    except IntegrityError:
+        db.rollback()
+
+        return jsonify({
+            "error": "slot_taken",
+            "message": "Another user booked this slot first."
+        }), 409
