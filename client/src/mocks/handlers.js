@@ -1297,22 +1297,49 @@ export const handlers = [
         }, { status: 201 })
     }),
 
-    http.get(apiUrl('/api/captures'), async () => {
+    http.get(apiUrl('/api/captures'), async ({ request }) => {
         if (!isMswEnabled()) return passthrough()
-        return HttpResponse.json({
-            items: [
-                {
-                    id: 'mock123abc456',
-                    objectName: 'Saturn',
-                    timestamp: new Date().toISOString(),
-                    coordinates: { ra: 123.4, dec: 67.9, alt: 45.0, az: 180.0 },
-                    capturedBy: 'teacher',
-                    capturedByTeacherId: 'teacher-1',
-                    capturedByStudentSessionId: null,
-                    observationSessionId: null,
-                }
-            ]
-        })
+
+        const MOCK_CAPTURES = [
+            {
+                id: 'mock001',
+                objectName: 'Saturn',
+                timestamp: '2026-05-07T18:32:00.000Z',
+                observationSessionId: '1',
+                coordinates: { ra: 123.4, dec: 67.9, alt: 45.0, az: 180.0 },
+                capturedBy: 'teacher',
+                capturedByTeacherId: 'teacher-1',
+                capturedByStudentSessionId: null,
+            },
+            {
+                id: 'mock002',
+                objectName: 'Jupiter',
+                timestamp: '2026-05-06T20:15:00.000Z',
+                observationSessionId: '2',
+                coordinates: { ra: 45.2, dec: -11.3, alt: 38.0, az: 220.0 },
+                capturedBy: 'student',
+                capturedByTeacherId: null,
+                capturedByStudentSessionId: 'anon-123',
+            },
+            {
+                id: 'mock003',
+                objectName: 'Saturn',
+                timestamp: '2026-05-05T19:00:00.000Z',
+                observationSessionId: '1',
+                coordinates: null,
+                capturedBy: 'teacher',
+                capturedByTeacherId: 'teacher-1',
+                capturedByStudentSessionId: null,
+            },
+        ]
+
+        const url = new URL(request.url)
+        const obsId = url.searchParams.get('observationSessionId')
+        const items = obsId
+            ? MOCK_CAPTURES.filter(c => String(c.observationSessionId) === obsId)
+            : MOCK_CAPTURES
+
+        return HttpResponse.json({ items })
     }),
 
     http.get(apiUrl('/api/captures/:id/download'), async () => {

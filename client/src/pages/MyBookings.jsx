@@ -114,7 +114,7 @@ function BookingCard({ booking, isPast }) {
                 {isPast && (
                     <button
                         className="booking-card__btn booking-card__btn--primary"
-                        onClick={() => navigate('/captures')}
+                        onClick={() => navigate(`/bookings/${booking.id}/captures`)}
                     >
                         View Captures
                     </button>

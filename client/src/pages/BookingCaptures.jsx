@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import CaptureCard from '../components/CaptureCard'
 import api from '../lib/api'
 import './Captures.css'
+import './BookingCaptures.css'
 
 function SkeletonCard() {
     return (
@@ -22,8 +23,10 @@ function SkeletonCard() {
     )
 }
 
-function Captures() {
+function BookingCaptures() {
+    const { id: bookingId } = useParams()
     const navigate = useNavigate()
+
     const [captures, setCaptures] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -35,7 +38,10 @@ function Captures() {
         setError(null)
         try {
             const { data } = await api.get('/api/captures')
-            setCaptures(data.items || [])
+            const all = data.items || []
+            // Filter client-side until backend supports ?observationSessionId=
+            const forBooking = all.filter(c => String(c.observationSessionId) === String(bookingId))
+            setCaptures(forBooking)
         } catch {
             setError('Failed to load captures. Please try again.')
         } finally {
@@ -43,7 +49,7 @@ function Captures() {
         }
     }
 
-    useEffect(() => { load() }, [])
+    useEffect(() => { load() }, [bookingId])
 
     const objectNames = [...new Set(captures.map(c => c.objectName).filter(Boolean))].sort()
 
@@ -60,10 +66,14 @@ function Captures() {
 
     return (
         <div className="cap-shell">
-            <TopBar activePath="/captures" />
+            <TopBar activePath="/bookings" />
             <div className="cap-body">
                 <div className="cap-header">
-                    <h1 className="cap-title">Captures</h1>
+                    <button className="bc-back-btn" onClick={() => navigate('/bookings')}>
+                        ← Back to Bookings
+                    </button>
+                    <h1 className="cap-title">Session Captures</h1>
+                    <p className="bc-booking-id">Booking #{bookingId}</p>
                 </div>
 
                 {!loading && !error && captures.length > 0 && (
@@ -121,11 +131,8 @@ function Captures() {
                 {!loading && !error && captures.length === 0 && (
                     <div className="cap-empty">
                         <div className="cap-empty-icon">📷</div>
-                        <div className="cap-empty-msg">No captures yet.</div>
-                        <div className="cap-empty-sub">Captures taken during telescope sessions will appear here.</div>
-                        <button className="cap-btn cap-btn--secondary" onClick={() => navigate('/bookings')}>
-                            Go to Bookings
-                        </button>
+                        <div className="cap-empty-msg">No captures for this session.</div>
+                        <div className="cap-empty-sub">Images captured during the session will appear here.</div>
                     </div>
                 )}
 
@@ -139,4 +146,4 @@ function Captures() {
     )
 }
 
-export default Captures
+export default BookingCaptures

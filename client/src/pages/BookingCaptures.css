@@ -1,0 +1,23 @@
+.bc-back-btn {
+    display: block;
+    background: none;
+    border: none;
+    color: var(--t3);
+    font-family: var(--disp);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 8px;
+    transition: color 0.12s;
+}
+
+.bc-back-btn:hover {
+    color: var(--t1);
+}
+
+.bc-booking-id {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--t3);
+    margin: 4px 0 0 0;
+}
