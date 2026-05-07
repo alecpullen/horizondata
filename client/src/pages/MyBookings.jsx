@@ -49,8 +49,9 @@ function getTimeUntilStart(sessionDate, sessionTime) {
     return `Available in ${hours}h ${mins}m`
 }
 
-function BookingCard({ booking, isPast, onManage }) {
+function BookingCard({ booking, isPast }) {
     const navigate = useNavigate()
+
     const handleStartSession = () => {
         window.location.href = `/lobby/${booking.id}`
     }
