@@ -42,7 +42,9 @@ function Step1Schedule({
     setStartTime,
     endTime,
     setEndTime,
-    onDurationChange
+    onDurationChange,
+    isHeadless,
+    setIsHeadless
 }) {
     const [currentWeekStart, setCurrentWeekStart] = useState(() => {
         const today = new Date()
@@ -236,6 +238,28 @@ function Step1Schedule({
 
     return (
         <div className="step-1 step-1--schedule">
+            {/* Headless Session Toggle */}
+            <div className="headless-toggle-section">
+                <label className="headless-toggle-label">
+                    <div className="headless-toggle-text">
+                        <span className="headless-toggle-title">Headless Session</span>
+                        <span className="headless-toggle-description">
+                            Runs automatically at the scheduled time — captures targets without a live teacher session
+                        </span>
+                    </div>
+                    <div
+                        className={`headless-toggle-switch ${isHeadless ? 'headless-toggle-switch--on' : ''}`}
+                        onClick={() => setIsHeadless(!isHeadless)}
+                        role="switch"
+                        aria-checked={isHeadless}
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === ' ' || e.key === 'Enter' ? setIsHeadless(!isHeadless) : null}
+                    >
+                        <div className="headless-toggle-thumb" />
+                    </div>
+                </label>
+            </div>
+
             {/* Weekly Schedule Grid */}
             <div className="schedule-section calendar-grid-section calendar-grid-section--flexible">
                 <div className="calendar-grid-header">

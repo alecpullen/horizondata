@@ -46,6 +46,7 @@ function NewBooking() {
     // Step 3: Session details
     const [sessionTitle, setSessionTitle] = useState('')
     const [sessionDescription, setSessionDescription] = useState('')
+    const [isHeadless, setIsHeadless] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Calculate max targets based on session duration (5 min each)
@@ -275,7 +276,8 @@ function NewBooking() {
                 startTime,
                 endTime,
                 title: sessionTitle,
-                description: sessionDescription
+                description: sessionDescription,
+                headless: isHeadless
             })
             showToast({ type: 'success', message: 'Booking created successfully!' })
             navigate('/bookings')
@@ -333,6 +335,8 @@ function NewBooking() {
                                 endTime={endTime}
                                 setEndTime={setEndTime}
                                 onDurationChange={setSessionDuration}
+                                isHeadless={isHeadless}
+                                setIsHeadless={setIsHeadless}
                             />
                         )}
 
@@ -360,6 +364,7 @@ function NewBooking() {
                                 setSessionTitle={setSessionTitle}
                                 sessionDescription={sessionDescription}
                                 setSessionDescription={setSessionDescription}
+                                isHeadless={isHeadless}
                             />
                         )}
                     </div>
