@@ -1966,3 +1966,92 @@
         justify-content: center;
     }
 }
+
+/* ==================== */
+/* Headless Session Toggle */
+/* ==================== */
+
+.headless-toggle-section {
+    padding: 14px 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.headless-toggle-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+}
+
+.headless-toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.headless-toggle-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--t1);
+}
+
+.headless-toggle-description {
+    font-size: 12px;
+    color: var(--t3);
+}
+
+.headless-toggle-switch {
+    flex-shrink: 0;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background: var(--border);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    outline: none;
+}
+
+.headless-toggle-switch:focus-visible {
+    box-shadow: 0 0 0 3px var(--tdim);
+}
+
+.headless-toggle-switch--on {
+    background: var(--violet, #7c3aed);
+}
+
+.headless-toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s;
+    pointer-events: none;
+}
+
+.headless-toggle-switch--on .headless-toggle-thumb {
+    transform: translateX(18px);
+}
+
+/* Headless badge in Step3 summary */
+.headless-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--violet, #7c3aed);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+}

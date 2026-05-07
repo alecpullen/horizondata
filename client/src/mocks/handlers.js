@@ -81,6 +81,7 @@ const mockBookings = {
             time: `${formatTime(sessionStart)} - ${formatTime(sessionEnd)}`,
             status: 'Confirmed',
             statusColor: 'confirmed',
+            headless: false,
             title: 'Test Session - Starting Soon',
             description: 'This mock session starts in 5 minutes.'
         },
@@ -90,6 +91,7 @@ const mockBookings = {
             time: '20:00 - 21:30',
             status: 'Confirmed',
             statusColor: 'confirmed',
+            headless: false,
             title: 'Year 9 Science Class',
             description: 'Introduction to telescope operation and lunar observation. Students will learn basic telescope controls and capture images of the Moon.'
         },
@@ -99,8 +101,19 @@ const mockBookings = {
             time: '20:00 - 22:00',
             status: 'Confirmed',
             statusColor: 'confirmed',
+            headless: false,
             title: 'ANZAC Day Star Party',
             description: 'Special evening session observing southern hemisphere winter constellations.'
+        },
+        {
+            id: 7,
+            date: '30/04/2026',
+            time: '22:00 - 23:30',
+            status: 'Confirmed',
+            statusColor: 'confirmed',
+            headless: true,
+            title: 'Automated Deep Sky Capture',
+            description: 'Headless session — telescope will automatically capture Saturn, Jupiter, and Andromeda Galaxy for student project use.'
         }
     ],
     past: [
@@ -353,6 +366,18 @@ const SESSION_KEY = 'horizon-session'
 // Key: bookingId, Value: { joinCode, participants[], createdAt }
 const activeSessions = new Map()
 
+// Mock telescope hardware state
+let mockTelescope = {
+    connected: false,
+    tracking: false,
+    parked: true,
+    slewing: false,
+    ra: 0.0,
+    dec: 0.0,
+    az: 180.0,
+    alt: 45.0
+}
+
 // Helper to generate a 6-digit join code
 function generateJoinCode() {
     return Math.floor(100000 + Math.random() * 900000).toString()
@@ -437,80 +462,137 @@ function pathSegment(request, index) {
 }
 
 export const handlers = [
-    // POST /api/auth/login - authenticate user
-    http.post(apiUrl('/api/auth/login'), async ({ request }) => {
-        if (!isMswEnabled()) {
-            return passthrough()
-        }
+    // POST /api/auth/teacher/signup - register new teacher
+    http.post(apiUrl('/api/auth/teacher/signup'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
         await delay(500)
-
-        const body = await request.json()
-        const { email, password } = body
-
-        const user = mockUsers.find(u => u.email.toLowerCase() === email?.toLowerCase())
-
-        if (!user || user.password !== password) {
-            return HttpResponse.json({
-                success: false,
-                error: 'Invalid email or password'
-            }, { status: 401 })
+        const { email, password, name } = await request.json()
+        if (!email || !password || !name) {
+            return HttpResponse.json({ error: 'validation_error', message: 'All fields required' }, { status: 400 })
         }
-
-        // Create session
-        currentSession = {
-            userId: user.id,
-            email: user.email,
-            createdAt: new Date().toISOString()
+        if (mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+            return HttpResponse.json({ error: 'email_exists', message: 'An account with this email already exists' }, { status: 409 })
         }
-
-        // Persist to sessionStorage
-        if (typeof window !== 'undefined') {
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession))
-        }
-
-        // Return user info (without password)
-        const { password: _, ...userWithoutPassword } = user
-        return HttpResponse.json({
-            success: true,
-            user: userWithoutPassword
-        })
+        const newUser = { id: String(Date.now()), email, fullName: name, role: 'teacher', phone: '', institution: '', is2FAEnabled: false, notificationsEnabled: true }
+        mockUsers.push({ ...newUser, password })
+        currentSession = { userId: newUser.id, email, createdAt: new Date().toISOString() }
+        if (typeof window !== 'undefined') sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession))
+        const token = `mock-token-${newUser.id}`
+        return HttpResponse.json({ success: true, user: { id: newUser.id, email, name, role: 'teacher' }, token, refresh_token: token }, { status: 201 })
     }),
 
-    // POST /api/auth/logout - clear session
-    http.post(apiUrl('/api/auth/logout'), async ({ request }) => {
-        if (!isMswEnabled()) {
-            return passthrough()
+    // POST /api/auth/teacher/login - authenticate teacher
+    http.post(apiUrl('/api/auth/teacher/login'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(500)
+        const { email, password } = await request.json()
+        const user = mockUsers.find(u => u.email.toLowerCase() === email?.toLowerCase())
+        if (!user || user.password !== password) {
+            return HttpResponse.json({ error: 'invalid_credentials', message: 'Invalid email or password' }, { status: 401 })
         }
+        currentSession = { userId: user.id, email: user.email, createdAt: new Date().toISOString() }
+        if (typeof window !== 'undefined') sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession))
+        const token = `mock-token-${user.id}`
+        const { password: _, ...userWithoutPassword } = user
+        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: 'teacher' }, token, refresh_token: token })
+    }),
+
+    // POST /api/auth/teacher/logout - clear session
+    http.post(apiUrl('/api/auth/teacher/logout'), async () => {
+        if (!isMswEnabled()) return passthrough()
         await delay(200)
-
         currentSession = null
-        if (typeof window !== 'undefined') {
-            sessionStorage.removeItem(SESSION_KEY)
-        }
-
+        if (typeof window !== 'undefined') sessionStorage.removeItem(SESSION_KEY)
         return HttpResponse.json({ success: true })
     }),
 
-    // GET /api/auth/session - check current session
-    http.get(apiUrl('/api/auth/session'), async ({ request }) => {
-        if (!isMswEnabled()) {
-            return passthrough()
-        }
+    // GET /api/auth/teacher/me - current teacher info
+    http.get(apiUrl('/api/auth/teacher/me'), async () => {
+        if (!isMswEnabled()) return passthrough()
         await delay(200)
-
         const user = getCurrentUser()
+        if (!user) return HttpResponse.json({ error: 'unauthorized', message: 'Not authenticated' }, { status: 401 })
+        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: 'teacher' } })
+    }),
 
-        if (!user) {
-            return HttpResponse.json({
-                authenticated: false
-            }, { status: 401 })
+    // POST /api/auth/teacher/refresh - refresh token
+    http.post(apiUrl('/api/auth/teacher/refresh'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const { refresh_token } = await request.json()
+        if (!refresh_token) return HttpResponse.json({ error: 'invalid_request', message: 'Refresh token required' }, { status: 400 })
+        const user = getCurrentUser()
+        if (!user) return HttpResponse.json({ error: 'invalid_token', message: 'Invalid or expired token' }, { status: 401 })
+        const token = `mock-token-${user.id}`
+        return HttpResponse.json({ success: true, token, refresh_token: token })
+    }),
+
+    // POST /api/auth/student/join - student joins session
+    http.post(apiUrl('/api/auth/student/join'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(300)
+        const { display_name, session_code } = await request.json()
+        if (!display_name) return HttpResponse.json({ error: 'validation_error', message: 'Display name required' }, { status: 400 })
+        if (!session_code) return HttpResponse.json({ error: 'validation_error', message: 'Session code required' }, { status: 400 })
+        // Find matching session
+        let matchedSession = null
+        for (const [bookingId, session] of activeSessions) {
+            if (session.joinCode === session_code) { matchedSession = session; break }
         }
+        if (!matchedSession) return HttpResponse.json({ error: 'session_not_found', message: 'Session not found or has ended' }, { status: 404 })
+        const studentSessionId = `student-${Date.now()}`
+        const obsSessionId = `obs-${matchedSession.bookingId}`
+        return HttpResponse.json({ success: true, session_id: studentSessionId, display_name, observation_session_id: obsSessionId }, { status: 201 })
+    }),
 
-        const { password: _, ...userWithoutPassword } = user
+    // POST /api/auth/student/leave - student leaves session
+    http.post(apiUrl('/api/auth/student/leave'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        return HttpResponse.json({ success: true })
+    }),
+
+    // GET /api/auth/student/me - current student info
+    http.get(apiUrl('/api/auth/student/me'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const sessionId = request.headers.get('X-Session-ID')
+        if (!sessionId) return HttpResponse.json({ error: 'unauthorized', message: 'Not authenticated' }, { status: 401 })
         return HttpResponse.json({
-            authenticated: true,
-            user: userWithoutPassword
+            success: true,
+            user: { id: sessionId, display_name: 'Mock Student', observation_session_id: 'obs-mock', user_type: 'student' },
+            rate_limits: { captures_remaining: 5 }
         })
+    }),
+
+    // GET /api/auth/teacher/participants - list students in session
+    http.get(apiUrl('/api/auth/teacher/participants'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const url = new URL(request.url)
+        const obsSessionId = url.searchParams.get('observation_session_id')
+        if (!obsSessionId) return HttpResponse.json({ error: 'validation_error', message: 'observation_session_id required' }, { status: 400 })
+        const mockParticipants = [
+            { id: '101', display_name: 'Emma Wilson', joined_at: new Date(Date.now() - 5 * 60000).toISOString() },
+            { id: '102', display_name: 'Liam Chen', joined_at: new Date(Date.now() - 3 * 60000).toISOString() },
+        ]
+        return HttpResponse.json({ success: true, participants: mockParticipants, count: mockParticipants.length })
+    }),
+
+    // POST /api/auth/teacher/kick - kick a student
+    http.post(apiUrl('/api/auth/teacher/kick'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const { student_session_id } = await request.json()
+        if (!student_session_id) return HttpResponse.json({ error: 'validation_error', message: 'student_session_id required' }, { status: 400 })
+        return HttpResponse.json({ success: true, message: 'Student kicked' })
+    }),
+
+    // GET /api/auth/rate-limit/captures - student capture rate limit
+    http.get(apiUrl('/api/auth/rate-limit/captures'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(100)
+        return HttpResponse.json({ success: true, limit: 5, remaining: 5, window_seconds: 60 })
     }),
 
     // GET /api/account - fetch user profile
@@ -1371,6 +1453,249 @@ export const handlers = [
                 'Content-Type': 'application/json',
                 'Content-Disposition': 'attachment; filename="mock_capture.json"',
             },
+        })
+    }),
+
+    // ── Sessions ───────────────────────────────────────────────────────────────
+
+    // POST /api/sessions/:id/end - end a session
+    http.post(apiUrl('/api/sessions/:id/end'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(300)
+        const bookingId = parseInt(pathSegment(request, 2), 10)
+        const session = activeSessions.get(bookingId)
+        if (!session) return HttpResponse.json({ error: 'not_found', message: 'No active session for this booking' }, { status: 404 })
+        session.status = 'ended'
+        session.endedAt = new Date().toISOString()
+        return HttpResponse.json({ success: true })
+    }),
+
+    // ── Visibility ─────────────────────────────────────────────────────────────
+
+    // GET /api/visibility/session - session-optimised targets for booking wizard
+    http.get(apiUrl('/api/visibility/session'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(400)
+        const url = new URL(request.url)
+        const startTime = url.searchParams.get('start_time') || new Date().toISOString()
+        const endTime = url.searchParams.get('end_time') || new Date().toISOString()
+        return HttpResponse.json({
+            success: true,
+            session: {
+                start_time: startTime,
+                end_time: endTime,
+                duration_hours: 0.5,
+                moon_phase: 'waxing_crescent',
+                moon_illumination: 28,
+                dark_sky_quality: 'good'
+            },
+            targets: [
+                {
+                    name: 'Jupiter', type: 'Planet',
+                    coordinates: { ra: 22.75, dec: -12.58, ra_hours: 22.75, dec_degrees: -12.58 },
+                    elevation_max: 58.0, elevation_min: 38.0, elevation_start: 42.0, elevation_end: 55.0,
+                    magnitude: -2.5, quality_grade: 'excellent', quality_score: 0.92,
+                    transits_during_session: false, transit_time: null, visible_entire_session: true,
+                    sets_during_session: false, best_time: '22:30', recommendation: 'Excellent — high altitude',
+                    constellation: 'Aquarius', catalog_id: null
+                },
+                {
+                    name: 'Saturn', type: 'Planet',
+                    coordinates: { ra: 21.15, dec: -18.75, ra_hours: 21.15, dec_degrees: -18.75 },
+                    elevation_max: 45.0, elevation_min: 28.0, elevation_start: 35.0, elevation_end: 43.0,
+                    magnitude: 0.7, quality_grade: 'good', quality_score: 0.78,
+                    transits_during_session: false, transit_time: null, visible_entire_session: true,
+                    sets_during_session: false, best_time: '21:45', recommendation: 'Good — rings visible',
+                    constellation: 'Capricornus', catalog_id: null
+                },
+                {
+                    name: 'Mars', type: 'Planet',
+                    coordinates: { ra: 14.26, dec: 19.18, ra_hours: 14.26, dec_degrees: 19.18 },
+                    elevation_max: 50.0, elevation_min: 30.0, elevation_start: 45.0, elevation_end: 38.0,
+                    magnitude: -2.1, quality_grade: 'good', quality_score: 0.74,
+                    transits_during_session: true, transit_time: '21:15', visible_entire_session: true,
+                    sets_during_session: false, best_time: '21:15', recommendation: 'Good — near transit',
+                    constellation: 'Virgo', catalog_id: null
+                },
+                {
+                    name: 'Orion Nebula', type: 'Emission Nebula',
+                    coordinates: { ra: 5.59, dec: -5.39, ra_hours: 5.59, dec_degrees: -5.39 },
+                    elevation_max: 42.0, elevation_min: 22.0, elevation_start: 25.0, elevation_end: 40.0,
+                    magnitude: 4.0, quality_grade: 'fair', quality_score: 0.55,
+                    transits_during_session: false, transit_time: null, visible_entire_session: true,
+                    sets_during_session: false, best_time: '23:00', recommendation: 'Fair — rising during session',
+                    constellation: 'Orion', catalog_id: 'M42'
+                },
+                {
+                    name: 'Andromeda Galaxy', type: 'Spiral Galaxy',
+                    coordinates: { ra: 0.71, dec: 41.27, ra_hours: 0.71, dec_degrees: 41.27 },
+                    elevation_max: 55.0, elevation_min: 45.0, elevation_start: 50.0, elevation_end: 53.0,
+                    magnitude: 3.4, quality_grade: 'excellent', quality_score: 0.88,
+                    transits_during_session: false, transit_time: null, visible_entire_session: true,
+                    sets_during_session: false, best_time: '22:00', recommendation: 'Excellent — high and steady',
+                    constellation: 'Andromeda', catalog_id: 'M31'
+                },
+                {
+                    name: 'The Pleiades', type: 'Open Cluster',
+                    coordinates: { ra: 3.79, dec: 24.12, ra_hours: 3.79, dec_degrees: 24.12 },
+                    elevation_max: 65.0, elevation_min: 50.0, elevation_start: 55.0, elevation_end: 63.0,
+                    magnitude: 1.6, quality_grade: 'excellent', quality_score: 0.95,
+                    transits_during_session: false, transit_time: null, visible_entire_session: true,
+                    sets_during_session: false, best_time: '22:45', recommendation: 'Excellent — ideal altitude',
+                    constellation: 'Taurus', catalog_id: 'M45'
+                },
+            ]
+        })
+    }),
+
+    // ── Telescope Control ──────────────────────────────────────────────────────
+
+    // GET /api/telescope/status
+    http.get(apiUrl('/api/telescope/status'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        return HttpResponse.json({ ...mockTelescope })
+    }),
+
+    // POST /api/telescope/connect
+    http.post(apiUrl('/api/telescope/connect'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(400)
+        const { connected } = await request.json()
+        mockTelescope.connected = Boolean(connected)
+        if (!connected) { mockTelescope.tracking = false; mockTelescope.parked = true }
+        return HttpResponse.json({ ...mockTelescope })
+    }),
+
+    // POST /api/telescope/tracking
+    http.post(apiUrl('/api/telescope/tracking'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(300)
+        if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
+        const { on } = await request.json()
+        mockTelescope.tracking = Boolean(on)
+        return HttpResponse.json({ ...mockTelescope })
+    }),
+
+    // POST /api/telescope/park
+    http.post(apiUrl('/api/telescope/park'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(600)
+        if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
+        const { action } = await request.json()
+        if (action === 'park') { mockTelescope.parked = true; mockTelescope.tracking = false }
+        else if (action === 'unpark') { mockTelescope.parked = false }
+        else return HttpResponse.json({ error: 'invalid_request', message: 'Action must be "park" or "unpark"' }, { status: 400 })
+        return HttpResponse.json({ ...mockTelescope })
+    }),
+
+    // POST /api/telescope/abort
+    http.post(apiUrl('/api/telescope/abort'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        mockTelescope.slewing = false
+        return HttpResponse.json({ ...mockTelescope })
+    }),
+
+    // POST /api/telescope/slew/coords
+    http.post(apiUrl('/api/telescope/slew/coords'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(800)
+        if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
+        const { ra, dec } = await request.json()
+        mockTelescope.slewing = true
+        mockTelescope.ra = ra
+        mockTelescope.dec = dec
+        // Simulate slew completing
+        await delay(1200)
+        mockTelescope.slewing = false
+        mockTelescope.alt = 45 + Math.random() * 20
+        mockTelescope.az = Math.random() * 360
+        return HttpResponse.json({ ...mockTelescope })
+    }),
+
+    // POST /api/telescope/slew/altaz
+    http.post(apiUrl('/api/telescope/slew/altaz'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(800)
+        if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
+        const { az, alt } = await request.json()
+        mockTelescope.slewing = true
+        mockTelescope.az = az
+        mockTelescope.alt = alt
+        await delay(1200)
+        mockTelescope.slewing = false
+        return HttpResponse.json({ ...mockTelescope })
+    }),
+
+    // GET /api/telescope/visible-objects
+    http.get(apiUrl('/api/telescope/visible-objects'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(350)
+        return HttpResponse.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            location: { latitude: -37.7214, longitude: 145.0489, name: 'Melbourne, Australia' },
+            objects: [
+                { name: 'Jupiter', type: 'Planet', coordinates: { elevation: 58.0, azimuth: 220.8 }, visibility: { magnitude: -2.5, is_visible: true, observability_rating: 'Excellent', duration_hours: 6.0 } },
+                { name: 'Saturn', type: 'Planet', coordinates: { elevation: 45.0, azimuth: 205.6 }, visibility: { magnitude: 0.7, is_visible: true, observability_rating: 'Good', duration_hours: 4.5 } },
+                { name: 'Mars', type: 'Planet', coordinates: { elevation: 50.0, azimuth: 180.5 }, visibility: { magnitude: -2.1, is_visible: true, observability_rating: 'Good', duration_hours: 5.0 } },
+                { name: 'Andromeda Galaxy', type: 'Spiral Galaxy', coordinates: { elevation: 55.0, azimuth: 35.7 }, visibility: { magnitude: 3.4, is_visible: true, observability_rating: 'Excellent', duration_hours: 6.5 } },
+                { name: 'The Pleiades', type: 'Open Cluster', coordinates: { elevation: 65.0, azimuth: 70.5 }, visibility: { magnitude: 1.6, is_visible: true, observability_rating: 'Excellent', duration_hours: 7.0 } },
+            ],
+            totalCount: 5,
+            safety_status: { status: 'ACTIVE', reason: 'Telescope operations available', filtered: false }
+        })
+    }),
+
+    // POST /api/telescope/select - slew to named space object
+    http.post(apiUrl('/api/telescope/select'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(500)
+        const { objectId } = await request.json()
+        if (!objectId) return HttpResponse.json({ success: false, error: 'missing_field', message: 'objectId is required' }, { status: 400 })
+        const names = { moon: 'Moon', mars: 'Mars', jupiter: 'Jupiter', saturn: 'Saturn', venus: 'Venus', vega: 'Vega', sirius: 'Sirius', m42: 'Orion Nebula (M42)', m31: 'Andromeda Galaxy (M31)', polaris: 'Polaris (North Star)' }
+        const name = names[objectId]
+        if (!name) return HttpResponse.json({ success: false, error: 'object_not_found', message: `Space object '${objectId}' does not exist` }, { status: 404 })
+        mockTelescope.slewing = true
+        return HttpResponse.json({
+            success: true,
+            message: `Telescope moving to ${name}`,
+            objectId, objectName: name,
+            targetCoordinates: { rightAscension: '22h 45m', declination: '-12° 35\'', altitude: 45.0, azimuth: 220.8 },
+            estimatedTime: 5, status: 'slewing'
+        })
+    }),
+
+    // ── Safety ─────────────────────────────────────────────────────────────────
+
+    // GET /api/safety/status
+    http.get(apiUrl('/api/safety/status'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const hour = new Date().getHours()
+        const isNight = hour >= 18 || hour < 6
+        return HttpResponse.json({
+            status: isNight ? 'ACTIVE' : 'CLOSED',
+            reason: isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
+            next_available: isNight ? null : 'Tonight at 18:00',
+            current_time: new Date().toISOString(),
+            viewing_window: { start: '18:00', end: '06:00', is_active: isNight }
+        })
+    }),
+
+    // GET /api/safety/comprehensive
+    http.get(apiUrl('/api/safety/comprehensive'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(250)
+        const hour = new Date().getHours()
+        const isNight = hour >= 18 || hour < 6
+        const status = isNight ? 'ACTIVE' : 'CLOSED'
+        return HttpResponse.json({
+            overall: { status, reason: isNight ? 'All systems nominal' : 'Outside viewing window' },
+            time_safety: { safe: isNight, current_time: new Date().toISOString(), in_viewing_window: isNight },
+            weather_safety: { safe: true, conditions: { temperature: 18.5, humidity: 45, pressure: 1013, dew_point: 7.2 }, thresholds_met: true },
+            last_updated: new Date().toISOString()
         })
     }),
 ]

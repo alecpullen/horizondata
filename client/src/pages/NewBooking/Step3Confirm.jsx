@@ -6,7 +6,8 @@ function Step3Confirm({
     sessionTitle,
     setSessionTitle,
     sessionDescription,
-    setSessionDescription
+    setSessionDescription,
+    isHeadless
 }) {
     const OBSERVATION_MINUTES_PER_TARGET = 5
 
@@ -144,6 +145,13 @@ function Step3Confirm({
                             <span className="summary-label">Observation Time</span>
                             <span className="summary-value">{totalObservationTime} minutes</span>
                         </div>
+
+                        {isHeadless && (
+                            <div className="summary-item">
+                                <span className="summary-label">Session Type</span>
+                                <span className="summary-value headless-badge">Headless</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -162,7 +170,11 @@ function Step3Confirm({
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                             <polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
-                        <span>You can start the session 10 minutes before the scheduled time</span>
+                        <span>
+                            {isHeadless
+                                ? 'This session will run automatically at the scheduled time'
+                                : 'You can start the session 10 minutes before the scheduled time'}
+                        </span>
                     </div>
                     <div className="note-item">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">

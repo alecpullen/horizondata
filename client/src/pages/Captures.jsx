@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import CaptureCard from '../components/CaptureCard'
+import api from '../lib/api'
+import './Captures.css'
+
 import api from '../lib/api'
 import './Captures.css'
 

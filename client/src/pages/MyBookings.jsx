@@ -49,9 +49,9 @@ function getTimeUntilStart(sessionDate, sessionTime) {
     return `Available in ${hours}h ${mins}m`
 }
 
-function BookingCard({ booking, isPast }) {
-    const navigate = useNavigate()
 
+function BookingCard({ booking, isPast, onManage }) {
+    const navigate = useNavigate()
     const handleStartSession = () => {
         window.location.href = `/lobby/${booking.id}`
     }
@@ -94,7 +94,7 @@ function BookingCard({ booking, isPast }) {
             </div>
 
             <div className="booking-card__actions">
-                {!isPast && booking.statusColor === 'confirmed' && (
+                {!isPast && booking.statusColor === 'confirmed' && !booking.headless && (
                     <button
                         className="booking-card__btn booking-card__btn--primary"
                         onClick={handleStartSession}
@@ -103,6 +103,15 @@ function BookingCard({ booking, isPast }) {
                     >
                         Start Session
                     </button>
+                )}
+                {!isPast && booking.statusColor === 'confirmed' && booking.headless && (
+                    <div className="booking-card__headless-badge">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+                        </svg>
+                        Queue Scheduled
+                    </div>
                 )}
                 {!isPast && booking.statusColor === 'pending' && (
                     <button
@@ -127,7 +136,7 @@ function BookingCard({ booking, isPast }) {
                     {isPast ? 'Details' : 'Manage'}
                 </button>
             </div>
-            {!isPast && booking.statusColor === 'confirmed' && !isStartable && (
+            {!isPast && booking.statusColor === 'confirmed' && !booking.headless && !isStartable && (
                 <div className="booking-card__start-hint">
                     {timeUntilStart}
                 </div>
