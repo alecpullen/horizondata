@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import { split } from '../utils/session'
 import AppLogo from '../components/AppLogo'
 import api from '../lib/api'
 import './SessionLobby.css'
+
+const APP_URL = import.meta.env.VITE_APP_URL
 
 function SessionLobby() {
     const { bookingId } = useParams()
@@ -150,7 +153,7 @@ function SessionLobby() {
             <div className="lobby-body">
                 <div className="lobby-left">
                     <div className="lobby-instruction">
-                        Join at <strong>https://URL</strong> and enter:
+                        Join at <strong>{APP_URL}</strong> and enter:
                     </div>
                     <div className="lobby-code">
                         {digits.map((digit, i) => (
@@ -160,10 +163,9 @@ function SessionLobby() {
                         ))}
                     </div>
 
-                    {/*TODO QR code*/}
                     <div className="lobby-qr">
                         <div className="lobby-qr-box">
-                            <div className="lobby-qr-inner">QR</div>
+                            <QRCodeSVG value={`${APP_URL}/join`} size={160} />
                         </div>
                         <div className="lobby-qr-label">Scan to join</div>
                     </div>
