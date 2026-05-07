@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
+import BookingManage from '../components/BookingManage'
 import api from '../lib/api'
 import './MyBookings.css'
 
@@ -47,13 +48,13 @@ function getTimeUntilStart(sessionDate, sessionTime) {
     return `Available in ${hours}h ${mins}m`
 }
 
-function BookingCard({ booking, isPast }) {
+function BookingCard({ booking, isPast, onManage }) {
     const handleStartSession = () => {
         window.location.href = `/lobby/${booking.id}`
     }
 
     const handleManage = () => {
-        console.log('Manage booking:', booking.id)
+        onManage(booking)
     }
 
     const isStartable = canStartSession(booking.date, booking.time)
@@ -137,6 +138,24 @@ function MyBookings() {
     const [bookings, setBookings] = useState({ upcoming: [], past: [], pending: [] })
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [selectedBooking, setSelectedBooking] = useState(null)
+
+    const handleManage = (booking) => setSelectedBooking(booking)
+    const handleCloseModal = () => setSelectedBooking(null)
+
+    const handleCancelBooking = async (bookingId) => {
+        try {
+            await api.delete(`/api/bookings/${bookingId}`)
+            setBookings(prev => ({
+                ...prev,
+                upcoming: prev.upcoming.filter(b => b.id !== bookingId),
+                pending: prev.pending.filter(b => b.id !== bookingId),
+            }))
+            setSelectedBooking(null)
+        } catch (err) {
+            console.error('Failed to cancel booking:', err)
+        }
+    }
 
     useEffect(() => {
         async function fetchBookings() {
@@ -222,6 +241,7 @@ function MyBookings() {
                                     key={booking.id}
                                     booking={booking}
                                     isPast={isPast}
+                                    onManage={handleManage}
                                 />
                             ))
                         ) : (
@@ -255,6 +275,15 @@ function MyBookings() {
                     </div>
                 </div>
             </main>
+
+            {selectedBooking && (
+                <BookingManage
+                    booking={selectedBooking}
+                    isPast={activeTab === 'past'}
+                    onClose={handleCloseModal}
+                    onCancel={handleCancelBooking}
+                />
+            )}
         </div>
     )
 }

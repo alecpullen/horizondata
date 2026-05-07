@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import './BookingModal.css'
+import './BookingManage.css'
 
 const statusColors = {
     confirmed: 'var(--teal)',
@@ -164,7 +164,7 @@ function ManageView({ booking, onRequestCancel }) {
 }
 
 // ── Main modal ────────────────────────────────────────────────────────────────
-export default function BookingModal({ booking, isPast, onClose, onCancel }) {
+export default function BookingManage({ booking, isPast, onClose, onCancel }) {
     const [confirmingCancel, setConfirmingCancel] = useState(false)
 
     const handleBackdropClick = (e) => {

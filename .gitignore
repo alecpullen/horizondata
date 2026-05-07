@@ -45,3 +45,5 @@ skills-lock.json
 # ── OS ─────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+jira_tasks.csv
