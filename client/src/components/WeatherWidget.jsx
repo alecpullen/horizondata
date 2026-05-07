@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
+import api from '../lib/api'
 import './WeatherWidget.css'
 
-const API_BASE  = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-const POLL_MS   = 60_000
+const POLL_MS    = 60_000
 const TIMEOUT_MS = 10_000
 
 const STATUS_META = {
@@ -24,27 +24,6 @@ function fmt(value, unit) {
     return `${Number(value).toFixed(1)}${unit}`
 }
 
-// Fetch with a hard timeout via AbortController
-async function fetchWithTimeout(url, ms) {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), ms)
-    try {
-        const res = await fetch(url, { signal: controller.signal })
-        return res
-    } finally {
-        clearTimeout(timer)
-    }
-}
-
-// Parse JSON safely — returns null instead of throwing on bad body
-async function safeJson(res) {
-    try {
-        return await res.json()
-    } catch {
-        return null
-    }
-}
-
 export default function WeatherWidget() {
     const [status,   setStatus]   = useState(null)
     const [detail,   setDetail]   = useState(null)
@@ -54,28 +33,23 @@ export default function WeatherWidget() {
 
     const fetchAll = useCallback(async (signal) => {
         try {
-            // Fetch both in parallel, each with its own timeout
-            const [statusRes, detailRes] = await Promise.all([
-                fetchWithTimeout(`${API_BASE}/api/safety/status`,  TIMEOUT_MS),
-                fetchWithTimeout(`${API_BASE}/api/safety/weather`, TIMEOUT_MS),
+            const opts = { signal, timeout: TIMEOUT_MS }
+            // Status is required; detail is optional — settle both independently
+            const [statusResult, detailResult] = await Promise.allSettled([
+                api.get('/api/safety/status',  opts),
+                api.get('/api/safety/weather', opts),
             ])
 
-            // Status is required — treat non-2xx as an error
-            if (!statusRes.ok) throw new Error(`HTTP ${statusRes.status}`)
-            const statusJson = await safeJson(statusRes)
-            if (!statusJson) throw new Error('Invalid status response')
-
-            // Detail is optional — a bad response just means no detail panel
-            const detailJson = detailRes.ok ? await safeJson(detailRes) : null
+            if (statusResult.status === 'rejected') throw statusResult.reason
 
             if (!signal.aborted) {
-                setStatus(statusJson)
-                setDetail(detailJson)
+                setStatus(statusResult.value.data)
+                setDetail(detailResult.status === 'fulfilled' ? detailResult.value.data : null)
                 setError(null)
             }
         } catch (e) {
             if (!signal.aborted) {
-                setError(e.name === 'AbortError' ? 'Timed out' : 'Unavailable')
+                setError(e.name === 'CanceledError' || e.name === 'AbortError' ? 'Timed out' : 'Unavailable')
             }
         } finally {
             if (!signal.aborted) setLoading(false)
