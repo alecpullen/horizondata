@@ -1283,4 +1283,67 @@ export const handlers = [
             }
         })
     }),
+
+    // ── Captures ───────────────────────────────────────────────────────────────
+
+    http.post(apiUrl('/api/captures'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(600)
+        return HttpResponse.json({
+            success: true,
+            id: 'mock123abc456',
+            downloadUrl: '/api/captures/mock123abc456/download',
+            capturedBy: 'teacher',
+        }, { status: 201 })
+    }),
+
+    http.get(apiUrl('/api/captures'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        return HttpResponse.json({
+            items: [
+                {
+                    id: 'mock123abc456',
+                    objectName: 'Saturn',
+                    timestamp: new Date().toISOString(),
+                    coordinates: { ra: 123.4, dec: 67.9, alt: 45.0, az: 180.0 },
+                    capturedBy: 'teacher',
+                    capturedByTeacherId: 'teacher-1',
+                    capturedByStudentSessionId: null,
+                    observationSessionId: null,
+                }
+            ]
+        })
+    }),
+
+    http.get(apiUrl('/api/captures/:id/download'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        // Minimal 1×1 white PNG
+        const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg=='
+        const bin = atob(b64)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        return new HttpResponse(bytes, {
+            headers: {
+                'Content-Type': 'image/png',
+                'Content-Disposition': 'attachment; filename="mock_capture.png"',
+            },
+        })
+    }),
+
+    http.get(apiUrl('/api/captures/:id/metadata'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        const json = JSON.stringify({
+            id: 'mock123abc456',
+            objectName: 'Saturn',
+            timestamp: new Date().toISOString(),
+            coordinates: { ra: 123.4, dec: 67.9, alt: 45.0, az: 180.0 },
+            capturedBy: 'teacher',
+        })
+        return new HttpResponse(json, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Disposition': 'attachment; filename="mock_capture.json"',
+            },
+        })
+    }),
 ]

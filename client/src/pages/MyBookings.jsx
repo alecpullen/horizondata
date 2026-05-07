@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
 import BookingManage from '../components/BookingManage'
@@ -48,7 +49,13 @@ function getTimeUntilStart(sessionDate, sessionTime) {
     return `Available in ${hours}h ${mins}m`
 }
 
+<<<<<<< US4
+function BookingCard({ booking, isPast }) {
+    const navigate = useNavigate()
+
+=======
 function BookingCard({ booking, isPast, onManage }) {
+>>>>>>> main
     const handleStartSession = () => {
         window.location.href = `/lobby/${booking.id}`
     }
@@ -112,7 +119,7 @@ function BookingCard({ booking, isPast, onManage }) {
                 {isPast && (
                     <button
                         className="booking-card__btn booking-card__btn--primary"
-                        onClick={() => window.location.href = '/captures'}
+                        onClick={() => navigate('/captures')}
                     >
                         View Captures
                     </button>

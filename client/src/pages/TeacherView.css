@@ -181,3 +181,37 @@
 .tv-btn--danger:hover {
     background: rgba(248,113,113,0.18);
 }
+
+.tv-btn--secondary {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+    color: var(--text-secondary, #94a3b8);
+    font-size: 12px;
+}
+
+.tv-btn--secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.tv-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tv-last-capture {
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 12px;
+}
+
+.tv-last-capture-time {
+    font-size: 11px;
+    color: var(--text-secondary, #94a3b8);
+    margin-bottom: 8px;
+}
+
+.tv-last-capture-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}

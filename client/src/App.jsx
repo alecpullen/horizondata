@@ -17,6 +17,7 @@ import StudentJoin  from './pages/StudentJoin'
 import StudentLobby from './pages/StudentLobby'
 import SessionLobby from './pages/SessionLobby'
 import NewBooking from './pages/NewBooking'
+import Captures from './pages/Captures'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/AuthContext'
 import { useSessionTimeout } from './hooks/useSessionTimeout'
@@ -93,6 +94,9 @@ function AppRoutes() {
                 <Route path="/live/student" element={<StudentView />} />
                 <Route path="/lobby/:bookingId?" element={
                     <ProtectedRoute><SessionLobby /></ProtectedRoute>
+                } />
+                <Route path="/captures" element={
+                    <ProtectedRoute><Captures /></ProtectedRoute>
                 } />
             </Routes>
         </SessionTimeoutWrapper>

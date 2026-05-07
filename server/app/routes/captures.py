@@ -193,3 +193,38 @@ def download_capture(cap_id: str):
         except Exception as e:
             current_app.logger.warning(f"Lookup error: {e}")
     abort(404)
+
+
+@captures_bp.route("/<cap_id>/metadata", methods=["GET"])
+@require_any_auth
+def download_capture_metadata(cap_id: str):
+    """
+    Send the JSON metadata sidecar as attachment by capture id.
+
+    Students can only download metadata for their own captures.
+    Teachers can download any capture's metadata.
+    """
+    user_type = g.user_type
+
+    for meta_path in _walk_captures():
+        try:
+            with open(meta_path, "r", encoding="utf-8") as fh:
+                meta = json.load(fh)
+
+            if meta.get("id") == cap_id:
+                if user_type == 'student':
+                    if meta.get('capturedByStudentSessionId') != g.session_id:
+                        abort(403, "You can only download your own captures")
+
+                root = _captures_root()
+                rel = meta["relativeDir"]
+                json_file = meta["file"].rsplit(".", 1)[0] + ".json"
+                return send_from_directory(
+                    directory=os.path.join(root, rel),
+                    path=json_file,
+                    as_attachment=True,
+                    mimetype="application/json"
+                )
+        except Exception as e:
+            current_app.logger.warning(f"Metadata lookup error: {e}")
+    abort(404)
