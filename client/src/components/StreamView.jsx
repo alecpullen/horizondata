@@ -1,4 +1,4 @@
-import { Component, useState, useCallback } from 'react'
+import { Component, useState, useCallback, forwardRef } from 'react'
 import './StreamView.css'
 
 // ── Error Boundary ──────────────────────────────────────────────────────────
@@ -27,6 +27,7 @@ class StreamErrorBoundary extends Component {
     }
 }
 
+
 // ── Offline placeholder ─────────────────────────────────────────────────────
 function StreamOffline({ label, onRetry }) {
     return (
@@ -46,7 +47,7 @@ function StreamOffline({ label, onRetry }) {
 }
 
 // ── Live video player ───────────────────────────────────────────────────────
-function StreamVideo({ label, streamUrl }) {
+function StreamVideo({ label, streamUrl, videoRef }) {
     const [failed, setFailed] = useState(false)
     const [retryKey, setRetryKey] = useState(0)
 
@@ -65,6 +66,7 @@ function StreamVideo({ label, streamUrl }) {
         <div className="stream-container">
             <video
                 key={retryKey}
+                ref={videoRef}
                 className="stream-video"
                 src={streamUrl}
                 autoPlay
@@ -78,16 +80,16 @@ function StreamVideo({ label, streamUrl }) {
 }
 
 // ── Public component ────────────────────────────────────────────────────────
-function StreamView({ label = 'Stream', streamUrl = null }) {
+const StreamView = forwardRef(function StreamView({ label = 'Stream', streamUrl = null }, ref) {
     if (!streamUrl) {
         return <StreamOffline label={label} />
     }
 
     return (
         <StreamErrorBoundary label={label}>
-            <StreamVideo label={label} streamUrl={streamUrl} />
+            <StreamVideo label={label} streamUrl={streamUrl} videoRef={ref} />
         </StreamErrorBoundary>
     )
-}
+})
 
 export default StreamView
