@@ -18,6 +18,7 @@ import StudentLobby from './pages/StudentLobby'
 import SessionLobby from './pages/SessionLobby'
 import NewBooking from './pages/NewBooking'
 import Captures from './pages/Captures'
+import BookingCaptures from './pages/BookingCaptures'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/AuthContext'
 import { useSessionTimeout } from './hooks/useSessionTimeout'
@@ -97,6 +98,9 @@ function AppRoutes() {
                 } />
                 <Route path="/captures" element={
                     <ProtectedRoute><Captures /></ProtectedRoute>
+                } />
+                <Route path="/bookings/:id/captures" element={
+                    <ProtectedRoute><BookingCaptures /></ProtectedRoute>
                 } />
             </Routes>
         </SessionTimeoutWrapper>

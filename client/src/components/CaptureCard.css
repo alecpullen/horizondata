@@ -1,0 +1,132 @@
+.cap-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 18px;
+    background: var(--surf);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: border-color 0.15s;
+}
+
+.cap-card:hover {
+    border-color: var(--tbr);
+}
+
+/* Thumbnail */
+.cap-thumb-wrap {
+    width: 88px;
+    height: 66px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--tdim);
+}
+
+.cap-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cap-thumb--placeholder {
+    background: linear-gradient(90deg,
+        rgba(255,255,255,0.04) 25%,
+        rgba(255,255,255,0.09) 50%,
+        rgba(255,255,255,0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: cap-card-shimmer 1.4s infinite;
+}
+
+.cap-thumb--failed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--t3);
+    animation: none;
+}
+
+@keyframes cap-card-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Main content */
+.cap-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.cap-object {
+    font-family: var(--disp);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--teal);
+    margin-bottom: 3px;
+}
+
+.cap-date {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--t2);
+    margin-bottom: 3px;
+}
+
+.cap-meta {
+    font-size: 13px;
+    color: var(--t3);
+    margin-bottom: 3px;
+}
+
+.cap-coords {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--t3);
+    margin-top: 4px;
+}
+
+/* Action buttons */
+.cap-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.cap-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: var(--disp);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.cap-btn--primary {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #060b16;
+}
+
+.cap-btn--primary:hover {
+    background: #7af5e0;
+}
+
+.cap-btn--secondary {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+    color: var(--text-secondary, #94a3b8);
+}
+
+.cap-btn--secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}

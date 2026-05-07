@@ -1,77 +1,21 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import CaptureCard from '../components/CaptureCard'
 import api from '../lib/api'
 import './Captures.css'
-
-async function downloadFile(url, fallbackName) {
-    const res = await api.get(url, { responseType: 'blob' })
-    const href = URL.createObjectURL(res.data)
-    const a = document.createElement('a')
-    a.href = href
-    a.download = fallbackName
-    a.click()
-    URL.revokeObjectURL(href)
-}
-
-function CaptureCard({ item }) {
-    const ts = new Date(item.timestamp)
-    const dateStr = ts.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-    const timeStr = ts.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-    const coords = item.coordinates
-    const hasCoords = coords && (coords.ra != null || coords.alt != null)
-
-    return (
-        <div className="cap-card">
-            <div className="cap-card-main">
-                <div className="cap-object">{item.objectName || 'Unknown'}</div>
-                <div className="cap-date">{dateStr} · {timeStr}</div>
-                <div className="cap-meta">
-                    Captured by: {item.capturedBy === 'teacher' ? 'Teacher' : 'Student'}
-                </div>
-                {hasCoords && (
-                    <div className="cap-coords">
-                        {coords.ra != null && <span>RA {coords.ra.toFixed(1)}°</span>}
-                        {coords.dec != null && <span>Dec {coords.dec.toFixed(1)}°</span>}
-                        {coords.alt != null && <span>Alt {coords.alt.toFixed(1)}°</span>}
-                        {coords.az != null && <span>Az {coords.az.toFixed(1)}°</span>}
-                    </div>
-                )}
-            </div>
-            <div className="cap-card-actions">
-                <button
-                    className="cap-btn cap-btn--primary"
-                    onClick={() => downloadFile(
-                        `/api/captures/${item.id}/download`,
-                        `${item.objectName || 'capture'}_${item.id}.png`
-                    )}
-                >
-                    Download Image
-                </button>
-                <button
-                    className="cap-btn cap-btn--secondary"
-                    onClick={() => downloadFile(
-                        `/api/captures/${item.id}/metadata`,
-                        `${item.objectName || 'capture'}_${item.id}.json`
-                    )}
-                >
-                    Download Metadata
-                </button>
-            </div>
-        </div>
-    )
-}
+import './BookingCaptures.css'
 
 function SkeletonCard() {
     return (
         <div className="cap-card cap-card--skeleton">
-            <div className="cap-card-main">
+            <div className="cap-thumb-skel" />
+            <div className="cap-main">
                 <div className="cap-skel cap-skel--title" />
                 <div className="cap-skel cap-skel--sub" />
                 <div className="cap-skel cap-skel--sub cap-skel--short" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div className="cap-card-actions">
                 <div className="cap-skel cap-skel--btn" />
                 <div className="cap-skel cap-skel--btn" />
             </div>
@@ -79,8 +23,10 @@ function SkeletonCard() {
     )
 }
 
-function Captures() {
+function BookingCaptures() {
+    const { id: bookingId } = useParams()
     const navigate = useNavigate()
+
     const [captures, setCaptures] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -92,7 +38,10 @@ function Captures() {
         setError(null)
         try {
             const { data } = await api.get('/api/captures')
-            setCaptures(data.items || [])
+            const all = data.items || []
+            // Filter client-side until backend supports ?observationSessionId=
+            const forBooking = all.filter(c => String(c.observationSessionId) === String(bookingId))
+            setCaptures(forBooking)
         } catch {
             setError('Failed to load captures. Please try again.')
         } finally {
@@ -100,7 +49,7 @@ function Captures() {
         }
     }
 
-    useEffect(() => { load() }, [])
+    useEffect(() => { load() }, [bookingId])
 
     const objectNames = [...new Set(captures.map(c => c.objectName).filter(Boolean))].sort()
 
@@ -117,10 +66,14 @@ function Captures() {
 
     return (
         <div className="cap-shell">
-            <TopBar activePath="/captures" />
+            <TopBar activePath="/bookings" />
             <div className="cap-body">
                 <div className="cap-header">
-                    <h1 className="cap-title">Captures</h1>
+                    <button className="bc-back-btn" onClick={() => navigate('/bookings')}>
+                        ← Back to Bookings
+                    </button>
+                    <h1 className="cap-title">Session Captures</h1>
+                    <p className="bc-booking-id">Booking #{bookingId}</p>
                 </div>
 
                 {!loading && !error && captures.length > 0 && (
@@ -178,11 +131,8 @@ function Captures() {
                 {!loading && !error && captures.length === 0 && (
                     <div className="cap-empty">
                         <div className="cap-empty-icon">📷</div>
-                        <div className="cap-empty-msg">No captures yet.</div>
-                        <div className="cap-empty-sub">Captures taken during telescope sessions will appear here.</div>
-                        <button className="cap-btn cap-btn--secondary" onClick={() => navigate('/bookings')}>
-                            Go to Bookings
-                        </button>
+                        <div className="cap-empty-msg">No captures for this session.</div>
+                        <div className="cap-empty-sub">Images captured during the session will appear here.</div>
                     </div>
                 )}
 
@@ -196,4 +146,4 @@ function Captures() {
     )
 }
 
-export default Captures
+export default BookingCaptures

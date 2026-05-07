@@ -49,13 +49,9 @@ function getTimeUntilStart(sessionDate, sessionTime) {
     return `Available in ${hours}h ${mins}m`
 }
 
-<<<<<<< US4
 function BookingCard({ booking, isPast }) {
     const navigate = useNavigate()
 
-=======
-function BookingCard({ booking, isPast, onManage }) {
->>>>>>> main
     const handleStartSession = () => {
         window.location.href = `/lobby/${booking.id}`
     }
@@ -119,7 +115,7 @@ function BookingCard({ booking, isPast, onManage }) {
                 {isPast && (
                     <button
                         className="booking-card__btn booking-card__btn--primary"
-                        onClick={() => navigate('/captures')}
+                        onClick={() => navigate(`/bookings/${booking.id}/captures`)}
                     >
                         View Captures
                     </button>
