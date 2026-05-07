@@ -81,6 +81,7 @@ const mockBookings = {
             time: `${formatTime(sessionStart)} - ${formatTime(sessionEnd)}`,
             status: 'Confirmed',
             statusColor: 'confirmed',
+            headless: false,
             title: 'Test Session - Starting Soon',
             description: 'This mock session starts in 5 minutes.'
         },
@@ -90,6 +91,7 @@ const mockBookings = {
             time: '20:00 - 21:30',
             status: 'Confirmed',
             statusColor: 'confirmed',
+            headless: false,
             title: 'Year 9 Science Class',
             description: 'Introduction to telescope operation and lunar observation. Students will learn basic telescope controls and capture images of the Moon.'
         },
@@ -99,8 +101,19 @@ const mockBookings = {
             time: '20:00 - 22:00',
             status: 'Confirmed',
             statusColor: 'confirmed',
+            headless: false,
             title: 'ANZAC Day Star Party',
             description: 'Special evening session observing southern hemisphere winter constellations.'
+        },
+        {
+            id: 7,
+            date: '30/04/2026',
+            time: '22:00 - 23:30',
+            status: 'Confirmed',
+            statusColor: 'confirmed',
+            headless: true,
+            title: 'Automated Deep Sky Capture',
+            description: 'Headless session — telescope will automatically capture Saturn, Jupiter, and Andromeda Galaxy for student project use.'
         }
     ],
     past: [

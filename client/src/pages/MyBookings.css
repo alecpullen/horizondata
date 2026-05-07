@@ -334,6 +334,23 @@
     box-shadow: 0 8px 24px rgba(94, 234, 212, 0.25);
 }
 
+/* Headless session badge */
+.booking-card__headless-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(124, 58, 237, 0.12);
+    color: #7c3aed;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    letter-spacing: 0.01em;
+    cursor: default;
+    user-select: none;
+}
+
 /* Start session hint */
 .booking-card__start-hint {
     font-size: 12px;
