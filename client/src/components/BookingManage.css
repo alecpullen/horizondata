@@ -1,0 +1,305 @@
+/* ── Backdrop ──────────────────────────────────────────────────────────────── */
+.bm-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    animation: bm-fade-in 0.18s ease;
+}
+
+@keyframes bm-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ── Modal shell ───────────────────────────────────────────────────────────── */
+.bm-modal {
+    background: var(--surface, #1a1f2e);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    border-radius: 16px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: bm-slide-up 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+@keyframes bm-slide-up {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.bm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem 0.75rem;
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+    flex-shrink: 0;
+}
+
+.bm-modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.bm-modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text1, #f0f0f0);
+    margin: 0;
+    letter-spacing: 0.01em;
+}
+
+.bm-modal-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--status-color, var(--teal));
+    background: color-mix(in srgb, var(--status-color, var(--teal)) 15%, transparent);
+    padding: 0.2rem 0.55rem;
+    border-radius: 99px;
+    border: 1px solid color-mix(in srgb, var(--status-color, var(--teal)) 30%, transparent);
+}
+
+.bm-close-btn {
+    background: none;
+    border: none;
+    color: var(--text3, #888);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.bm-close-btn:hover {
+    color: var(--text1, #f0f0f0);
+    background: rgba(255,255,255,0.07);
+}
+
+/* ── Booking title strip ───────────────────────────────────────────────────── */
+.bm-booking-title {
+    padding: 0.85rem 1.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text1, #f0f0f0);
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
+    flex-shrink: 0;
+}
+
+/* ── Scrollable body ───────────────────────────────────────────────────────── */
+.bm-modal-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 0.5rem 0;
+}
+
+.bm-modal-body::-webkit-scrollbar { width: 4px; }
+.bm-modal-body::-webkit-scrollbar-track { background: transparent; }
+.bm-modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+/* ── Section ───────────────────────────────────────────────────────────────── */
+.bm-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
+}
+
+.bm-section:last-child {
+    border-bottom: none;
+}
+
+.bm-section-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3, #888);
+    margin: 0 0 0.75rem;
+}
+
+/* ── Detail rows ───────────────────────────────────────────────────────────── */
+.bm-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.35rem 0;
+}
+
+.bm-detail-row + .bm-detail-row {
+    border-top: 1px solid var(--border, rgba(255,255,255,0.04));
+}
+
+.bm-detail-label {
+    font-size: 0.8rem;
+    color: var(--text3, #888);
+    flex-shrink: 0;
+}
+
+.bm-detail-value {
+    font-size: 0.85rem;
+    color: var(--text1, #f0f0f0);
+    font-weight: 500;
+    text-align: right;
+}
+
+/* ── Description ───────────────────────────────────────────────────────────── */
+.bm-description {
+    font-size: 0.85rem;
+    color: var(--text2, #bbb);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.bm-description--muted {
+    color: var(--text3, #888);
+    font-style: italic;
+}
+
+/* ── Session summary stats ─────────────────────────────────────────────────── */
+.bm-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.bm-summary-stat {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    border-radius: 10px;
+    padding: 0.85rem 0.75rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.bm-summary-stat__value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--teal, #4ecdc4);
+    line-height: 1;
+}
+
+.bm-summary-stat__label {
+    font-size: 0.68rem;
+    color: var(--text3, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+.bm-footer {
+    padding: 1rem 1.5rem 1.25rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.bm-footer--spaced {
+    justify-content: space-between;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.bm-btn {
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s, transform 0.12s, background 0.15s;
+}
+
+.bm-btn:active {
+    transform: scale(0.97);
+}
+
+.bm-btn--primary {
+    background: var(--teal, #4ecdc4);
+    color: #0a0f1a;
+}
+
+.bm-btn--primary:hover {
+    opacity: 0.88;
+}
+
+.bm-btn--ghost {
+    background: rgba(255,255,255,0.07);
+    color: var(--text2, #bbb);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+}
+
+.bm-btn--ghost:hover {
+    background: rgba(255,255,255,0.12);
+    color: var(--text1, #f0f0f0);
+}
+
+.bm-btn--danger {
+    background: #e05252;
+    color: #fff;
+}
+
+.bm-btn--danger:hover {
+    background: #c94545;
+}
+
+.bm-btn--danger-ghost {
+    background: transparent;
+    color: #e05252;
+    border: 1px solid rgba(224, 82, 82, 0.35);
+}
+
+.bm-btn--danger-ghost:hover {
+    background: rgba(224, 82, 82, 0.1);
+    border-color: #e05252;
+}
+
+/* ── Cancel confirm screen ─────────────────────────────────────────────────── */
+.bm-cancel-confirm {
+    padding: 2rem 1.5rem 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bm-cancel-icon {
+    color: #e05252;
+    opacity: 0.9;
+}
+
+.bm-cancel-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text1, #f0f0f0);
+    margin: 0;
+}
+
+.bm-cancel-body {
+    font-size: 0.875rem;
+    color: var(--text2, #bbb);
+    line-height: 1.6;
+    max-width: 340px;
+    margin: 0;
+}
+
+.bm-cancel-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
