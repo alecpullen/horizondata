@@ -13,7 +13,6 @@ _STATUS_LABELS = {
     "cancelled": "Cancelled",
 }
 
-
 class Booking(Base):
     __tablename__ = "bookings"
     __table_args__ = {"schema": "app"}
@@ -31,8 +30,13 @@ class Booking(Base):
 
     sessions = relationship("ObservationSession", back_populates="booking", uselist=False)
 
-    def to_dict(self):
-        return {
+    def to_dict(self, db=None):
+        """Convert booking to dictionary.
+        
+        Args:
+            db: Optional database session. If provided, will query captures table.
+        """
+        result = {
             "id": str(self.id),
             "title": self.title,
             "description": self.description or "",
@@ -40,5 +44,19 @@ class Booking(Base):
             "time": f"{self.scheduled_start.strftime('%H:%M')} - {self.scheduled_end.strftime('%H:%M')}",
             "status": _STATUS_LABELS.get(self.status, self.status.title()),
             "statusColor": self.status,
-            "captureCount": 0,
         }
+        
+        # Calculate real capture count from DATABASE
+        if db is not None:
+            try:
+                from app.models.capture import Capture
+                capture_count = db.query(Capture).filter(
+                    Capture.teacher_id == str(self.teacher_id)
+                ).count()
+                result["captureCount"] = capture_count
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Could not calculate capture count for booking {self.id}: {e}")
+        
+        return result

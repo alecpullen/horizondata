@@ -55,7 +55,8 @@ def list_bookings():
             )
 
             for b in rows:
-                buckets[_bucket(b, now_melbourne)].append(b.to_dict())
+                booking_dict = b.to_dict(db)  # Pass db session for real captureCount
+                buckets[_bucket(b, now_melbourne)].append(booking_dict)
 
         return jsonify(buckets)
 

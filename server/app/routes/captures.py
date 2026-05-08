@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, send_from_directory, current_app,
 from app.middleware.auth import require_auth, require_any_auth
 from app.services.rate_limiter import check_capture_limit
 from app.services.student_session_manager import get_student_session_manager
+from app.services.alpaca_client import alpaca_client
 
 captures_bp = Blueprint("captures", __name__, url_prefix="/api/captures")
 
@@ -52,10 +53,20 @@ def upload_capture():
         return jsonify({"message": "file has no filename"}), 400
 
     object_name = request.form.get("objectName", "Unknown")
-    ra = request.form.get("ra")
-    dec = request.form.get("dec")
-    alt = request.form.get("alt")
-    az = request.form.get("az")
+    # Get ACTUAL telescope coordinates at capture time
+    try:
+        coords = alpaca_client.get_coordinates()
+        ra = str(coords['ra'])
+        dec = str(coords['dec'])
+        alt = str(coords['alt'])
+        az = str(coords['az'])
+    except Exception as e:
+        current_app.logger.warning(f"Could not get telescope coordinates: {e}")
+        # Fallback to form data if telescope query fails
+        ra = request.form.get("ra")
+        dec = request.form.get("dec")
+        alt = request.form.get("alt")
+        az = request.form.get("az")
     ts = request.form.get("timestamp")
     observation_session_id = request.form.get("observationSessionId")
 
@@ -91,7 +102,19 @@ def upload_capture():
     # Determine who captured this
     captured_by_teacher = g.user_type == 'teacher'
     teacher_id = g.user.get('id') if captured_by_teacher else None
+    teacher_name = g.user.get('name') if captured_by_teacher else None
     student_session_id = g.session_id if not captured_by_teacher else None
+    
+    # Get student's display name if student captured
+    student_display_name = None
+    if not captured_by_teacher and student_session_id:
+        try:
+            session_manager = get_student_session_manager()
+            session = session_manager.validate_session(student_session_id)
+            if session:
+                student_display_name = session.get('display_name')
+        except Exception as e:
+            current_app.logger.warning(f"Could not get student display name: {e}")
 
     # save metadata sidecar
     meta = {
@@ -108,7 +131,9 @@ def upload_capture():
         "relativeDir": os.path.relpath(dest_dir, root),
         "capturedBy": "teacher" if captured_by_teacher else "student",
         "capturedByTeacherId": teacher_id,
+        "capturedByTeacherName": teacher_name,  # NEW: Teacher's name
         "capturedByStudentSessionId": student_session_id,
+        "capturedByStudentName": student_display_name,  # NEW: Student's display name
         "observationSessionId": observation_session_id
     }
     with open(meta_path, "w", encoding="utf-8") as fh:
@@ -120,6 +145,25 @@ def upload_capture():
         "downloadUrl": f"/api/captures/{cap_id}/download",
         "capturedBy": "teacher" if captured_by_teacher else "student"
     }), 201
+
+def _is_teachers_session(teacher_id, session_id, db):
+    """Check if a session belongs to this teacher's bookings"""
+    from app.models.session import ObservationSession
+    from app.models.booking import Booking
+    
+    session = db.query(ObservationSession).filter(
+        ObservationSession.id == session_id
+    ).first()
+    
+    if not session or not session.booking_id:
+        return False
+    
+    booking = db.query(Booking).filter(
+        Booking.id == session.booking_id,
+        Booking.teacher_id == teacher_id
+    ).first()
+    
+    return booking is not None
 
 def _walk_captures():
     root = _captures_root()
@@ -134,29 +178,40 @@ def list_captures():
     """
     Return a list of captures.
     
-    Teachers: see all captures in their observation sessions
+    Teachers: see only captures from their sessions/bookings
     Students: see only their own captures
+    
+    Optional query param: ?sessionId=<id> to filter by session
     """
     items = []
     user_type = g.user_type
+    teacher_id = g.user.get('id') if user_type == 'teacher' else None
     
-    for meta_path in _walk_captures():
-        try:
-            with open(meta_path, "r", encoding="utf-8") as fh:
-                meta = json.load(fh)
-            
-            # Filter based on user type
-            if user_type == 'student':
-                # Students only see their own captures
-                if meta.get('capturedByStudentSessionId') != g.session_id:
-                    continue
-            
-            items.append(meta)
-        except Exception as e:
-            current_app.logger.warning(f"Failed reading {meta_path}: {e}")
+    # Get sessionId filter from query params
+    filter_session_id = request.args.get("sessionId")
     
-    # newest first
-    items.sort(key=lambda x: x.get("timestamp",""), reverse=True)
+    with get_db() as db:
+        from app.models.capture import Capture
+        
+        # Build query
+        query = db.query(Capture)
+        
+        if user_type == 'teacher':
+            # Teachers see only their captures
+            query = query.filter(Capture.teacher_id == str(teacher_id))
+        elif user_type == 'student':
+            # Students see only their captures
+            query = query.filter(Capture.captured_by_student_session_id == g.session_id)
+        
+        # Filter by sessionId if provided
+        if filter_session_id:
+            query = query.filter(Capture.observation_session_id == filter_session_id)
+        
+        captures = query.order_by(Capture.timestamp.desc()).all()
+        
+        for capture in captures:
+            items.append(capture.to_dict())
+    
     return jsonify({"items": items})
 
 @captures_bp.route("/<cap_id>/download", methods=["GET"])
