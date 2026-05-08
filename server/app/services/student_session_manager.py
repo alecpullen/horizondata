@@ -60,7 +60,7 @@ class StudentSessionManager:
         self._observation_index: Dict[str, set] = {}
         self._lock = Lock()
         self._initialized = True
-        self.session_duration_hours: int = 8  # Configurable session duration
+        self.session_duration_hours: int = 8  # <---- CHANGE THIS INT VALUE FOR SESSION DURATION
         logger.info("StudentSessionManager initialized")
 
     def create_session(self, display_name: str, observation_session_id: str) -> str:
