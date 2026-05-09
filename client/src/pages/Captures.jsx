@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
-import CaptureCard from '../components/CaptureCard'
-import api from '../lib/api'
-import './Captures.css'
-
 import api from '../lib/api'
 import './Captures.css'
 
@@ -74,7 +70,6 @@ function SkeletonCard() {
                 <div className="cap-skel cap-skel--sub" />
                 <div className="cap-skel cap-skel--sub cap-skel--short" />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div className="cap-card-actions">
                 <div className="cap-skel cap-skel--btn" />
                 <div className="cap-skel cap-skel--btn" />
