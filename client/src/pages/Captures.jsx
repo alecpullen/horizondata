@@ -27,7 +27,7 @@ function CaptureCard({ item }) {
                 <div className="cap-object">{item.objectName || 'Unknown'}</div>
                 <div className="cap-date">{dateStr} · {timeStr}</div>
                 <div className="cap-meta">
-                    Captured by: {item.capturedBy === 'teacher' ? 'Teacher' : 'Student'}
+                    Captured by: {item.capturedByName || (item.capturedBy === 'teacher' ? 'Teacher' : 'Student')}
                 </div>
                 {hasCoords && (
                     <div className="cap-coords">

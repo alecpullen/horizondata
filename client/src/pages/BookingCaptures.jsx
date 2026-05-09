@@ -37,11 +37,8 @@ function BookingCaptures() {
         setLoading(true)
         setError(null)
         try {
-            const { data } = await api.get('/api/captures')
-            const all = data.items || []
-            // Filter client-side until backend supports ?observationSessionId=
-            const forBooking = all.filter(c => String(c.observationSessionId) === String(bookingId))
-            setCaptures(forBooking)
+            const { data } = await api.get(`/api/captures?sessionId=${bookingId}`)
+            setCaptures(data.items || [])
         } catch {
             setError('Failed to load captures. Please try again.')
         } finally {
