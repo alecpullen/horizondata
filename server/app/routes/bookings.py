@@ -183,6 +183,7 @@ def create_booking():
                 scheduled_end=scheduled_end,
                 status="confirmed",
                 targets=data.get("targets"),
+                headless=data.get("headless", False),
             )
             db.add(booking)
             db.flush()
