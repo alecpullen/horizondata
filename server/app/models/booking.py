@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, Text, JSON
+from sqlalchemy import Column, String, DateTime, Text, JSON, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -25,6 +25,7 @@ class Booking(Base):
     scheduled_end = Column(DateTime(timezone=True), nullable=False)
     status = Column(String(20), nullable=False, default="confirmed")
     targets = Column(JSON, nullable=True)
+    headless = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -44,6 +45,7 @@ class Booking(Base):
             "time": f"{self.scheduled_start.strftime('%H:%M')} - {self.scheduled_end.strftime('%H:%M')}",
             "status": _STATUS_LABELS.get(self.status, self.status.title()),
             "statusColor": self.status,
+            "headless": self.headless,
         }
         
         # Calculate real capture count from DATABASE
