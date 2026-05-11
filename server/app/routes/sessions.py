@@ -2,12 +2,13 @@ import logging
 import uuid as _uuid
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify, g
+from flask import Blueprint, jsonify, g, request
 
 from app.middleware.auth import require_auth
 from app.services.database import get_db
 from app.services.session_codes import generate_session_code
 from app.services.student_session_manager import get_student_session_manager
+from app.services.rate_limiter import check_join_limit, get_join_remaining
 from app.models.booking import Booking
 from app.models.session import ObservationSession
 from sqlalchemy.exc import IntegrityError
@@ -176,7 +177,134 @@ def end_session(booking_id):
     except Exception as e:
         logger.error(f"Error ending session for booking {booking_id}: {e}")
         return jsonify({"error": "internal_error", "message": "Failed to end session"}), 500
-        
+
+
+@sessions_bp.route("/validate", methods=["POST"])
+def validate_join_code():
+    """
+    Lightweight check that a join code exists and belongs to an active session.
+    Does not create a student session — just confirms the code is valid.
+
+    Body (JSON):
+        joinCode  str  required  6-character session code
+
+    Returns:
+        { valid: bool, status?, sessionId?, reason? }
+    """
+    data = request.get_json(force=True) or {}
+    join_code = (data.get("joinCode") or "").strip().upper()
+
+    if not join_code:
+        return jsonify({"valid": False, "reason": "missing_code"}), 400
+
+    # Rate limit by IP
+    ip = request.remote_addr or "unknown"
+    if not check_join_limit(ip):
+        remaining = get_join_remaining(ip)
+        return jsonify({
+            "valid": False,
+            "reason": "rate_limited",
+            "message": "Too many attempts. Please wait before trying again.",
+            "remaining": remaining,
+        }), 429
+
+    try:
+        with get_db() as db:
+            obs = (
+                db.query(ObservationSession)
+                .filter(
+                    ObservationSession.session_code == join_code,
+                    ObservationSession.status == "active",
+                )
+                .first()
+            )
+
+        if not obs:
+            return jsonify({"valid": False, "reason": "not_found"})
+
+        return jsonify({"valid": True, "sessionId": str(obs.id), "status": obs.status})
+
+    except Exception as e:
+        logger.error(f"Error validating join code: {e}")
+        return jsonify({"valid": False, "reason": "internal_error"}), 500
+
+
+@sessions_bp.route("/join", methods=["POST"])
+def join_session():
+    """
+    Join an active session as a student.
+
+    Rate limited per IP — 10 attempts per minute to prevent
+    brute-force session code guessing.
+
+    Body (JSON):
+        joinCode     str  required  6-character session code
+        studentName  str  required  Display name (max 50 chars)
+
+    Returns:
+        201 + { success, session: { id, joinCode }, studentSessionId }
+    """
+    data = request.get_json(force=True) or {}
+    join_code = (data.get("joinCode") or "").strip().upper()
+    student_name = (data.get("studentName") or "").strip()
+
+    # Validate input
+    if not join_code:
+        return jsonify({"error": "validation_error", "message": "joinCode is required"}), 400
+    if not student_name:
+        return jsonify({"error": "validation_error", "message": "studentName is required"}), 400
+    if len(student_name) > 50:
+        return jsonify({"error": "validation_error", "message": "Name must be 50 characters or less"}), 400
+
+    # Rate limit by IP — prevents brute-force guessing of session codes
+    ip = request.remote_addr or "unknown"
+    if not check_join_limit(ip):
+        remaining = get_join_remaining(ip)
+        return jsonify({
+            "error": "rate_limited",
+            "message": "Too many join attempts. Please wait before trying again.",
+            "remaining": remaining,
+        }), 429
+
+    try:
+        with get_db() as db:
+            obs = (
+                db.query(ObservationSession)
+                .filter(
+                    ObservationSession.session_code == join_code,
+                    ObservationSession.status == "active",
+                )
+                .first()
+            )
+
+            if not obs:
+                return jsonify({
+                    "error": "session_not_found",
+                    "message": "Session not found or has ended. Please check the session code.",
+                }), 404
+
+            obs_id = str(obs.id)
+            obs_code = obs.session_code
+
+        # Create ephemeral student session
+        manager = get_student_session_manager()
+        student_session_id = manager.create_session(
+            display_name=student_name,
+            observation_session_id=obs_id,
+        )
+
+        logger.info(f"Student '{student_name}' joined session {obs_id}")
+
+        return jsonify({
+            "success": True,
+            "session": {"id": obs_id, "joinCode": obs_code},
+            "studentSessionId": student_session_id,
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error joining session with code {join_code}: {e}")
+        return jsonify({"error": "internal_error", "message": "Failed to join session"}), 500
+
 
 def create_booking(slot_id):
     try:

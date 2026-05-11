@@ -147,6 +147,42 @@ class RateLimiter:
                 logger.info(f"Rate limit reset for {key}")
 
 
+# Join-specific rate limiting
+def check_join_limit(ip_address: str, max_attempts: int = 10, window_seconds: float = 60) -> bool:
+    """
+    Check if a join attempt from an IP is within rate limit.
+    Prevents brute-force session code guessing.
+
+    Args:
+        ip_address: Client IP address
+        max_attempts: Maximum join attempts allowed in window (default: 10)
+        window_seconds: Time window in seconds (default: 60)
+
+    Returns:
+        True if attempt is allowed, False if rate limited
+    """
+    limiter = RateLimiter()
+    key = f"join:{ip_address}"
+    return limiter.check_limit(key, max_attempts, window_seconds=window_seconds)
+
+
+def get_join_remaining(ip_address: str, max_attempts: int = 10, window_seconds: float = 60) -> int:
+    """
+    Get remaining join attempts for an IP address.
+
+    Args:
+        ip_address: Client IP address
+        max_attempts: Maximum join attempts allowed
+        window_seconds: Time window in seconds
+
+    Returns:
+        Number of remaining attempts
+    """
+    limiter = RateLimiter()
+    key = f"join:{ip_address}"
+    return limiter.get_remaining(key, max_attempts, window_seconds=window_seconds)
+
+
 # Capture-specific rate limiting
 def check_capture_limit(student_session_id: str, max_per_minute: int = 5) -> bool:
     """

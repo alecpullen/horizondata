@@ -19,6 +19,7 @@ class ObservationSession(Base):
     ended_at = Column(DateTime(timezone=True), nullable=True)
 
     booking = relationship("Booking", back_populates="sessions")
+    captures = relationship("Capture", back_populates="session")
 
     def to_dict(self):
         return {

@@ -3,9 +3,11 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, send_from_directory, current_app, abort, g
 
 from app.middleware.auth import require_auth, require_any_auth
+from app.services.database import get_db
 from app.services.rate_limiter import check_capture_limit
 from app.services.student_session_manager import get_student_session_manager
 from app.services.alpaca_client import alpaca_client
+from app.models.capture import Capture
 
 captures_bp = Blueprint("captures", __name__, url_prefix="/api/captures")
 
@@ -87,7 +89,8 @@ def upload_capture():
     os.makedirs(dest_dir, exist_ok=True)
 
     # ids & filenames
-    cap_id = uuid.uuid4().hex[:12]
+    cap_uuid = uuid.uuid4()
+    cap_id = str(cap_uuid)
     ts_part = dt.strftime("%Y%m%dT%H%M%S")
     ext = ".png" if (f.mimetype == "image/png" or f.filename.lower().endswith(".png")) else ".jpg"
     img_name = f"{ts_part}_{cap_id}{ext}"
@@ -138,6 +141,23 @@ def upload_capture():
     }
     with open(meta_path, "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2)
+
+    # persist to DB
+    try:
+        obs_uuid = uuid.UUID(observation_session_id) if observation_session_id else None
+        with get_db() as db:
+            db.add(Capture(
+                id=cap_uuid,
+                captured_by_teacher_id=teacher_id,
+                captured_by_student_session_id=student_session_id,
+                observation_session_id=obs_uuid,
+                file_path=img_path,
+                object_name=object_name,
+                coordinates=meta["coordinates"],
+                captured_at=dt,
+            ))
+    except Exception as e:
+        current_app.logger.error(f"Failed to persist capture to DB: {e}")
 
     return jsonify({
         "success": True,
@@ -197,17 +217,14 @@ def list_captures():
         query = db.query(Capture)
         
         if user_type == 'teacher':
-            # Teachers see only their captures
-            query = query.filter(Capture.teacher_id == str(teacher_id))
+            query = query.filter(Capture.captured_by_teacher_id == str(teacher_id))
         elif user_type == 'student':
-            # Students see only their captures
             query = query.filter(Capture.captured_by_student_session_id == g.session_id)
-        
-        # Filter by sessionId if provided
+
         if filter_session_id:
             query = query.filter(Capture.observation_session_id == filter_session_id)
-        
-        captures = query.order_by(Capture.timestamp.desc()).all()
+
+        captures = query.order_by(Capture.captured_at.desc()).all()
         
         for capture in captures:
             items.append(capture.to_dict())
