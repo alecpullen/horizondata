@@ -1,3 +1,4 @@
+import os
 import requests
 import time
 from typing import Dict, Any, Optional
@@ -5,6 +6,11 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Default configuration for the singleton instance
+DEFAULT_ALPACA_BASE = os.getenv('ALPACA_BASE', 'http://localhost:32323/api/v1/telescope/0')
+DEFAULT_CLIENT_ID = int(os.getenv('CLIENT_ID', '1'))
+
 
 class AlpacaClient:
     """Client for communicating with ASCOM Alpaca telescope simulator"""
@@ -153,3 +159,7 @@ class AlpacaError(Exception):
 class AlpacaConnectionError(Exception):
     """Exception for connection errors"""
     pass
+
+
+# Module-level singleton instance for use by other modules
+alpaca_client = AlpacaClient(DEFAULT_ALPACA_BASE, DEFAULT_CLIENT_ID)
