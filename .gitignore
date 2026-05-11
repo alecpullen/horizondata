@@ -47,4 +47,5 @@ skills-lock.json
 .DS_Store
 Thumbs.db
 
+misc_files/
 jira_tasks.csv
