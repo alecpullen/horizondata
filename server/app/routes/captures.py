@@ -107,17 +107,17 @@ def upload_capture():
     teacher_id = g.user.get('id') if captured_by_teacher else None
     teacher_name = g.user.get('name') if captured_by_teacher else None
     student_session_id = g.session_id if not captured_by_teacher else None
-    
-    # Get student's display name if student captured
-    student_display_name = None
+
+    captured_by_name = teacher_name
     if not captured_by_teacher and student_session_id:
         try:
             session_manager = get_student_session_manager()
             session = session_manager.validate_session(student_session_id)
             if session:
-                student_display_name = session.get('display_name')
+                captured_by_name = session.get('display_name')
         except Exception as e:
             current_app.logger.warning(f"Could not get student display name: {e}")
+    student_display_name = captured_by_name if not captured_by_teacher else None
 
     # save metadata sidecar
     meta = {
@@ -150,6 +150,7 @@ def upload_capture():
                 id=cap_uuid,
                 captured_by_teacher_id=teacher_id,
                 captured_by_student_session_id=student_session_id,
+                captured_by_name=captured_by_name,
                 observation_session_id=obs_uuid,
                 file_path=img_path,
                 object_name=object_name,

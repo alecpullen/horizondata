@@ -12,6 +12,7 @@ class Capture(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     captured_by_teacher_id = Column(String(255), nullable=True, index=True)
     captured_by_student_session_id = Column(String(255), nullable=True)
+    captured_by_name = Column(String(255), nullable=True)
     observation_session_id = Column(UUID(as_uuid=True), ForeignKey("app.observation_sessions.id"), nullable=True)
     file_path = Column(String(500), nullable=False)
     object_name = Column(String(255), nullable=True)
@@ -39,6 +40,7 @@ class Capture(Base):
                 "az": coords.get("az"),
             },
             "capturedBy": captured_by,
+            "capturedByName": self.captured_by_name,
             "capturedByTeacherId": self.captured_by_teacher_id,
             "capturedByStudentSessionId": self.captured_by_student_session_id,
             "timestamp": self.captured_at.isoformat() if self.captured_at else None,
