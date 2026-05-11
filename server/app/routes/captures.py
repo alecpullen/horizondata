@@ -208,15 +208,12 @@ def list_captures():
     user_type = g.user_type
     teacher_id = g.user.get('id') if user_type == 'teacher' else None
     
-    # Get sessionId filter from query params
     filter_session_id = request.args.get("sessionId")
-    
+    filter_booking_id = request.args.get("bookingId")
+
     with get_db() as db:
-        from app.models.capture import Capture
-        
-        # Build query
         query = db.query(Capture)
-        
+
         if user_type == 'teacher':
             query = query.filter(Capture.captured_by_teacher_id == str(teacher_id))
         elif user_type == 'student':
@@ -224,80 +221,54 @@ def list_captures():
 
         if filter_session_id:
             query = query.filter(Capture.observation_session_id == filter_session_id)
+        elif filter_booking_id:
+            from app.models.session import ObservationSession
+            session_ids = [
+                str(s.id) for s in db.query(ObservationSession.id)
+                .filter(ObservationSession.booking_id == filter_booking_id)
+                .all()
+            ]
+            if not session_ids:
+                return jsonify({"items": []})
+            query = query.filter(Capture.observation_session_id.in_(session_ids))
 
         captures = query.order_by(Capture.captured_at.desc()).all()
-        
+
         for capture in captures:
             items.append(capture.to_dict())
-    
+
     return jsonify({"items": items})
+
+def _get_capture_or_abort(cap_id: str):
+    """Look up a capture by ID and enforce student ownership."""
+    with get_db() as db:
+        capture = db.query(Capture).filter(Capture.id == cap_id).first()
+    if not capture:
+        abort(404)
+    if g.user_type == 'student' and capture.captured_by_student_session_id != g.session_id:
+        abort(403, "You can only download your own captures")
+    return capture
+
 
 @captures_bp.route("/<cap_id>/download", methods=["GET"])
 @require_any_auth
 def download_capture(cap_id: str):
-    """
-    Send the image as attachment by id.
-    
-    Students can only download their own captures.
-    Teachers can download any capture.
-    """
-    user_type = g.user_type
-    
-    # find meta
-    for meta_path in _walk_captures():
-        try:
-            with open(meta_path, "r", encoding="utf-8") as fh:
-                meta = json.load(fh)
-            
-            if meta.get("id") == cap_id:
-                # Check permissions for students
-                if user_type == 'student':
-                    if meta.get('capturedByStudentSessionId') != g.session_id:
-                        abort(403, "You can only download your own captures")
-                
-                root = _captures_root()
-                rel = meta["relativeDir"]
-                img = meta["file"]
-                return send_from_directory(
-                    directory=os.path.join(root, rel),
-                    path=img,
-                    as_attachment=True
-                )
-        except Exception as e:
-            current_app.logger.warning(f"Lookup error: {e}")
-    abort(404)
+    capture = _get_capture_or_abort(cap_id)
+    return send_from_directory(
+        directory=os.path.dirname(capture.file_path),
+        path=os.path.basename(capture.file_path),
+        as_attachment=True
+    )
 
 
 @captures_bp.route("/<cap_id>/metadata", methods=["GET"])
 @require_any_auth
 def download_capture_metadata(cap_id: str):
-    """
-    Send the JSON metadata sidecar as attachment by capture id.
-
-    Students can only download metadata for their own captures.
-    Teachers can download any capture's metadata.
-    """
-    user_type = g.user_type
-
-    for meta_path in _walk_captures():
-        try:
-            with open(meta_path, "r", encoding="utf-8") as fh:
-                meta = json.load(fh)
-
-            if meta.get("id") == cap_id:
-                if user_type == 'student':
-                    if meta.get('capturedByStudentSessionId') != g.session_id:
-                        abort(403, "You can only download your own captures")
-
-                root = _captures_root()
-                rel = meta["relativeDir"]
-                json_file = meta["file"].rsplit(".", 1)[0] + ".json"
-                return send_from_directory(
-                    directory=os.path.join(root, rel),
-                    path=json_file,
-                    as_attachment=True,
-                    mimetype="application/json"
-                )
-        except Exception as e:
-            current_app.logger.warning(f"Metadata lookup error: {e}")
-    abort(404)
+    capture = _get_capture_or_abort(cap_id)
+    meta_path = os.path.splitext(capture.file_path)[0] + ".json"
+    return send_from_directory(
+        directory=os.path.dirname(meta_path),
+        path=os.path.basename(meta_path),
+        as_attachment=True,
+        mimetype="application/json"
+    )

@@ -37,7 +37,7 @@ function BookingCaptures() {
         setLoading(true)
         setError(null)
         try {
-            const { data } = await api.get(`/api/captures?sessionId=${bookingId}`)
+            const { data } = await api.get(`/api/captures?bookingId=${bookingId}`)
             setCaptures(data.items || [])
         } catch {
             setError('Failed to load captures. Please try again.')

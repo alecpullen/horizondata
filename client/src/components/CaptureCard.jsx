@@ -8,14 +8,19 @@ function CaptureThumb({ captureId, objectName }) {
     const [failed, setFailed] = useState(false)
 
     useEffect(() => {
+        let cancelled = false
         let blobUrl = null
         api.get(`/api/captures/${captureId}/download`, { responseType: 'blob' })
             .then(res => {
+                if (cancelled) return
                 blobUrl = URL.createObjectURL(res.data)
                 setSrc(blobUrl)
             })
-            .catch(() => setFailed(true))
-        return () => { if (blobUrl) URL.revokeObjectURL(blobUrl) }
+            .catch(() => { if (!cancelled) setFailed(true) })
+        return () => {
+            cancelled = true
+            if (blobUrl) URL.revokeObjectURL(blobUrl)
+        }
     }, [captureId])
 
     if (failed) {

@@ -32,7 +32,6 @@ class Capture(Base):
             "teacherId": self.captured_by_teacher_id,
             "observationSessionId": str(self.observation_session_id) if self.observation_session_id else None,
             "objectName": self.object_name,
-            "file": self.file_path,
             "coordinates": {
                 "ra": coords.get("ra"),
                 "dec": coords.get("dec"),
