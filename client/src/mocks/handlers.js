@@ -370,6 +370,33 @@ const mockSpaceObjects = [
     }
 ]
 
+// Admin safety override — null when no override is active
+// Shape: { state: 'OPEN' | 'CLOSED', expiresAt: ISO string }
+let mockSafetyOverride = null
+
+function resolveAdminSafetyStatus() {
+    // If an override exists, check if it has expired
+    if (mockSafetyOverride) {
+        if (new Date(mockSafetyOverride.expiresAt) <= new Date()) {
+            mockSafetyOverride = null
+        }
+    }
+    if (mockSafetyOverride) {
+        return {
+            status: mockSafetyOverride.state === 'OPEN' ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+            source: 'manual',
+            override: { state: mockSafetyOverride.state, expiresAt: mockSafetyOverride.expiresAt },
+        }
+    }
+    const hour = new Date().getHours()
+    const isNight = hour >= 18 || hour < 6
+    return {
+        status: isNight ? 'ACTIVE' : 'CLOSED',
+        source: 'automatic',
+        override: null,
+    }
+}
+
 // Past sessions (admin view) — static seed; terminate handler pushes into this
 const mockPastSessions = [
     { bookingId: 3,  title: 'Year 10 - Jupiter Observation',    teacherName: 'James Okafor',   startedAt: '2026-04-08T21:00:00Z', endedAt: '2026-04-08T22:28:00Z', captureCount: 12, status: 'ended'     },
@@ -1712,14 +1739,18 @@ export const handlers = [
     http.get(apiUrl('/api/safety/status'), async () => {
         if (!isMswEnabled()) return passthrough()
         await delay(200)
+        const { status } = resolveAdminSafetyStatus()
         const hour = new Date().getHours()
         const isNight = hour >= 18 || hour < 6
+        const effectiveActive = status === 'ACTIVE' || status === 'FORCE_OPEN'
         return HttpResponse.json({
-            status: isNight ? 'ACTIVE' : 'CLOSED',
-            reason: isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
-            next_available: isNight ? null : 'Tonight at 18:00',
+            status: effectiveActive ? 'ACTIVE' : 'CLOSED',
+            reason: mockSafetyOverride
+                ? `Manual override: force ${mockSafetyOverride.state.toLowerCase()}`
+                : isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
+            next_available: effectiveActive ? null : 'Tonight at 18:00',
             current_time: new Date().toISOString(),
-            viewing_window: { start: '18:00', end: '06:00', is_active: isNight }
+            viewing_window: { start: '18:00', end: '06:00', is_active: effectiveActive }
         })
     }),
 
@@ -1736,6 +1767,34 @@ export const handlers = [
             weather_safety: { safe: true, conditions: { temperature: 18.5, humidity: 45, pressure: 1013, dew_point: 7.2 }, thresholds_met: true },
             last_updated: new Date().toISOString()
         })
+    }),
+
+    // GET /api/admin/safety/status — richer status for admin widget (source + override)
+    http.get(apiUrl('/api/admin/safety/status'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        return HttpResponse.json(resolveAdminSafetyStatus())
+    }),
+
+    // POST /api/admin/safety/override — body: { state: 'OPEN'|'CLOSED', durationMins: number }
+    http.post(apiUrl('/api/admin/safety/override'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(180)
+        const { state, durationMins } = await request.json()
+        if (!['OPEN', 'CLOSED'].includes(state) || !durationMins || durationMins <= 0) {
+            return HttpResponse.json({ error: 'invalid_params' }, { status: 400 })
+        }
+        const expiresAt = new Date(Date.now() + durationMins * 60 * 1000).toISOString()
+        mockSafetyOverride = { state, expiresAt }
+        return HttpResponse.json(resolveAdminSafetyStatus())
+    }),
+
+    // DELETE /api/admin/safety/override — clear the current override
+    http.delete(apiUrl('/api/admin/safety/override'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        mockSafetyOverride = null
+        return HttpResponse.json(resolveAdminSafetyStatus())
     }),
 
     // GET /api/admin/sessions/active — live list of active sessions (polled)
@@ -1791,15 +1850,52 @@ export const handlers = [
     http.get(apiUrl('/api/admin/stats'), async () => {
         if (!isMswEnabled()) return passthrough()
         await delay(180)
-        const hour = new Date().getHours()
-        const isNight = hour >= 18 || hour < 6
+        const MS_PER_DAY = 86400000
+
+        // Pending accounts detail — oldest pending teacher
+        const pendingTeachers = mockTeachers
+            .filter(t => t.status === 'pending')
+            .sort((a, b) => a.registeredAt.localeCompare(b.registeredAt))
+        const oldestTeacher = pendingTeachers[0] ?? null
+
+        // Pending bookings detail — earliest pending booking by date
+        const pendingBookings = mockAdminBookings
+            .filter(b => b.status === 'pending')
+            .sort((a, b) => a.date.localeCompare(b.date))
+        const nextBooking = pendingBookings[0] ?? null
+
+        // Active sessions detail — total students + one sample session
+        let totalStudents = 0
+        let sampleSession = null
+        for (const [bookingId, session] of activeSessions) {
+            if (session.status === 'ended') continue
+            totalStudents += session.participants.length
+            if (!sampleSession) {
+                const booking = mockAdminBookings.find(b => b.id === bookingId)
+                if (booking) sampleSession = { title: booking.title, teacher: booking.teacherName }
+            }
+        }
+
         return HttpResponse.json({
-            pending_accounts: mockTeachers.filter(t => t.status === 'pending').length,
-            pending_bookings: mockAdminBookings.filter(b => b.status === 'pending').length,
+            pending_accounts: pendingTeachers.length,
+            pending_accounts_detail: oldestTeacher ? {
+                oldest_name:        oldestTeacher.fullName,
+                oldest_institution: oldestTeacher.institution,
+                oldest_days:        Math.floor((Date.now() - new Date(oldestTeacher.registeredAt)) / MS_PER_DAY),
+            } : null,
+
+            pending_bookings: pendingBookings.length,
+            pending_bookings_detail: nextBooking ? {
+                next_title:   nextBooking.title,
+                next_date:    nextBooking.date,
+                next_teacher: nextBooking.teacherName,
+            } : null,
+
             active_sessions: [...activeSessions.values()].filter(s => s.status !== 'ended').length,
-            safety: {
-                status: isNight ? 'ACTIVE' : 'CLOSED',
-                reason: isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
+            active_sessions_detail: {
+                total_students: totalStudents,
+                sample_title:   sampleSession?.title   ?? null,
+                sample_teacher: sampleSession?.teacher ?? null,
             },
         })
     }),
