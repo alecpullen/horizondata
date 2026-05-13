@@ -527,6 +527,17 @@ export const handlers = [
         return HttpResponse.json({ success: true, token, refresh_token: token })
     }),
 
+    // POST /api/auth/teacher/reset-password - consume a reset token and set new password
+    http.post(apiUrl('/api/auth/teacher/reset-password'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(500)
+        const { token, password } = await request.json()
+        if (!token || !password) {
+            return HttpResponse.json({ error: 'validation_error', message: 'Token and password required' }, { status: 400 })
+        }
+        return HttpResponse.json({ success: true })
+    }),
+
     // POST /api/auth/student/join - student joins session
     http.post(apiUrl('/api/auth/student/join'), async ({ request }) => {
         if (!isMswEnabled()) return passthrough()

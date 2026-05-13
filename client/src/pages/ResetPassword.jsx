@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import AuthShell from '../components/auth/AuthShell'
 import { useToast } from '../components/ui/ToastProvider'
 import { validatePassword, doPasswordsMatch } from '../utils/validation'
+import api from '../lib/api'
 import './ResetPassword.css'
 
 function ResetPassword() {
@@ -31,16 +32,16 @@ function ResetPassword() {
 
         setIsLoading(true)
 
-        // Simulate API call
-        await new Promise(r => setTimeout(r, 1000))
-
-        setIsSuccess(true)
-        showToast({
-            type: 'success',
-            message: 'Password reset successfully!'
-        })
-
-        setIsLoading(false)
+        try {
+            await api.post('/api/auth/teacher/reset-password', { token, password })
+            setIsSuccess(true)
+            showToast({ type: 'success', message: 'Password reset successfully!' })
+        } catch (err) {
+            const message = err.response?.data?.message || 'Password reset failed. Please try again.'
+            showToast({ type: 'error', message })
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     // Success state
