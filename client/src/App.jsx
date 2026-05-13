@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ToastProvider from './components/ui/ToastProvider'
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -106,6 +106,7 @@ function AppRoutes() {
                 <Route path="/bookings/:id/captures" element={
                     <ProtectedRoute><BookingCaptures /></ProtectedRoute>
                 } />
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </SessionTimeoutWrapper>
     )

@@ -57,6 +57,10 @@ export async function validateJoinCode(joinCode) {
         body: JSON.stringify({ joinCode })
     });
 
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || `Validation failed: ${res.status}`);
+    }
     return res.json();
 }
 

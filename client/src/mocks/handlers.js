@@ -631,7 +631,7 @@ export const handlers = [
         await delay(500)
         const updatedData = await request.json()
         Object.assign(mockAccount, updatedData)
-        return HttpResponse.json(mockAccount)
+        return HttpResponse.json({ profile: mockAccount })
     }),
 
     // GET /api/bookings - fetch user bookings

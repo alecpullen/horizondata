@@ -29,6 +29,7 @@ function StudentLobby() {
                     return
                 }
 
+                if (!cancelled) setError('')
                 const data = await response.json()
                 if (cancelled) return
 
