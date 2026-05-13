@@ -32,6 +32,17 @@ const mockUsers = [
         institution: 'Melbourne High School',
         is2FAEnabled: false,
         notificationsEnabled: true
+    },
+    {
+        id: '3',
+        email: 'admin@horizondata.edu.au',
+        password: 'admin123',
+        fullName: 'Horizon Admin',
+        role: 'admin',
+        phone: '',
+        institution: 'La Trobe University',
+        is2FAEnabled: false,
+        notificationsEnabled: true
     }
 ]
 
@@ -359,6 +370,27 @@ const mockSpaceObjects = [
     }
 ]
 
+// Mock admin bookings — richer than the teacher-facing mockBookings (mutable in memory)
+let mockAdminBookings = [
+    { id: 1,  teacherName: 'James Okafor',    title: 'Year 9 Science Class',        date: '2026-04-18', time: '20:00 – 21:30', targets: ['Moon'],                               headless: false, status: 'confirmed' },
+    { id: 2,  teacherName: 'Sarah Chen',       title: 'Evening Star Party',           date: '2026-04-22', time: '19:30 – 21:00', targets: ['Saturn', 'Jupiter'],                 headless: false, status: 'pending'   },
+    { id: 4,  teacherName: 'Priya Sharma',     title: 'ANZAC Day Star Party',         date: '2026-04-25', time: '20:00 – 22:00', targets: ['Omega Centauri', 'Pleiades'],        headless: false, status: 'confirmed' },
+    { id: 7,  teacherName: 'James Okafor',     title: 'Automated Deep Sky Capture',   date: '2026-04-30', time: '22:00 – 23:30', targets: ['Saturn', 'Jupiter', 'Andromeda'],   headless: true,  status: 'confirmed' },
+    { id: 8,  teacherName: 'Tom Adeyemi',      title: 'Introduction to Planets',      date: '2026-05-10', time: '20:00 – 21:00', targets: ['Mars'],                              headless: false, status: 'pending'   },
+    { id: 9,  teacherName: 'Daniel Kowalski',  title: 'Deep Sky Survey',              date: '2026-05-15', time: '21:00 – 23:00', targets: ['Andromeda', 'Orion Nebula'],         headless: true,  status: 'pending'   },
+    { id: 10, teacherName: 'Maria Nguyen',     title: 'Lunar Geology Study',          date: '2026-03-05', time: '20:00 – 21:30', targets: ['Moon'],                              headless: false, status: 'rejected'  },
+]
+
+// Mock teacher accounts (mutable — approve/suspend actions update this in memory)
+const mockTeachers = [
+    { id: 101, fullName: 'Sarah Chen',      email: 'sarah.chen@bundoora.edu.au',    institution: 'Bundoora Secondary',   registeredAt: '2026-01-12', status: 'pending'   },
+    { id: 102, fullName: 'James Okafor',    email: 'j.okafor@latrobe.edu.au',       institution: 'La Trobe University',  registeredAt: '2026-02-08', status: 'approved'  },
+    { id: 103, fullName: 'Maria Nguyen',    email: 'm.nguyen@rmit.edu.au',          institution: 'RMIT University',      registeredAt: '2026-03-01', status: 'suspended' },
+    { id: 104, fullName: 'Tom Adeyemi',     email: 'tadeyemi@princes-hill.vic.edu', institution: "Prince's Hill SC",     registeredAt: '2026-03-14', status: 'pending'   },
+    { id: 105, fullName: 'Priya Sharma',    email: 'priya.s@monash.edu.au',         institution: 'Monash University',    registeredAt: '2026-04-02', status: 'approved'  },
+    { id: 106, fullName: 'Daniel Kowalski', email: 'd.kowalski@melbhs.vic.edu.au',  institution: 'Melbourne High School',registeredAt: '2026-04-20', status: 'pending'   },
+]
+
 // Session storage key for persistence across reloads
 const SESSION_KEY = 'horizon-session'
 
@@ -494,7 +526,7 @@ export const handlers = [
         if (typeof window !== 'undefined') sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession))
         const token = `mock-token-${user.id}`
         const { password: _, ...userWithoutPassword } = user
-        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: 'teacher' }, token, refresh_token: token })
+        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: user.role }, token, refresh_token: token })
     }),
 
     // POST /api/auth/teacher/logout - clear session
@@ -512,7 +544,7 @@ export const handlers = [
         await delay(200)
         const user = getCurrentUser()
         if (!user) return HttpResponse.json({ error: 'unauthorized', message: 'Not authenticated' }, { status: 401 })
-        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: 'teacher' } })
+        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: user.role } })
     }),
 
     // POST /api/auth/teacher/refresh - refresh token
@@ -1706,13 +1738,86 @@ export const handlers = [
         const hour = new Date().getHours()
         const isNight = hour >= 18 || hour < 6
         return HttpResponse.json({
-            pending_accounts: 3,
-            pending_bookings: mockBookings.pending.length,
+            pending_accounts: mockTeachers.filter(t => t.status === 'pending').length,
+            pending_bookings: mockAdminBookings.filter(b => b.status === 'pending').length,
             active_sessions: activeSessions.size,
             safety: {
                 status: isNight ? 'ACTIVE' : 'CLOSED',
                 reason: isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
             },
         })
+    }),
+
+    // GET /api/admin/bookings
+    http.get(apiUrl('/api/admin/bookings'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(220)
+        const status = new URL(request.url).searchParams.get('status')
+        const results = status ? mockAdminBookings.filter(b => b.status === status) : mockAdminBookings
+        return HttpResponse.json(results)
+    }),
+
+    // POST /api/admin/bookings/:id/confirm
+    http.post(apiUrl('/api/admin/bookings/:id/confirm'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
+        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        b.status = 'confirmed'
+        return HttpResponse.json({ id: b.id, status: b.status })
+    }),
+
+    // POST /api/admin/bookings/:id/reject  — body: { reason }
+    http.post(apiUrl('/api/admin/bookings/:id/reject'), async ({ params, request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
+        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        const body = await request.json().catch(() => ({}))
+        b.status = 'rejected'
+        b.rejectReason = body.reason ?? ''
+        return HttpResponse.json({ id: b.id, status: b.status })
+    }),
+
+    // POST /api/admin/bookings/:id/cancel
+    http.post(apiUrl('/api/admin/bookings/:id/cancel'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
+        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        b.status = 'cancelled'
+        return HttpResponse.json({ id: b.id, status: b.status })
+    }),
+
+    // GET /api/admin/teachers — list all teacher accounts
+    http.get(apiUrl('/api/admin/teachers'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(220)
+        const url = new URL(request.url)
+        const statusFilter = url.searchParams.get('status')
+        const results = statusFilter
+            ? mockTeachers.filter(t => t.status === statusFilter)
+            : mockTeachers
+        return HttpResponse.json(results)
+    }),
+
+    // POST /api/admin/teachers/:id/approve
+    http.post(apiUrl('/api/admin/teachers/:id/approve'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const teacher = mockTeachers.find(t => t.id === parseInt(params.id, 10))
+        if (!teacher) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        teacher.status = 'approved'
+        return HttpResponse.json({ id: teacher.id, status: teacher.status })
+    }),
+
+    // POST /api/admin/teachers/:id/suspend
+    http.post(apiUrl('/api/admin/teachers/:id/suspend'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const teacher = mockTeachers.find(t => t.id === parseInt(params.id, 10))
+        if (!teacher) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        teacher.status = 'suspended'
+        return HttpResponse.json({ id: teacher.id, status: teacher.status })
     }),
 ]
