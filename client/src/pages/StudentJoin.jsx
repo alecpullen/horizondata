@@ -32,7 +32,7 @@ const StudentJoin = () => {
     setIsLoading(true);
     try {
       const session = await joinAsStudent(displayName.trim(), sessionCode.trim().toUpperCase());
-      navigate(`/student/lobby/${session.id}`);
+      navigate(`/student/lobby/${session.session_id}`);
     } catch (err) {
       const code = err.response?.data?.error;
       const message = err.response?.data?.message || 'Failed to join session';

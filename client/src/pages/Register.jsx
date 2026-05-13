@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import AuthShell from '../components/auth/AuthShell'
 import { useToast } from '../components/ui/ToastProvider'
 import { validateEmail, validatePassword, doPasswordsMatch, validateRequired } from '../utils/validation'
+import api from '../lib/api'
 import './Register.css'
 
 function Register() {
@@ -85,12 +86,20 @@ function Register() {
 
         setIsLoading(true)
 
-        // Simulate API call
-        await new Promise(r => setTimeout(r, 1000))
-
-        // Teacher accounts require administrator approval
-        showToast({ type: 'success', message: 'Registration submitted for approval!' })
-        window.location.href = '/pending-approval'
+        try {
+            await api.post('/api/auth/teacher/signup', {
+                email: formData.email,
+                password: formData.password,
+                name: formData.fullName,
+            })
+            showToast({ type: 'success', message: 'Registration submitted for approval!' })
+            window.location.href = '/pending-approval'
+        } catch (err) {
+            const message = err.response?.data?.message || 'Registration failed. Please try again.'
+            showToast({ type: 'error', message })
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const passwordValidation = validatePassword(formData.password)

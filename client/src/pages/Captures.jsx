@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import { useToast } from '../components/ui/ToastProvider'
 import api from '../lib/api'
 import './Captures.css'
 
@@ -15,6 +16,7 @@ async function downloadFile(url, fallbackName) {
 }
 
 function CaptureCard({ item }) {
+    const { showToast } = useToast()
     const ts = new Date(item.timestamp)
     const dateStr = ts.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
     const timeStr = ts.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
@@ -44,7 +46,7 @@ function CaptureCard({ item }) {
                     onClick={() => downloadFile(
                         `/api/captures/${item.id}/download`,
                         `${item.objectName || 'capture'}_${item.id}.png`
-                    )}
+                    ).catch(() => showToast({ type: 'error', message: 'Download failed. Please try again.' }))}
                 >
                     Download Image
                 </button>
@@ -53,7 +55,7 @@ function CaptureCard({ item }) {
                     onClick={() => downloadFile(
                         `/api/captures/${item.id}/metadata`,
                         `${item.objectName || 'capture'}_${item.id}.json`
-                    )}
+                    ).catch(() => showToast({ type: 'error', message: 'Download failed. Please try again.' }))}
                 >
                     Download Metadata
                 </button>

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ToastProvider from './components/ui/ToastProvider'
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -19,6 +19,7 @@ import SessionLobby from './pages/SessionLobby'
 import NewBooking from './pages/NewBooking'
 import Captures from './pages/Captures'
 import BookingCaptures from './pages/BookingCaptures'
+import Scheduling from './pages/Scheduling'
 import AdminRoute    from './components/auth/AdminRoute'
 import AdminShell    from './pages/admin/AdminShell'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -93,6 +94,9 @@ function AppRoutes() {
                 <Route path="/bookings/new" element={
                     <ProtectedRoute><NewBooking /></ProtectedRoute>
                 } />
+                <Route path="/scheduling" element={
+                    <ProtectedRoute><Scheduling /></ProtectedRoute>
+                } />
                 <Route path="/account" element={
                     <ProtectedRoute><MyAccount /></ProtectedRoute>
                 } />
@@ -120,6 +124,7 @@ function AppRoutes() {
                     <Route path="safety"    element={<AdminSafety />} />
                     <Route path="queue"     element={<AdminQueue />} />
                 </Route>
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </SessionTimeoutWrapper>
     )

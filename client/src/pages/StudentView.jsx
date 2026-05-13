@@ -34,6 +34,7 @@ function StudentView() {
                 const res = await fetch(`${API_BASE}/api/sessions/${bookingId}`, {
                     headers: { Accept: 'application/json' },
                 })
+                if (!res.ok) return
                 const data = await res.json()
                 if (data.session?.status === 'ended') {
                     navigate('/join', { replace: true, state: { ended: true } })

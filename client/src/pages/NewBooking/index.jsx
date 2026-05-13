@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import TopBar from '../../components/TopBar'
 import { useToast } from '../../components/ui/ToastProvider'
 import Step1Schedule from './Step1Schedule'
@@ -27,13 +27,20 @@ const DEFAULT_FILTERS = {
 function NewBooking() {
     const navigate = useNavigate()
     const { showToast } = useToast()
+    const [searchParams] = useSearchParams()
     const [currentStep, setCurrentStep] = useState(1)
     const [isLoading, setIsLoading] = useState(false)
 
-    // Step 1: Scheduling
-    const [sessionDate, setSessionDate] = useState('')
-    const [startTime, setStartTime] = useState('')
-    const [endTime, setEndTime] = useState('')
+    // Step 1: Scheduling — may be pre-filled from ?date= and ?startTime= query params
+    const [sessionDate, setSessionDate] = useState(() => searchParams.get('date') || '')
+    const [startTime, setStartTime] = useState(() => searchParams.get('startTime') || '')
+    const [endTime, setEndTime] = useState(() => {
+        const t = searchParams.get('startTime')
+        if (!t) return ''
+        const [h, m] = t.split(':').map(Number)
+        const end = new Date(2000, 0, 1, h, m + 30)
+        return `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
+    })
 
     // Step 2: Target selection (multiple targets supported)
     const [targets, setTargets] = useState([])
@@ -54,6 +61,8 @@ function NewBooking() {
         if (sessionDuration <= 0) return 0
         return Math.floor(sessionDuration / OBSERVATION_MINUTES_PER_TARGET)
     }, [sessionDuration])
+
+    const fetchAbortRef = useRef(null)
 
     // Fetch targets on mount with default filters
     useEffect(() => {
@@ -80,6 +89,10 @@ function NewBooking() {
     }, [maxTargets, selectedTargets.length])
 
     async function fetchTargets() {
+        fetchAbortRef.current?.abort()
+        const controller = new AbortController()
+        fetchAbortRef.current = controller
+
         setIsLoading(true)
         try {
             let transformedTargets = []
@@ -100,7 +113,7 @@ function NewBooking() {
                     min_elevation: '30'
                 })
 
-                const { data } = await api.get(`/api/visibility/session?${params}`)
+                const { data } = await api.get(`/api/visibility/session?${params}`, { signal: controller.signal })
                 sessionInfo = data.session
 
                 const qualityMap = { excellent: 'good', good: 'good', fair: 'fair', poor: 'poor', not_visible: 'poor' }
@@ -111,9 +124,9 @@ function NewBooking() {
                     type: target.type,
                     rightAscension: target.coordinates?.ra || null,
                     declination: target.coordinates?.dec || null,
-                    ra: target.coordinates?.ra_hours?.toFixed(2) + 'h',
-                    dec: target.coordinates?.dec_degrees?.toFixed(2) + '°',
-                    altitude: target.elevation_max?.toFixed(1) + '°',
+                    ra: target.coordinates?.ra_hours != null ? `${target.coordinates.ra_hours.toFixed(2)}h` : '–',
+                    dec: target.coordinates?.dec_degrees != null ? `${target.coordinates.dec_degrees.toFixed(2)}°` : '–',
+                    altitude: target.elevation_max != null ? `${target.elevation_max.toFixed(1)}°` : '–',
                     elevation: target.elevation_max,
                     azimuth: null,
                     magnitude: target.magnitude ?? null,
@@ -146,7 +159,7 @@ function NewBooking() {
                 const params = new URLSearchParams()
                 if (filters.type && filters.type !== 'all') params.append('type', filters.type)
 
-                const { data } = await api.get(`/api/visibility/objects?${params}`)
+                const { data } = await api.get(`/api/visibility/objects?${params}`, { signal: controller.signal })
 
                 transformedTargets = (data.objects || []).map(obj => {
                     const elevation = obj.coordinates?.elevation ?? 0
@@ -203,10 +216,11 @@ function NewBooking() {
                 window.sessionVisibilityInfo = sessionInfo
             }
         } catch (err) {
+            if (err.name === 'AbortError' || err.name === 'CanceledError') return
             showToast({ type: 'error', message: 'Failed to load targets' })
             console.error('Failed to fetch targets:', err)
         } finally {
-            setIsLoading(false)
+            if (!controller.signal.aborted) setIsLoading(false)
         }
     }
 

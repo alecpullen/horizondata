@@ -33,6 +33,14 @@ async function downloadFile(url, fallbackName) {
     URL.revokeObjectURL(href)
 }
 
+async function safeDownload(url, name, showToast) {
+    try {
+        await downloadFile(url, name)
+    } catch {
+        showToast({ type: 'error', message: 'Download failed. Please try again.' })
+    }
+}
+
 function TeacherView() {
     const navigate = useNavigate()
     const { state } = useLocation()
@@ -171,18 +179,20 @@ function TeacherView() {
                             <div className="tv-last-capture-actions">
                                 <button
                                     className="tv-btn tv-btn--secondary"
-                                    onClick={() => downloadFile(
+                                    onClick={() => safeDownload(
                                         `/api/captures/${lastCapture.id}/download`,
-                                        `${SESSION.object}_${lastCapture.id}.png`
+                                        `${SESSION.object}_${lastCapture.id}.png`,
+                                        showToast
                                     )}
                                 >
                                     Download Image
                                 </button>
                                 <button
                                     className="tv-btn tv-btn--secondary"
-                                    onClick={() => downloadFile(
+                                    onClick={() => safeDownload(
                                         `/api/captures/${lastCapture.id}/metadata`,
-                                        `${SESSION.object}_${lastCapture.id}.json`
+                                        `${SESSION.object}_${lastCapture.id}.json`,
+                                        showToast
                                     )}
                                 >
                                     Download Metadata

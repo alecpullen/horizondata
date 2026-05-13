@@ -51,7 +51,8 @@ function MyAccount() {
         }
 
         fetchAccount()
-    }, [showToast])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const handleSave = async () => {
         setIsSaving(true)
