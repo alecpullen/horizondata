@@ -19,6 +19,7 @@ import SessionLobby from './pages/SessionLobby'
 import NewBooking from './pages/NewBooking'
 import Captures from './pages/Captures'
 import BookingCaptures from './pages/BookingCaptures'
+import Scheduling from './pages/Scheduling'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/AuthContext'
 import { useSessionTimeout } from './hooks/useSessionTimeout'
@@ -84,6 +85,9 @@ function AppRoutes() {
                 } />
                 <Route path="/bookings/new" element={
                     <ProtectedRoute><NewBooking /></ProtectedRoute>
+                } />
+                <Route path="/scheduling" element={
+                    <ProtectedRoute><Scheduling /></ProtectedRoute>
                 } />
                 <Route path="/account" element={
                     <ProtectedRoute><MyAccount /></ProtectedRoute>
