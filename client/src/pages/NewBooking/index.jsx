@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import TopBar from '../../components/TopBar'
 import { useToast } from '../../components/ui/ToastProvider'
 import Step1Schedule from './Step1Schedule'
@@ -27,13 +27,20 @@ const DEFAULT_FILTERS = {
 function NewBooking() {
     const navigate = useNavigate()
     const { showToast } = useToast()
+    const [searchParams] = useSearchParams()
     const [currentStep, setCurrentStep] = useState(1)
     const [isLoading, setIsLoading] = useState(false)
 
-    // Step 1: Scheduling
-    const [sessionDate, setSessionDate] = useState('')
-    const [startTime, setStartTime] = useState('')
-    const [endTime, setEndTime] = useState('')
+    // Step 1: Scheduling — may be pre-filled from ?date= and ?startTime= query params
+    const [sessionDate, setSessionDate] = useState(() => searchParams.get('date') || '')
+    const [startTime, setStartTime] = useState(() => searchParams.get('startTime') || '')
+    const [endTime, setEndTime] = useState(() => {
+        const t = searchParams.get('startTime')
+        if (!t) return ''
+        const [h, m] = t.split(':').map(Number)
+        const end = new Date(2000, 0, 1, h, m + 30)
+        return `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
+    })
 
     // Step 2: Target selection (multiple targets supported)
     const [targets, setTargets] = useState([])
