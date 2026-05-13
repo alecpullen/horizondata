@@ -10,7 +10,7 @@ import './Login.css'
 
 function Login() {
     const { showToast } = useToast()
-    const { login: authLogin, isAuthenticated, isLoading: isAuthLoading } = useAuth()
+    const { loginTeacher: authLogin, isAuthenticated, isLoading: isAuthLoading } = useAuth()
     const { redirect, getRedirectUrl } = useRedirectAfterAuth()
     const navigate = useNavigate()
 
