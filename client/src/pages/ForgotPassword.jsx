@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import AuthShell from '../components/auth/AuthShell'
 import { useToast } from '../components/ui/ToastProvider'
@@ -47,7 +47,7 @@ function ForgotPassword() {
     }
 
     // Countdown timer for resend button
-    useState(() => {
+    useEffect(() => {
         if (resendCooldown <= 0) return
 
         const timer = setInterval(() => {
