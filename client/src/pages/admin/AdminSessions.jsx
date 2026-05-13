@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Fragment } from 'react'
 import { useToast } from '../../components/ui/ToastProvider'
 import './AdminSessions.css'
 
@@ -54,8 +54,8 @@ function ActiveTable({ sessions, onTerminate, terminatingId, setTerminatingId, b
                     {sessions.map(s => {
                         const confirming = terminatingId === s.bookingId
                         return (
-                            <>
-                                <tr key={s.bookingId} className={confirming ? 'sess-row--confirming' : ''}>
+                            <Fragment key={s.bookingId}>
+                                <tr className={confirming ? 'sess-row--confirming' : ''}>
                                     <td className="sess-cell-title">{s.title}</td>
                                     <td>{s.teacherName}</td>
                                     <td className="sess-cell-mono">{fmtTime(s.startedAt)}</td>
@@ -105,7 +105,7 @@ function ActiveTable({ sessions, onTerminate, terminatingId, setTerminatingId, b
                                         </td>
                                     </tr>
                                 )}
-                            </>
+                            </Fragment>
                         )
                     })}
                 </tbody>

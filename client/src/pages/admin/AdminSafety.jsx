@@ -34,15 +34,16 @@ function ConditionRow({ label, value, fmt, ok }) {
 }
 
 function AdminSafety() {
-    const [data, setData]     = useState(null)
+    const [data, setData]       = useState(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError]     = useState(null)
 
     const fetchData = useCallback((quiet = false) => {
         if (!quiet) setLoading(true)
         fetch('/api/safety/comprehensive')
-            .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
-            .then(d => { setData(d); setLoading(false) })
-            .catch(() => setLoading(false))
+            .then(r => { if (!r.ok) throw new Error(`Failed to load safety data (${r.status})`); return r.json() })
+            .then(d => { setData(d); setError(null); setLoading(false) })
+            .catch(err => { if (!quiet) setError(err.message); setLoading(false) })
     }, [])
 
     useEffect(() => {
@@ -65,9 +66,11 @@ function AdminSafety() {
                     <div className="safety-cond-header">
                         <h3 className="safety-cond-title">Current Conditions</h3>
                         <span className="safety-cond-updated">
-                            {data ? `Updated ${fmtTime(data.last_updated)}` : loading ? 'Loading…' : 'No data'}
+                            {data ? `Updated ${fmtTime(data.last_updated)}` : loading ? 'Loading…' : '—'}
                         </span>
                     </div>
+
+                    {error && <p className="safety-cond-error">{error}</p>}
 
                     <table className="safety-cond-table">
                         <tbody>
