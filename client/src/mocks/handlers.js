@@ -370,6 +370,13 @@ const mockSpaceObjects = [
     }
 ]
 
+// Past sessions (admin view) — static seed; terminate handler pushes into this
+const mockPastSessions = [
+    { bookingId: 3,  title: 'Year 10 - Jupiter Observation',    teacherName: 'James Okafor',   startedAt: '2026-04-08T21:00:00Z', endedAt: '2026-04-08T22:28:00Z', captureCount: 12, status: 'ended'     },
+    { bookingId: 5,  title: 'Introduction to Astrophotography', teacherName: 'Priya Sharma',   startedAt: '2026-04-01T22:00:00Z', endedAt: '2026-04-01T23:31:00Z', captureCount: 8,  status: 'ended'     },
+    { bookingId: 10, title: 'Lunar Geology Study',              teacherName: 'Maria Nguyen',   startedAt: '2026-03-05T20:00:00Z', endedAt: '2026-03-05T20:12:00Z', captureCount: 0,  status: 'terminated' },
+]
+
 // Mock admin bookings — richer than the teacher-facing mockBookings (mutable in memory)
 let mockAdminBookings = [
     { id: 1,  teacherName: 'James Okafor',    title: 'Year 9 Science Class',        date: '2026-04-18', time: '20:00 – 21:30', targets: ['Moon'],                               headless: false, status: 'confirmed' },
@@ -1731,6 +1738,55 @@ export const handlers = [
         })
     }),
 
+    // GET /api/admin/sessions/active — live list of active sessions (polled)
+    http.get(apiUrl('/api/admin/sessions/active'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const result = []
+        for (const [bookingId, session] of activeSessions) {
+            if (session.status === 'ended') continue
+            const booking = mockAdminBookings.find(b => b.id === bookingId) ?? {}
+            result.push({
+                bookingId,
+                title:        booking.title      ?? `Session #${bookingId}`,
+                teacherName:  booking.teacherName ?? 'Unknown',
+                startedAt:    session.createdAt,
+                studentCount: session.participants.length,
+                joinCode:     session.joinCode,
+                status:       session.status,
+            })
+        }
+        return HttpResponse.json(result)
+    }),
+
+    // POST /api/admin/sessions/:id/terminate
+    http.post(apiUrl('/api/admin/sessions/:id/terminate'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const bookingId = parseInt(params.id, 10)
+        const session = activeSessions.get(bookingId)
+        if (!session) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        const booking = mockAdminBookings.find(b => b.id === bookingId) ?? {}
+        mockPastSessions.unshift({
+            bookingId,
+            title:        booking.title      ?? `Session #${bookingId}`,
+            teacherName:  booking.teacherName ?? 'Unknown',
+            startedAt:    session.createdAt,
+            endedAt:      new Date().toISOString(),
+            captureCount: 0,
+            status:       'terminated',
+        })
+        activeSessions.delete(bookingId)
+        return HttpResponse.json({ success: true })
+    }),
+
+    // GET /api/admin/sessions/past
+    http.get(apiUrl('/api/admin/sessions/past'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        return HttpResponse.json(mockPastSessions)
+    }),
+
     // GET /api/admin/stats — aggregate numbers for the admin dashboard
     http.get(apiUrl('/api/admin/stats'), async () => {
         if (!isMswEnabled()) return passthrough()
@@ -1740,7 +1796,7 @@ export const handlers = [
         return HttpResponse.json({
             pending_accounts: mockTeachers.filter(t => t.status === 'pending').length,
             pending_bookings: mockAdminBookings.filter(b => b.status === 'pending').length,
-            active_sessions: activeSessions.size,
+            active_sessions: [...activeSessions.values()].filter(s => s.status !== 'ended').length,
             safety: {
                 status: isNight ? 'ACTIVE' : 'CLOSED',
                 reason: isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
