@@ -1698,4 +1698,21 @@ export const handlers = [
             last_updated: new Date().toISOString()
         })
     }),
+
+    // GET /api/admin/stats — aggregate numbers for the admin dashboard
+    http.get(apiUrl('/api/admin/stats'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(180)
+        const hour = new Date().getHours()
+        const isNight = hour >= 18 || hour < 6
+        return HttpResponse.json({
+            pending_accounts: 3,
+            pending_bookings: mockBookings.pending.length,
+            active_sessions: activeSessions.size,
+            safety: {
+                status: isNight ? 'ACTIVE' : 'CLOSED',
+                reason: isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
+            },
+        })
+    }),
 ]
