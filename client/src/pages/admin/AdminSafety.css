@@ -1,0 +1,103 @@
+.admin-safety {
+    max-width: 860px;
+}
+
+/* ── Two-column grid ── */
+.safety-page-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.safety-page-widget-col {
+    position: sticky;
+    top: 24px;
+}
+
+/* ── Conditions panel ── */
+.safety-conditions {
+    background: var(--surf);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.safety-cond-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+}
+
+.safety-cond-header--sub {
+    padding-top: 14px;
+    padding-bottom: 10px;
+}
+
+.safety-cond-title {
+    font-family: var(--disp);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0;
+}
+
+.safety-cond-updated {
+    font-size: 11px;
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+}
+
+.safety-cond-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 20px;
+}
+
+/* ── Condition rows ── */
+.safety-cond-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.safety-cond-row {
+    border-top: 1px solid var(--border);
+}
+
+.safety-cond-row:first-child {
+    border-top: none;
+}
+
+.safety-cond-label,
+.safety-cond-value {
+    padding: 10px 20px;
+    font-size: 13.5px;
+    line-height: 1;
+}
+
+.safety-cond-label {
+    color: var(--t2);
+    width: 50%;
+}
+
+.safety-cond-value {
+    color: var(--t1);
+    font-family: var(--mono);
+    text-align: right;
+}
+
+.safety-cond-value--warn {
+    color: var(--red);
+}
+
+/* ── Responsive ── */
+@media (max-width: 720px) {
+    .safety-page-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .safety-page-widget-col {
+        position: static;
+    }
+}

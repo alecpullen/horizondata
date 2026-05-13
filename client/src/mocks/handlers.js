@@ -415,6 +415,17 @@ let mockAdminBookings = [
     { id: 10, teacherName: 'Maria Nguyen',     title: 'Lunar Geology Study',          date: '2026-03-05', time: '20:00 – 21:30', targets: ['Moon'],                              headless: false, status: 'rejected'  },
 ]
 
+// Observation queue — represents confirmed bookings as execution jobs (mutable)
+let mockQueue = [
+    { id: 201, title: 'Year 9 Science Class',        teacherName: 'James Okafor',   scheduledAt: '2026-05-13T20:00:00+10:00', targetsCompleted: 1, targetsTotal: 1, status: 'running'  },
+    { id: 202, title: 'Evening Star Party',           teacherName: 'Sarah Chen',      scheduledAt: '2026-05-14T19:30:00+10:00', targetsCompleted: 0, targetsTotal: 2, status: 'pending'  },
+    { id: 203, title: 'ANZAC Day Star Party',         teacherName: 'Priya Sharma',    scheduledAt: '2026-05-15T20:00:00+10:00', targetsCompleted: 0, targetsTotal: 2, status: 'pending'  },
+    { id: 204, title: 'Automated Deep Sky Capture',   teacherName: 'James Okafor',   scheduledAt: '2026-05-15T22:00:00+10:00', targetsCompleted: 0, targetsTotal: 3, status: 'pending'  },
+    { id: 205, title: 'Introduction to Planets',      teacherName: 'Tom Adeyemi',     scheduledAt: '2026-05-16T20:00:00+10:00', targetsCompleted: 0, targetsTotal: 1, status: 'pending'  },
+    { id: 206, title: 'Intro to Astrophotography',    teacherName: 'Priya Sharma',    scheduledAt: '2026-04-01T22:00:00+10:00', targetsCompleted: 5, targetsTotal: 5, status: 'done'     },
+    { id: 207, title: 'Lunar Geology Study',          teacherName: 'Maria Nguyen',    scheduledAt: '2026-03-05T20:00:00+10:00', targetsCompleted: 0, targetsTotal: 1, status: 'aborted'  },
+]
+
 // Mock teacher accounts (mutable — approve/suspend actions update this in memory)
 const mockTeachers = [
     { id: 101, fullName: 'Sarah Chen',      email: 'sarah.chen@bundoora.edu.au',    institution: 'Bundoora Secondary',   registeredAt: '2026-01-12', status: 'pending'   },
@@ -1764,7 +1775,19 @@ export const handlers = [
         return HttpResponse.json({
             overall: { status, reason: isNight ? 'All systems nominal' : 'Outside viewing window' },
             time_safety: { safe: isNight, current_time: new Date().toISOString(), in_viewing_window: isNight },
-            weather_safety: { safe: true, conditions: { temperature: 18.5, humidity: 45, pressure: 1013, dew_point: 7.2 }, thresholds_met: true },
+            weather_safety: {
+                safe: true,
+                conditions: {
+                    temperature: 18.5,
+                    humidity: 45,
+                    pressure: 1013,
+                    dew_point: 7.2,
+                    wind_speed: 12.4,
+                    rain_detected: false,
+                    light_level: isNight ? 0.003 : 52.1,
+                },
+                thresholds_met: true,
+            },
             last_updated: new Date().toISOString()
         })
     }),
@@ -1795,6 +1818,27 @@ export const handlers = [
         await delay(150)
         mockSafetyOverride = null
         return HttpResponse.json(resolveAdminSafetyStatus())
+    }),
+
+    // GET /api/admin/queue — observation job queue
+    http.get(apiUrl('/api/admin/queue'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(180)
+        return HttpResponse.json(mockQueue)
+    }),
+
+    // POST /api/admin/queue/:id/abort — abort a pending or running job
+    http.post(apiUrl('/api/admin/queue/:id/abort'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const id = parseInt(pathSegment(request, 3), 10)
+        const job = mockQueue.find(q => q.id === id)
+        if (!job) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        if (!['pending', 'running'].includes(job.status)) {
+            return HttpResponse.json({ error: 'invalid_state' }, { status: 409 })
+        }
+        job.status = 'aborted'
+        return HttpResponse.json({ id: job.id, status: job.status })
     }),
 
     // GET /api/admin/sessions/active — live list of active sessions (polled)
