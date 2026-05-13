@@ -32,6 +32,17 @@ const mockUsers = [
         institution: 'Melbourne High School',
         is2FAEnabled: false,
         notificationsEnabled: true
+    },
+    {
+        id: '3',
+        email: 'admin@horizondata.edu.au',
+        password: 'admin123',
+        fullName: 'Horizon Admin',
+        role: 'admin',
+        phone: '',
+        institution: 'La Trobe University',
+        is2FAEnabled: false,
+        notificationsEnabled: true
     }
 ]
 
@@ -359,6 +370,72 @@ const mockSpaceObjects = [
     }
 ]
 
+// Admin safety override — null when no override is active
+// Shape: { state: 'OPEN' | 'CLOSED', expiresAt: ISO string }
+let mockSafetyOverride = null
+
+function resolveAdminSafetyStatus() {
+    // If an override exists, check if it has expired
+    if (mockSafetyOverride) {
+        if (new Date(mockSafetyOverride.expiresAt) <= new Date()) {
+            mockSafetyOverride = null
+        }
+    }
+    if (mockSafetyOverride) {
+        return {
+            status: mockSafetyOverride.state === 'OPEN' ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+            source: 'manual',
+            override: { state: mockSafetyOverride.state, expiresAt: mockSafetyOverride.expiresAt },
+        }
+    }
+    const hour = new Date().getHours()
+    const isNight = hour >= 18 || hour < 6
+    return {
+        status: isNight ? 'ACTIVE' : 'CLOSED',
+        source: 'automatic',
+        override: null,
+    }
+}
+
+// Past sessions (admin view) — static seed; terminate handler pushes into this
+const mockPastSessions = [
+    { bookingId: 3,  title: 'Year 10 - Jupiter Observation',    teacherName: 'James Okafor',   startedAt: '2026-04-08T21:00:00Z', endedAt: '2026-04-08T22:28:00Z', captureCount: 12, status: 'ended'     },
+    { bookingId: 5,  title: 'Introduction to Astrophotography', teacherName: 'Priya Sharma',   startedAt: '2026-04-01T22:00:00Z', endedAt: '2026-04-01T23:31:00Z', captureCount: 8,  status: 'ended'     },
+    { bookingId: 10, title: 'Lunar Geology Study',              teacherName: 'Maria Nguyen',   startedAt: '2026-03-05T20:00:00Z', endedAt: '2026-03-05T20:12:00Z', captureCount: 0,  status: 'terminated' },
+]
+
+// Mock admin bookings — richer than the teacher-facing mockBookings (mutable in memory)
+let mockAdminBookings = [
+    { id: 1,  teacherName: 'James Okafor',    title: 'Year 9 Science Class',        date: '2026-04-18', time: '20:00 – 21:30', targets: ['Moon'],                               headless: false, status: 'confirmed' },
+    { id: 2,  teacherName: 'Sarah Chen',       title: 'Evening Star Party',           date: '2026-04-22', time: '19:30 – 21:00', targets: ['Saturn', 'Jupiter'],                 headless: false, status: 'pending'   },
+    { id: 4,  teacherName: 'Priya Sharma',     title: 'ANZAC Day Star Party',         date: '2026-04-25', time: '20:00 – 22:00', targets: ['Omega Centauri', 'Pleiades'],        headless: false, status: 'confirmed' },
+    { id: 7,  teacherName: 'James Okafor',     title: 'Automated Deep Sky Capture',   date: '2026-04-30', time: '22:00 – 23:30', targets: ['Saturn', 'Jupiter', 'Andromeda'],   headless: true,  status: 'confirmed' },
+    { id: 8,  teacherName: 'Tom Adeyemi',      title: 'Introduction to Planets',      date: '2026-05-10', time: '20:00 – 21:00', targets: ['Mars'],                              headless: false, status: 'pending'   },
+    { id: 9,  teacherName: 'Daniel Kowalski',  title: 'Deep Sky Survey',              date: '2026-05-15', time: '21:00 – 23:00', targets: ['Andromeda', 'Orion Nebula'],         headless: true,  status: 'pending'   },
+    { id: 10, teacherName: 'Maria Nguyen',     title: 'Lunar Geology Study',          date: '2026-03-05', time: '20:00 – 21:30', targets: ['Moon'],                              headless: false, status: 'rejected'  },
+]
+
+// Observation queue — represents confirmed bookings as execution jobs (mutable)
+let mockQueue = [
+    { id: 201, title: 'Year 9 Science Class',        teacherName: 'James Okafor',   scheduledAt: '2026-05-13T20:00:00+10:00', targetsCompleted: 1, targetsTotal: 1, status: 'running'  },
+    { id: 202, title: 'Evening Star Party',           teacherName: 'Sarah Chen',      scheduledAt: '2026-05-14T19:30:00+10:00', targetsCompleted: 0, targetsTotal: 2, status: 'pending'  },
+    { id: 203, title: 'ANZAC Day Star Party',         teacherName: 'Priya Sharma',    scheduledAt: '2026-05-15T20:00:00+10:00', targetsCompleted: 0, targetsTotal: 2, status: 'pending'  },
+    { id: 204, title: 'Automated Deep Sky Capture',   teacherName: 'James Okafor',   scheduledAt: '2026-05-15T22:00:00+10:00', targetsCompleted: 0, targetsTotal: 3, status: 'pending'  },
+    { id: 205, title: 'Introduction to Planets',      teacherName: 'Tom Adeyemi',     scheduledAt: '2026-05-16T20:00:00+10:00', targetsCompleted: 0, targetsTotal: 1, status: 'pending'  },
+    { id: 206, title: 'Intro to Astrophotography',    teacherName: 'Priya Sharma',    scheduledAt: '2026-04-01T22:00:00+10:00', targetsCompleted: 5, targetsTotal: 5, status: 'done'     },
+    { id: 207, title: 'Lunar Geology Study',          teacherName: 'Maria Nguyen',    scheduledAt: '2026-03-05T20:00:00+10:00', targetsCompleted: 0, targetsTotal: 1, status: 'aborted'  },
+]
+
+// Mock teacher accounts (mutable — approve/suspend actions update this in memory)
+const mockTeachers = [
+    { id: 101, fullName: 'Sarah Chen',      email: 'sarah.chen@bundoora.edu.au',    institution: 'Bundoora Secondary',   registeredAt: '2026-01-12', status: 'pending'   },
+    { id: 102, fullName: 'James Okafor',    email: 'j.okafor@latrobe.edu.au',       institution: 'La Trobe University',  registeredAt: '2026-02-08', status: 'approved'  },
+    { id: 103, fullName: 'Maria Nguyen',    email: 'm.nguyen@rmit.edu.au',          institution: 'RMIT University',      registeredAt: '2026-03-01', status: 'suspended' },
+    { id: 104, fullName: 'Tom Adeyemi',     email: 'tadeyemi@princes-hill.vic.edu', institution: "Prince's Hill SC",     registeredAt: '2026-03-14', status: 'pending'   },
+    { id: 105, fullName: 'Priya Sharma',    email: 'priya.s@monash.edu.au',         institution: 'Monash University',    registeredAt: '2026-04-02', status: 'approved'  },
+    { id: 106, fullName: 'Daniel Kowalski', email: 'd.kowalski@melbhs.vic.edu.au',  institution: 'Melbourne High School',registeredAt: '2026-04-20', status: 'pending'   },
+]
+
 // Session storage key for persistence across reloads
 const SESSION_KEY = 'horizon-session'
 
@@ -494,7 +571,7 @@ export const handlers = [
         if (typeof window !== 'undefined') sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession))
         const token = `mock-token-${user.id}`
         const { password: _, ...userWithoutPassword } = user
-        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: 'teacher' }, token, refresh_token: token })
+        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: user.role }, token, refresh_token: token })
     }),
 
     // POST /api/auth/teacher/logout - clear session
@@ -512,7 +589,7 @@ export const handlers = [
         await delay(200)
         const user = getCurrentUser()
         if (!user) return HttpResponse.json({ error: 'unauthorized', message: 'Not authenticated' }, { status: 401 })
-        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: 'teacher' } })
+        return HttpResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.fullName, role: user.role } })
     }),
 
     // POST /api/auth/teacher/refresh - refresh token
@@ -1684,14 +1761,18 @@ export const handlers = [
     http.get(apiUrl('/api/safety/status'), async () => {
         if (!isMswEnabled()) return passthrough()
         await delay(200)
+        const { status } = resolveAdminSafetyStatus()
         const hour = new Date().getHours()
         const isNight = hour >= 18 || hour < 6
+        const effectiveActive = status === 'ACTIVE' || status === 'FORCE_OPEN'
         return HttpResponse.json({
-            status: isNight ? 'ACTIVE' : 'CLOSED',
-            reason: isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
-            next_available: isNight ? null : 'Tonight at 18:00',
+            status: effectiveActive ? 'ACTIVE' : 'CLOSED',
+            reason: mockSafetyOverride
+                ? `Manual override: force ${mockSafetyOverride.state.toLowerCase()}`
+                : isNight ? 'Within viewing window' : 'Outside nighttime viewing window',
+            next_available: effectiveActive ? null : 'Tonight at 18:00',
             current_time: new Date().toISOString(),
-            viewing_window: { start: '18:00', end: '06:00', is_active: isNight }
+            viewing_window: { start: '18:00', end: '06:00', is_active: effectiveActive }
         })
     }),
 
@@ -1705,8 +1786,245 @@ export const handlers = [
         return HttpResponse.json({
             overall: { status, reason: isNight ? 'All systems nominal' : 'Outside viewing window' },
             time_safety: { safe: isNight, current_time: new Date().toISOString(), in_viewing_window: isNight },
-            weather_safety: { safe: true, conditions: { temperature: 18.5, humidity: 45, pressure: 1013, dew_point: 7.2 }, thresholds_met: true },
+            weather_safety: {
+                safe: true,
+                conditions: {
+                    temperature: 18.5,
+                    humidity: 45,
+                    pressure: 1013,
+                    dew_point: 7.2,
+                    wind_speed: 12.4,
+                    rain_detected: false,
+                    light_level: isNight ? 0.003 : 52.1,
+                },
+                thresholds_met: true,
+            },
             last_updated: new Date().toISOString()
         })
+    }),
+
+    // GET /api/admin/safety/status — richer status for admin widget (source + override)
+    http.get(apiUrl('/api/admin/safety/status'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        return HttpResponse.json(resolveAdminSafetyStatus())
+    }),
+
+    // POST /api/admin/safety/override — body: { state: 'OPEN'|'CLOSED', durationMins: number }
+    http.post(apiUrl('/api/admin/safety/override'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(180)
+        const { state, durationMins } = await request.json()
+        if (!['OPEN', 'CLOSED'].includes(state) || !durationMins || durationMins <= 0) {
+            return HttpResponse.json({ error: 'invalid_params' }, { status: 400 })
+        }
+        const expiresAt = new Date(Date.now() + durationMins * 60 * 1000).toISOString()
+        mockSafetyOverride = { state, expiresAt }
+        return HttpResponse.json(resolveAdminSafetyStatus())
+    }),
+
+    // DELETE /api/admin/safety/override — clear the current override
+    http.delete(apiUrl('/api/admin/safety/override'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        mockSafetyOverride = null
+        return HttpResponse.json(resolveAdminSafetyStatus())
+    }),
+
+    // GET /api/admin/queue — observation job queue
+    http.get(apiUrl('/api/admin/queue'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(180)
+        return HttpResponse.json(mockQueue)
+    }),
+
+    // POST /api/admin/queue/:id/abort — abort a pending or running job
+    http.post(apiUrl('/api/admin/queue/:id/abort'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const id = parseInt(pathSegment(request, 3), 10)
+        const job = mockQueue.find(q => q.id === id)
+        if (!job) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        if (!['pending', 'running'].includes(job.status)) {
+            return HttpResponse.json({ error: 'invalid_state' }, { status: 409 })
+        }
+        job.status = 'aborted'
+        return HttpResponse.json({ id: job.id, status: job.status })
+    }),
+
+    // GET /api/admin/sessions/active — live list of active sessions (polled)
+    http.get(apiUrl('/api/admin/sessions/active'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const result = []
+        for (const [bookingId, session] of activeSessions) {
+            if (session.status === 'ended') continue
+            const booking = mockAdminBookings.find(b => b.id === bookingId) ?? {}
+            result.push({
+                bookingId,
+                title:        booking.title      ?? `Session #${bookingId}`,
+                teacherName:  booking.teacherName ?? 'Unknown',
+                startedAt:    session.createdAt,
+                studentCount: session.participants.length,
+                joinCode:     session.joinCode,
+                status:       session.status,
+            })
+        }
+        return HttpResponse.json(result)
+    }),
+
+    // POST /api/admin/sessions/:id/terminate
+    http.post(apiUrl('/api/admin/sessions/:id/terminate'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const bookingId = parseInt(params.id, 10)
+        const session = activeSessions.get(bookingId)
+        if (!session) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        const booking = mockAdminBookings.find(b => b.id === bookingId) ?? {}
+        mockPastSessions.unshift({
+            bookingId,
+            title:        booking.title      ?? `Session #${bookingId}`,
+            teacherName:  booking.teacherName ?? 'Unknown',
+            startedAt:    session.createdAt,
+            endedAt:      new Date().toISOString(),
+            captureCount: 0,
+            status:       'terminated',
+        })
+        activeSessions.delete(bookingId)
+        return HttpResponse.json({ success: true })
+    }),
+
+    // GET /api/admin/sessions/past
+    http.get(apiUrl('/api/admin/sessions/past'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        return HttpResponse.json(mockPastSessions)
+    }),
+
+    // GET /api/admin/stats — aggregate numbers for the admin dashboard
+    http.get(apiUrl('/api/admin/stats'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(180)
+        const MS_PER_DAY = 86400000
+
+        // Pending accounts detail — oldest pending teacher
+        const pendingTeachers = mockTeachers
+            .filter(t => t.status === 'pending')
+            .sort((a, b) => a.registeredAt.localeCompare(b.registeredAt))
+        const oldestTeacher = pendingTeachers[0] ?? null
+
+        // Pending bookings detail — earliest pending booking by date
+        const pendingBookings = mockAdminBookings
+            .filter(b => b.status === 'pending')
+            .sort((a, b) => a.date.localeCompare(b.date))
+        const nextBooking = pendingBookings[0] ?? null
+
+        // Active sessions detail — total students + one sample session
+        let totalStudents = 0
+        let sampleSession = null
+        for (const [bookingId, session] of activeSessions) {
+            if (session.status === 'ended') continue
+            totalStudents += session.participants.length
+            if (!sampleSession) {
+                const booking = mockAdminBookings.find(b => b.id === bookingId)
+                if (booking) sampleSession = { title: booking.title, teacher: booking.teacherName }
+            }
+        }
+
+        return HttpResponse.json({
+            pending_accounts: pendingTeachers.length,
+            pending_accounts_detail: oldestTeacher ? {
+                oldest_name:        oldestTeacher.fullName,
+                oldest_institution: oldestTeacher.institution,
+                oldest_days:        Math.floor((Date.now() - new Date(oldestTeacher.registeredAt)) / MS_PER_DAY),
+            } : null,
+
+            pending_bookings: pendingBookings.length,
+            pending_bookings_detail: nextBooking ? {
+                next_title:   nextBooking.title,
+                next_date:    nextBooking.date,
+                next_teacher: nextBooking.teacherName,
+            } : null,
+
+            active_sessions: [...activeSessions.values()].filter(s => s.status !== 'ended').length,
+            active_sessions_detail: {
+                total_students: totalStudents,
+                sample_title:   sampleSession?.title   ?? null,
+                sample_teacher: sampleSession?.teacher ?? null,
+            },
+        })
+    }),
+
+    // GET /api/admin/bookings
+    http.get(apiUrl('/api/admin/bookings'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(220)
+        const status = new URL(request.url).searchParams.get('status')
+        const results = status ? mockAdminBookings.filter(b => b.status === status) : mockAdminBookings
+        return HttpResponse.json(results)
+    }),
+
+    // POST /api/admin/bookings/:id/confirm
+    http.post(apiUrl('/api/admin/bookings/:id/confirm'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
+        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        b.status = 'confirmed'
+        return HttpResponse.json({ id: b.id, status: b.status })
+    }),
+
+    // POST /api/admin/bookings/:id/reject  — body: { reason }
+    http.post(apiUrl('/api/admin/bookings/:id/reject'), async ({ params, request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
+        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        const body = await request.json().catch(() => ({}))
+        b.status = 'rejected'
+        b.rejectReason = body.reason ?? ''
+        return HttpResponse.json({ id: b.id, status: b.status })
+    }),
+
+    // POST /api/admin/bookings/:id/cancel
+    http.post(apiUrl('/api/admin/bookings/:id/cancel'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
+        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        b.status = 'cancelled'
+        return HttpResponse.json({ id: b.id, status: b.status })
+    }),
+
+    // GET /api/admin/teachers — list all teacher accounts
+    http.get(apiUrl('/api/admin/teachers'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(220)
+        const url = new URL(request.url)
+        const statusFilter = url.searchParams.get('status')
+        const results = statusFilter
+            ? mockTeachers.filter(t => t.status === statusFilter)
+            : mockTeachers
+        return HttpResponse.json(results)
+    }),
+
+    // POST /api/admin/teachers/:id/approve
+    http.post(apiUrl('/api/admin/teachers/:id/approve'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const teacher = mockTeachers.find(t => t.id === parseInt(params.id, 10))
+        if (!teacher) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        teacher.status = 'approved'
+        return HttpResponse.json({ id: teacher.id, status: teacher.status })
+    }),
+
+    // POST /api/admin/teachers/:id/suspend
+    http.post(apiUrl('/api/admin/teachers/:id/suspend'), async ({ params }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const teacher = mockTeachers.find(t => t.id === parseInt(params.id, 10))
+        if (!teacher) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+        teacher.status = 'suspended'
+        return HttpResponse.json({ id: teacher.id, status: teacher.status })
     }),
 ]

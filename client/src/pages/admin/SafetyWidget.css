@@ -1,0 +1,216 @@
+.safety-widget {
+    background: var(--surf);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* accent bar — same pattern as stat cards */
+.safety-widget::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 10px 10px 0 0;
+}
+
+.safety-widget--green::before { background: var(--green); }
+.safety-widget--teal::before  { background: var(--teal);  }
+.safety-widget--red::before   { background: var(--red);   }
+.safety-widget--grey::before  { background: var(--border); }
+
+.safety-widget-title {
+    font-family: var(--disp);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--t2);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    margin: 0 0 16px;
+}
+
+/* ── Status row ── */
+.safety-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.safety-status-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.safety-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.safety-dot--green { background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 20%, transparent); }
+.safety-dot--teal  { background: var(--teal);  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal)  20%, transparent); }
+.safety-dot--red   { background: var(--red);   box-shadow: 0 0 0 3px color-mix(in srgb, var(--red)   20%, transparent); }
+.safety-dot--grey  { background: var(--t3);    box-shadow: none; }
+
+.safety-status-label {
+    font-family: var(--disp);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.safety-status-label--green { color: var(--green); }
+.safety-status-label--teal  { color: var(--teal);  }
+.safety-status-label--red   { color: var(--red);   }
+.safety-status-label--grey  { color: var(--t2);    }
+
+.safety-source {
+    font-size: 12px;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+/* ── Countdown ── */
+.safety-countdown {
+    font-size: 12.5px;
+    color: var(--t2);
+    margin-bottom: 4px;
+}
+
+.safety-countdown-value {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--t1);
+}
+
+/* ── Divider ── */
+.safety-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+}
+
+/* ── Override section ── */
+.safety-override-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.safety-override-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--t3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* ── Duration picker ── */
+.safety-duration-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.safety-duration-opt {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--t2);
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    transition: border-color 0.12s, color 0.12s;
+    user-select: none;
+}
+
+.safety-duration-opt input[type="radio"] { display: none; }
+
+.safety-duration-opt:has(input:checked) {
+    border-color: var(--teal);
+    color: var(--teal);
+    background: color-mix(in srgb, var(--teal) 8%, transparent);
+}
+
+.safety-duration-opt:hover:not(:has(input:checked)) {
+    border-color: var(--t2);
+    color: var(--t1);
+}
+
+.safety-custom-input {
+    width: 72px;
+    padding: 5px 8px;
+    font-size: 13px;
+    font-family: var(--mono);
+    color: var(--t1);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    text-align: center;
+}
+
+.safety-custom-input:focus {
+    outline: none;
+    border-color: var(--teal);
+}
+
+/* ── Action buttons ── */
+.safety-action-row {
+    display: flex;
+    gap: 8px;
+}
+
+.safety-btn {
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.safety-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.safety-btn--open {
+    background: color-mix(in srgb, var(--green) 12%, transparent);
+    color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 30%, transparent);
+}
+.safety-btn--open:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+.safety-btn--close {
+    background: color-mix(in srgb, var(--red) 10%, transparent);
+    color: var(--red);
+    border-color: color-mix(in srgb, var(--red) 25%, transparent);
+}
+.safety-btn--close:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+.safety-btn--clear {
+    background: var(--elev);
+    color: var(--t2);
+    border-color: var(--border);
+    align-self: flex-start;
+}
+.safety-btn--clear:hover:not(:disabled) {
+    color: var(--t1);
+    background: color-mix(in srgb, var(--red) 8%, transparent);
+    border-color: color-mix(in srgb, var(--red) 25%, transparent);
+    color: var(--red);
+}

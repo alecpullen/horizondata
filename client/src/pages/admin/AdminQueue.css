@@ -1,0 +1,217 @@
+.admin-queue {
+    max-width: 1060px;
+}
+
+/* ── Header ── */
+.queue-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.queue-section-title {
+    font-family: var(--disp);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--t1);
+    margin: 0;
+}
+
+/* ── Live indicator ── */
+.queue-poll-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--t3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.queue-poll-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: queue-pulse 2s ease-in-out infinite;
+}
+
+@keyframes queue-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+}
+
+/* ── Empty / error ── */
+.queue-empty {
+    color: var(--t3);
+    font-size: 14px;
+    padding: 12px 0;
+}
+
+.queue-empty--error {
+    color: var(--red);
+}
+
+/* ── Table ── */
+.queue-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.queue-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.queue-table thead {
+    background: var(--surf);
+}
+
+.queue-table th {
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.queue-table td {
+    padding: 13px 14px;
+    color: var(--t1);
+    border-top: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.queue-table tbody tr:first-child td {
+    border-top: none;
+}
+
+.queue-table tbody tr:hover td {
+    background: color-mix(in srgb, var(--teal) 4%, transparent);
+}
+
+.queue-row--confirming td {
+    background: color-mix(in srgb, var(--red) 5%, transparent) !important;
+}
+
+.queue-cell-title {
+    font-weight: 500;
+    max-width: 240px;
+}
+
+.queue-cell-mono {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--t2);
+    white-space: nowrap;
+}
+
+.queue-cell-targets {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--t2);
+    white-space: nowrap;
+}
+
+/* ── Status badges ── */
+.queue-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.queue-badge--gold   { background: color-mix(in srgb, var(--gold)  18%, transparent); color: var(--gold);  }
+.queue-badge--teal   { background: color-mix(in srgb, var(--teal)  18%, transparent); color: var(--teal);  }
+.queue-badge--grey   { background: color-mix(in srgb, var(--t3)    18%, transparent); color: var(--t2);    }
+.queue-badge--red    { background: color-mix(in srgb, var(--red)   18%, transparent); color: var(--red);   }
+
+/* ── Buttons ── */
+.queue-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.12s;
+}
+
+.queue-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.queue-btn--abort {
+    background: color-mix(in srgb, var(--red) 12%, transparent);
+    color: var(--red);
+    border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+}
+
+.queue-btn--abort:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+.queue-btn--abort.active {
+    background: color-mix(in srgb, var(--t2) 10%, transparent);
+    color: var(--t2);
+    border-color: var(--border);
+}
+
+.queue-btn--abort-confirm {
+    background: var(--red);
+    color: #fff;
+}
+
+.queue-btn--abort-confirm:hover:not(:disabled) {
+    opacity: 0.88;
+}
+
+.queue-btn--ghost {
+    background: transparent;
+    color: var(--t2);
+    border: 1px solid var(--border);
+}
+
+.queue-btn--ghost:hover:not(:disabled) {
+    background: var(--elev);
+}
+
+/* ── Confirm drawer ── */
+.queue-confirm-drawer td {
+    padding: 0;
+    border-top: none !important;
+    background: color-mix(in srgb, var(--red) 5%, transparent) !important;
+}
+
+.queue-confirm-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-top: 1px dashed color-mix(in srgb, var(--red) 30%, transparent);
+}
+
+.queue-confirm-msg {
+    font-size: 13.5px;
+    color: var(--t1);
+}
+
+.queue-confirm-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}

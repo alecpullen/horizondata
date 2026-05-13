@@ -20,6 +20,14 @@ import NewBooking from './pages/NewBooking'
 import Captures from './pages/Captures'
 import BookingCaptures from './pages/BookingCaptures'
 import Scheduling from './pages/Scheduling'
+import AdminRoute    from './components/auth/AdminRoute'
+import AdminShell    from './pages/admin/AdminShell'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminTeachers  from './pages/admin/AdminTeachers'
+import AdminBookings  from './pages/admin/AdminBookings'
+import AdminSessions  from './pages/admin/AdminSessions'
+import AdminSafety    from './pages/admin/AdminSafety'
+import AdminQueue     from './pages/admin/AdminQueue'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/AuthContext'
 import { useSessionTimeout } from './hooks/useSessionTimeout'
@@ -106,6 +114,16 @@ function AppRoutes() {
                 <Route path="/bookings/:id/captures" element={
                     <ProtectedRoute><BookingCaptures /></ProtectedRoute>
                 } />
+
+                {/* Admin routes - require role=admin */}
+                <Route path="/admin" element={<AdminRoute><AdminShell /></AdminRoute>}>
+                    <Route index            element={<AdminDashboard />} />
+                    <Route path="teachers"  element={<AdminTeachers />} />
+                    <Route path="bookings"  element={<AdminBookings />} />
+                    <Route path="sessions"  element={<AdminSessions />} />
+                    <Route path="safety"    element={<AdminSafety />} />
+                    <Route path="queue"     element={<AdminQueue />} />
+                </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </SessionTimeoutWrapper>
