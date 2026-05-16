@@ -159,7 +159,9 @@ def require_auth(roles: Optional[List[str]] = None):
         def decorated_function(*args, **kwargs):
             user = None
             user_type = None
-            
+            bearer_token = None
+            session_id = None
+
             # Try teacher authentication (Bearer token)
             bearer_token = extract_bearer_token()
             if bearer_token:

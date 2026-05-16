@@ -60,7 +60,14 @@ def get_logs():
     try:
         # Get query parameters
         level = request.args.get('level')
-        limit = int(request.args.get('limit', 100))
+        try:
+            limit = int(request.args.get('limit', 100))
+            if limit < 1:
+                limit = 1
+            elif limit > 1000:
+                limit = 1000
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'error': 'limit must be an integer'}), 400
         since = request.args.get('since')  # ISO timestamp
         
         filtered_logs = log_entries.copy()
