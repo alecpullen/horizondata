@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useToast } from '../../components/ui/ToastProvider'
+import api from '../../lib/api'
 import './AdminTeachers.css'
 
 const TABS = ['all', 'pending', 'approved', 'suspended']
@@ -59,10 +60,9 @@ function AdminTeachers() {
     const load = useCallback(() => {
         setLoading(true)
         setError(null)
-        fetch('/api/admin/teachers')
-            .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-            .then(data => { setTeachers(data); setLoading(false) })
-            .catch(err => { setError(err.message); setLoading(false) })
+        api.get('/api/admin/teachers')
+            .then(res => { setTeachers(res.data); setLoading(false) })
+            .catch(err => { setError(err.response?.status?.toString() || err.message); setLoading(false) })
     }, [])
 
     useEffect(() => { load() }, [load])
@@ -70,8 +70,7 @@ function AdminTeachers() {
     const handleAction = useCallback(async (id, action) => {
         setBusyIds(prev => new Set(prev).add(id))
         try {
-            const r = await fetch(`/api/admin/teachers/${id}/${action}`, { method: 'POST' })
-            if (!r.ok) throw new Error(`${r.status}`)
+            await api.post(`/api/admin/teachers/${id}/${action}`)
             // Update local state so the tab counts re-compute without a full refetch
             setTeachers(prev => prev.map(t =>
                 t.id === id ? { ...t, status: action === 'approve' ? 'approved' : 'suspended' } : t

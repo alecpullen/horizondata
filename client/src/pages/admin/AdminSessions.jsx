@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, Fragment } from 'react'
 import { useToast } from '../../components/ui/ToastProvider'
+import api from '../../lib/api'
 import './AdminSessions.css'
 
 const POLL_MS = 5000
@@ -161,10 +162,9 @@ function AdminSessions() {
     const [tick, setTick]               = useState(0)
 
     const fetchActive = useCallback(() => {
-        fetch('/api/admin/sessions/active')
-            .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-            .then(data => { setActive(data); setTick(t => t + 1); setError(null) })
-            .catch(err => setError(err.message))
+        api.get('/api/admin/sessions/active')
+            .then(res => { setActive(res.data); setTick(t => t + 1); setError(null) })
+            .catch(err => setError(err.response?.status?.toString() || err.message))
     }, [])
 
     // Poll active sessions every 5s
@@ -176,23 +176,20 @@ function AdminSessions() {
 
     // Fetch past sessions once
     useEffect(() => {
-        fetch('/api/admin/sessions/past')
-            .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-            .then(data => { setPast(data); setLoadingPast(false) })
-            .catch(err => { setError(err.message); setLoadingPast(false) })
+        api.get('/api/admin/sessions/past')
+            .then(res => { setPast(res.data); setLoadingPast(false) })
+            .catch(err => { setError(err.response?.status?.toString() || err.message); setLoadingPast(false) })
     }, [])
 
     const handleTerminate = useCallback(async (bookingId, title) => {
         setBusyId(bookingId)
         try {
-            const r = await fetch(`/api/admin/sessions/${bookingId}/terminate`, { method: 'POST' })
-            if (!r.ok) throw new Error()
+            await api.post(`/api/admin/sessions/${bookingId}/terminate`)
             setActive(prev => prev.filter(s => s.bookingId !== bookingId))
             setTerminatingId(null)
             // Re-fetch past so the terminated session appears
-            fetch('/api/admin/sessions/past')
-                .then(r => r.json())
-                .then(setPast)
+            api.get('/api/admin/sessions/past')
+                .then(res => setPast(res.data))
                 .catch(() => {})
             showToast({ type: 'success', message: `"${title}" terminated.` })
         } catch {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import SafetyWidget from './SafetyWidget'
+import api from '../../lib/api'
 import './AdminSafety.css'
 
 const POLL_MS = 30000
@@ -40,10 +41,9 @@ function AdminSafety() {
 
     const fetchData = useCallback((quiet = false) => {
         if (!quiet) setLoading(true)
-        fetch('/api/safety/comprehensive')
-            .then(r => { if (!r.ok) throw new Error(`Failed to load safety data (${r.status})`); return r.json() })
-            .then(d => { setData(d); setError(null); setLoading(false) })
-            .catch(err => { if (!quiet) setError(err.message); setLoading(false) })
+        api.get('/api/safety/comprehensive')
+            .then(res => { setData(res.data); setError(null); setLoading(false) })
+            .catch(err => { if (!quiet) setError(err.response?.status?.toString() || err.message); if (!quiet) setLoading(false) })
     }, [])
 
     useEffect(() => {

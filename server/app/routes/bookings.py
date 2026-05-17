@@ -7,7 +7,7 @@ import pytz
 
 from app.middleware.auth import require_auth
 from app.services.database import get_db
-from app.models.booking import Booking
+from app.models.booking import Booking, validate_targets
 from app.services.time_service import TimeService
 
 logger = logging.getLogger(__name__)
@@ -174,6 +174,13 @@ def create_booking():
                 return jsonify(
                     {"error": "conflict", "message": "You already have a booking during this time"}
                 ), 409
+
+            # Validate targets JSON if provided
+            targets = data.get("targets")
+            if targets and not validate_targets(targets):
+                return jsonify(
+                    {"error": "validation_error", "message": "Invalid targets format. Expected JSON with celestialObjects and/or captureSettings."}
+                ), 400
 
             booking = Booking(
                 teacher_id=g.user["id"],

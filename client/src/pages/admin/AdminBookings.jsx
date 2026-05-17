@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useToast } from '../../components/ui/ToastProvider'
+import api from '../../lib/api'
 import './AdminBookings.css'
 
 const TABS = [
@@ -40,10 +41,9 @@ function AdminBookings() {
     useEffect(() => {
         setLoading(true)
         setError(null)
-        fetch('/api/admin/bookings')
-            .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-            .then(data => { setBookings(data); setLoading(false) })
-            .catch(err => { setError(err.message); setLoading(false) })
+        api.get('/api/admin/bookings')
+            .then(res => { setBookings(res.data); setLoading(false) })
+            .catch(err => { setError(err.response?.status?.toString() || err.message); setLoading(false) })
     }, [])
 
     const setBusy = (id, on) => setBusyIds(prev => {
@@ -58,8 +58,7 @@ function AdminBookings() {
     const handleConfirm = useCallback(async (id) => {
         setBusy(id, true)
         try {
-            const r = await fetch(`/api/admin/bookings/${id}/confirm`, { method: 'POST' })
-            if (!r.ok) throw new Error()
+            await api.post(`/api/admin/bookings/${id}/confirm`)
             mutateStatus(id, 'confirmed')
             showToast({ type: 'success', message: 'Booking confirmed.' })
         } catch {
@@ -74,12 +73,7 @@ function AdminBookings() {
         }
         setBusy(id, true)
         try {
-            const r = await fetch(`/api/admin/bookings/${id}/reject`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason: rejectReason.trim() }),
-            })
-            if (!r.ok) throw new Error()
+            await api.post(`/api/admin/bookings/${id}/reject`, { reason: rejectReason.trim() })
             mutateStatus(id, 'rejected')
             setRejectingId(null)
             setRejectReason('')

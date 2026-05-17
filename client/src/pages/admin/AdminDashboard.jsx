@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SafetyWidget from './SafetyWidget'
+import api from '../../lib/api'
 import './AdminDashboard.css'
 
 function PendingAccountsCard({ data, loading }) {
@@ -124,10 +125,9 @@ function AdminDashboard() {
     useEffect(() => {
         let cancelled = false
         setLoading(true)
-        fetch('/api/admin/stats')
-            .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-            .then(json => { if (!cancelled) { setData(json); setLoading(false) } })
-            .catch(err => { if (!cancelled) { setError(err.message); setLoading(false) } })
+        api.get('/api/admin/stats')
+            .then(res => { if (!cancelled) { setData(res.data); setLoading(false) } })
+            .catch(err => { if (!cancelled) { setError(err.response?.status?.toString() || err.message); setLoading(false) } })
         return () => { cancelled = true }
     }, [])
 

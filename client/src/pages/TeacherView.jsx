@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import StreamView from '../components/StreamView'
@@ -6,22 +6,6 @@ import WeatherWidget from '../components/WeatherWidget'
 import { useToast } from '../components/ui/ToastProvider'
 import api from '../lib/api'
 import './TeacherView.css'
-
-const SESSION = {
-    date:      'Sun 22 Aug 2026',
-    time:      '20:00 – 20:10 AEST',
-    ref:       'HD-2026-0841',
-    object:    'Saturn',
-    telescope: 'Bundoora',
-}
-
-const STUDENTS = [
-    { id: 1, name: 'Student A' },
-    { id: 2, name: 'Student B' },
-    { id: 3, name: 'Student C' },
-    { id: 4, name: 'Student D'},
-    { id: 5, name: 'Student E'},
-]
 
 async function downloadFile(url, fallbackName) {
     const res = await api.get(url, { responseType: 'blob' })
@@ -50,8 +34,18 @@ function TeacherView() {
     const [ending, setEnding] = useState(false)
     const [capturing, setCapturing] = useState(false)
     const [lastCapture, setLastCapture] = useState(null) // { id, ts }
+    const [booking, setBooking] = useState(null)
 
     const primaryStreamRef = useRef(null)
+
+    // Fetch booking data
+    useEffect(() => {
+        if (bookingId) {
+            api.get(`/api/bookings/${bookingId}`)
+                .then(res => setBooking(res.data))
+                .catch(err => console.error('Failed to load booking:', err))
+        }
+    }, [bookingId])
 
     const handleCapture = async () => {
         const video = primaryStreamRef.current
@@ -71,7 +65,7 @@ function TeacherView() {
             const ts = new Date().toISOString()
             const formData = new FormData()
             formData.append('file', blob, `capture_${Date.now()}.png`)
-            formData.append('objectName', SESSION.object)
+            formData.append('objectName', booking?.title || 'Unknown')
             formData.append('timestamp', ts)
             if (bookingId) formData.append('observationSessionId', bookingId)
 

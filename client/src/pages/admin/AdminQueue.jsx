@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, Fragment } from 'react'
 import { useToast } from '../../components/ui/ToastProvider'
+import api from '../../lib/api'
 import './AdminQueue.css'
 
 const POLL_MS = 10000
@@ -32,10 +33,9 @@ function AdminQueue() {
     const [busyId, setBusyId]       = useState(null)
 
     const fetchQueue = useCallback(() => {
-        fetch('/api/admin/queue')
-            .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-            .then(data => { setJobs(data); setLoading(false); setError(null) })
-            .catch(err => { setError(err.message); setLoading(false) })
+        api.get('/api/admin/queue')
+            .then(res => { setJobs(res.data); setLoading(false); setError(null) })
+            .catch(err => { setError(err.response?.status?.toString() || err.message); setLoading(false) })
     }, [])
 
     useEffect(() => {
@@ -47,8 +47,7 @@ function AdminQueue() {
     const handleAbort = useCallback(async (jobId, title) => {
         setBusyId(jobId)
         try {
-            const r = await fetch(`/api/admin/queue/${jobId}/abort`, { method: 'POST' })
-            if (!r.ok) throw new Error()
+            await api.post(`/api/admin/queue/${jobId}/abort`)
             setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'aborted' } : j))
             setConfirmingId(null)
             showToast({ type: 'success', message: `"${title}" aborted.` })

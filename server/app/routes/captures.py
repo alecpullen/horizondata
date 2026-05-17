@@ -11,6 +11,30 @@ from app.models.capture import Capture
 
 captures_bp = Blueprint("captures", __name__, url_prefix="/api/captures")
 
+# Magic bytes for common image formats
+IMAGE_SIGNATURES = {
+    b'\x89PNG\r\n\x1a\n': 'png',
+    b'\xff\xd8\xff': 'jpeg',
+}
+
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+def _validate_image_content(file_stream) -> str:
+    """Validate file content by checking magic bytes.
+    
+    Returns the detected image type ('png' or 'jpeg') or raises ValueError.
+    """
+    # Read first 8 bytes to check magic bytes
+    header = file_stream.read(8)
+    file_stream.seek(0)  # Reset to beginning
+    
+    for signature, img_type in IMAGE_SIGNATURES.items():
+        if header.startswith(signature):
+            return img_type
+    
+    raise ValueError("Invalid file format. Only PNG and JPEG images are allowed.")
+
+
 def _safe_slug(s: str) -> str:
     s = s.strip().lower()
     s = re.sub(r"[^a-z0-9\-_.]+", "-", s)
@@ -53,6 +77,21 @@ def upload_capture():
     f = request.files["file"]
     if not f.filename:
         return jsonify({"message": "file has no filename"}), 400
+    
+    # Validate file content (magic bytes) to prevent malicious uploads
+    try:
+        validated_type = _validate_image_content(f.stream)
+    except ValueError as e:
+        current_app.logger.warning(f"File validation failed: {e}")
+        return jsonify({"message": str(e)}), 400
+    
+    # Check file size
+    f.seek(0, 2)  # Seek to end
+    file_size = f.tell()
+    f.seek(0)  # Reset to beginning
+    
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({"message": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"}), 400
 
     object_name = request.form.get("objectName", "Unknown")
     # Get ACTUAL telescope coordinates at capture time
@@ -88,11 +127,11 @@ def upload_capture():
     dest_dir = os.path.join(root, y, m, d, obj_slug)
     os.makedirs(dest_dir, exist_ok=True)
 
-    # ids & filenames
+    # ids & filenames - use validated type instead of relying on extension
     cap_uuid = uuid.uuid4()
     cap_id = str(cap_uuid)
     ts_part = dt.strftime("%Y%m%dT%H%M%S")
-    ext = ".png" if (f.mimetype == "image/png" or f.filename.lower().endswith(".png")) else ".jpg"
+    ext = f".{validated_type}"
     img_name = f"{ts_part}_{cap_id}{ext}"
     meta_name = f"{ts_part}_{cap_id}.json"
 

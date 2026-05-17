@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useToast } from '../../components/ui/ToastProvider'
+import api from '../../lib/api'
 import './SafetyWidget.css'
 
 const POLL_MS    = 15000

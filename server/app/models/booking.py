@@ -13,6 +13,76 @@ _STATUS_LABELS = {
     "cancelled": "Cancelled",
 }
 
+# Expected JSON schema for targets field
+# targets: {
+#     "celestialObjects": [
+#         {"name": "Mars", "ra": "04:35:00", "dec": "+23:45:00"},
+#     ],
+#     "captureSettings": {
+#         "exposure": 1000,
+#         "gain": 0,
+#         "duration": 5
+#     }
+# }
+TARGETS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "celestialObjects": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "ra": {"type": "string"},
+                    "dec": {"type": "string"},
+                },
+                "required": ["name"]
+            }
+        },
+        "captureSettings": {
+            "type": "object",
+            "properties": {
+                "exposure": {"type": "number"},
+                "gain": {"type": "number"},
+                "duration": {"type": "number"},
+            }
+        }
+    }
+}
+
+
+def validate_targets(targets) -> bool:
+    """Validate targets JSON field.
+    
+    Args:
+        targets: Dictionary to validate
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    if targets is None:
+        return True
+    
+    if not isinstance(targets, dict):
+        return False
+    
+    # Validate celestialObjects array
+    if "celestialObjects" in targets:
+        if not isinstance(targets["celestialObjects"], list):
+            return False
+        for obj in targets["celestialObjects"]:
+            if not isinstance(obj, dict):
+                return False
+            if "name" not in obj:
+                return False
+    
+    # Validate captureSettings object
+    if "captureSettings" in targets:
+        if not isinstance(targets["captureSettings"], dict):
+            return False
+    
+    return True
+
 class Booking(Base):
     __tablename__ = "bookings"
     __table_args__ = {"schema": "app"}

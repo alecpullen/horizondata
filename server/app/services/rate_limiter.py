@@ -50,6 +50,8 @@ class RateLimiter:
             
         self._limits: Dict[str, RateLimitEntry] = {}
         self._lock = Lock()
+        self._last_cleanup = time.time()
+        self._cleanup_interval = 60  # Clean up every 60 seconds
         self._initialized = True
         logger.info("RateLimiter initialized")
     
@@ -65,6 +67,9 @@ class RateLimiter:
             # Remove empty entries
             if not entry.requests:
                 del self._limits[key]
+        
+        self._last_cleanup = now
+        logger.debug(f"Cleaned up rate limiter entries. Active entries: {len(self._limits)}")
     
     def check_limit(self, key: str, max_requests: int, window_seconds: float = None) -> bool:
         """
@@ -84,8 +89,8 @@ class RateLimiter:
         now = time.time()
         
         with self._lock:
-            # Clean up periodically (1% chance per check)
-            if hash(key) % 100 == 0:
+            # Time-based cleanup every 60 seconds
+            if time.time() - self._last_cleanup > self._cleanup_interval:
                 self._clean_expired(window_seconds)
             
             # Get or create entry
