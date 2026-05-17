@@ -92,6 +92,82 @@ def get_session(booking_id):
         return jsonify({"error": "internal_error", "message": "Failed to fetch session"}), 500
 
 
+@sessions_bp.route("/<uuid:booking_id>/queue-status", methods=["GET"])
+@require_auth(roles=["teacher"])
+def get_queue_status(booking_id):
+    """
+    Get the queue status for a booking's observation session.
+    
+    Returns:
+        {
+            total: int,
+            completed: int,
+            current_target: str | null,
+            status: "pending" | "running" | "done" | "aborted"
+        }
+    """
+    try:
+        with get_db() as db:
+            booking, err = _load_booking_owned(db, booking_id)
+            if err:
+                return err
+            
+            obs = (
+                db.query(ObservationSession)
+                .filter(ObservationSession.booking_id == booking.id)
+                .first()
+            )
+            
+            if not obs:
+                return jsonify({
+                    "total": 0,
+                    "completed": 0,
+                    "current_target": None,
+                    "status": "pending"
+                })
+            
+            # Get targets from booking
+            targets = booking.targets or {}
+            celestial_objects = targets.get("celestialObjects", [])
+            total = len(celestial_objects)
+            
+            # Determine status based on session status
+            session_status = obs.status if obs.status else "pending"
+            
+            # Map session status to queue status
+            status_map = {
+                "active": "running",
+                "completed": "done",
+                "terminated": "aborted",
+                "ended": "done",
+            }
+            status = status_map.get(session_status, "pending")
+            
+            # Calculate completed count and current target
+            completed = 0
+            current_target = None
+            
+            if status == "done":
+                completed = total
+            elif status == "running" and total > 0:
+                # For now, assume we're on the first incomplete target
+                # In a full implementation, this would track actual progress
+                current_index = 0
+                current_target = celestial_objects[0].get("name") if celestial_objects else None
+                completed = current_index
+            
+            return jsonify({
+                "total": total,
+                "completed": completed,
+                "current_target": current_target,
+                "status": status
+            })
+    
+    except Exception as e:
+        logger.error(f"Error fetching queue status for booking {booking_id}: {e}")
+        return jsonify({"error": "internal_error", "message": "Failed to fetch queue status"}), 500
+
+
 @sessions_bp.route("/<uuid:booking_id>/participants", methods=["GET"])
 @require_auth(roles=["teacher"])
 def list_participants(booking_id):
