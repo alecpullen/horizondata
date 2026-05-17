@@ -7,6 +7,7 @@ Handles both teacher (BetterAuth token) and student (session ID) authentication.
 
 import hashlib
 import logging
+import os
 import threading
 from functools import wraps
 from flask import request, g, jsonify
@@ -17,6 +18,13 @@ from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.services.student_session_manager import get_student_session_manager
 
 logger = logging.getLogger(__name__)
+
+# Admin configuration - comma-separated list of admin email addresses
+ADMIN_EMAILS = set(
+    email.strip().lower() 
+    for email in os.getenv("ADMIN_EMAILS", "").split(",") 
+    if email.strip()
+)
 
 # Cache validated teacher tokens for 60 s to avoid a live HTTP call on every request.
 # Key: sha256(token) — avoids storing raw bearer tokens in memory.
@@ -81,14 +89,23 @@ def validate_teacher(token: str) -> Optional[dict]:
         if row is None:
             return None
 
+        # Determine role - check if user is in admin list
+        user_email = row.email.lower().strip() if row.email else ""
+        is_admin = user_email in ADMIN_EMAILS
+        
+        if is_admin:
+            role = "admin"
+            user_type = "admin"
+        else:
+            role = "teacher"
+            user_type = "teacher"
+
         result = {
             "id": str(row.id),
             "email": row.email,
             "name": row.name,
-            # Neon Auth defaults role to 'user'; in this app all
-            # authenticated Neon Auth users are teachers.
-            "role": "teacher",
-            "user_type": "teacher",
+            "role": role,
+            "user_type": user_type,
         }
         with _token_cache_lock:
             _token_cache[cache_key] = result
@@ -240,3 +257,16 @@ def is_teacher() -> bool:
 def is_student() -> bool:
     """Check if current user is a student"""
     return get_current_user_type() == 'student'
+
+
+def require_admin(f: Callable) -> Callable:
+    """Shortcut decorator for admin-only routes.
+    
+    All /api/admin routes should use this decorator.
+    """
+    return require_auth(roles=['admin'])(f)
+
+
+def is_admin() -> bool:
+    """Check if current user is an admin"""
+    return get_current_user_type() == 'admin'
