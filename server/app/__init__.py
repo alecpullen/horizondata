@@ -16,6 +16,7 @@ from .routes.auth import auth_bp
 from .routes.account import account_bp
 from .routes.bookings import bookings_bp
 from .routes.sessions import sessions_bp
+from .routes.admin_teachers import admin_teachers_bp
 
 def create_app():
     """
@@ -64,5 +65,6 @@ def create_app():
     app.register_blueprint(account_bp)
     app.register_blueprint(bookings_bp)
     app.register_blueprint(sessions_bp)
+    app.register_blueprint(admin_teachers_bp)
 
     return app

@@ -1,13 +1,16 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.sql import func
 from app.services.database import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True)
-    external_id = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True)
-    phone = Column(String(20), nullable=True)
-    institution = Column(String(255), nullable=True)
-    is_2fa_enabled = Column(Boolean, default=False)
-    notifications_enabled = Column(Boolean, default=True)
+    username = Column(String)
+    hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    account_status = Column(String(20), nullable=False, default="pending")
