@@ -84,6 +84,33 @@ def get_booking(booking_id):
         return jsonify({"error": "internal_error", "message": "Failed to fetch booking"}), 500
 
 
+@bookings_bp.route("/<uuid:booking_id>", methods=["DELETE"])
+@require_auth(roles=["teacher"])
+def delete_booking(booking_id):
+    """
+    Delete/cancel a booking.
+    Teachers can only delete their own bookings.
+    """
+    try:
+        with get_db() as db:
+            booking = db.query(Booking).filter(Booking.id == booking_id).first()
+
+            if not booking:
+                return jsonify({"error": "not_found", "message": "Booking not found"}), 404
+            if str(booking.teacher_id) != str(g.user["id"]):
+                return jsonify({"error": "forbidden", "message": "You do not own this booking"}), 403
+
+            db.delete(booking)
+            db.commit()
+
+            logger.info(f"Booking {booking_id} deleted by teacher {g.user['id']}")
+            return jsonify({"success": True, "message": "Booking deleted successfully"}), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting booking {booking_id}: {e}")
+        return jsonify({"error": "internal_error", "message": "Failed to delete booking"}), 500
+
+
 @bookings_bp.route("", methods=["POST"])
 @require_auth(roles=["teacher"])
 def create_booking():
