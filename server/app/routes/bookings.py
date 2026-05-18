@@ -77,7 +77,7 @@ def get_booking(booking_id):
             if str(booking.teacher_id) != str(g.user["id"]):
                 return jsonify({"error": "forbidden", "message": "You do not own this booking"}), 403
 
-            return jsonify(booking.to_dict())
+            return jsonify(booking.to_dict(db))
 
     except Exception as e:
         logger.error(f"Error fetching booking {booking_id}: {e}")

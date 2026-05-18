@@ -116,6 +116,7 @@ class Booking(Base):
             "status": _STATUS_LABELS.get(self.status, self.status.title()),
             "statusColor": self.status,
             "headless": self.headless,
+            "targets": self.targets,
         }
         
         # Calculate real capture count from DATABASE
@@ -123,7 +124,7 @@ class Booking(Base):
             try:
                 from app.models.capture import Capture
                 capture_count = db.query(Capture).filter(
-                    Capture.teacher_id == str(self.teacher_id)
+                    Capture.captured_by_teacher_id == str(self.teacher_id)
                 ).count()
                 result["captureCount"] = capture_count
             except Exception as e:
