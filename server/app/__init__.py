@@ -67,4 +67,8 @@ def create_app():
     app.register_blueprint(sessions_bp)
     app.register_blueprint(admin_teachers_bp)
 
+    if os.getenv("HEADLESS_SCHEDULER_ENABLED", "true").lower() != "false":
+        from .services.headless_runner import init_scheduler
+        init_scheduler(app)
+
     return app
