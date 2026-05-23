@@ -100,6 +100,10 @@ def delete_booking(booking_id):
             if str(booking.teacher_id) != str(g.user["id"]):
                 return jsonify({"error": "forbidden", "message": "You do not own this booking"}), 403
 
+            if booking.headless:
+                from app.services.headless_runner import unschedule_headless_booking
+                unschedule_headless_booking(str(booking.id))
+
             db.delete(booking)
             db.commit()
 
@@ -221,6 +225,11 @@ def create_booking():
             )
             db.add(booking)
             db.flush()
+
+            if booking.headless:
+                from app.services.headless_runner import schedule_headless_booking
+                schedule_headless_booking(str(booking.id), booking.scheduled_start)
+
             result = booking.to_dict()
 
         return jsonify({"success": True, "booking": result}), 201
