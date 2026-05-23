@@ -25,11 +25,68 @@ async function safeDownload(url, name, showToast) {
     }
 }
 
+function PipControls({ onResizeMouseDown }) {
+    return (
+        <>
+            <div className="tv-pip-hover-overlay">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+            </div>
+            <div className="tv-pip-resize-handle" onMouseDown={onResizeMouseDown} />
+        </>
+    )
+}
+
 function TeacherView() {
     const navigate = useNavigate()
     const { state } = useLocation()
     const bookingId = state?.bookingId
     const { showToast } = useToast()
+
+    const [swapped, setSwapped] = useState(false)
+    const [pipSize, setPipSize] = useState({ w: 240, h: 148 })
+    const isResizingRef = useRef(false)
+
+    function handleSwap() {
+        if (!isResizingRef.current) setSwapped(s => !s)
+    }
+
+    function handleResizeMouseDown(e) {
+        e.stopPropagation()
+        e.preventDefault()
+        isResizingRef.current = true
+
+        const pipEl = e.currentTarget.parentElement
+        pipEl.style.transition = 'none'
+
+        const startX = e.clientX
+        const startY = e.clientY
+        const startW = pipSize.w
+        const startH = pipSize.h
+
+        function onMove(ev) {
+            pipEl.style.width  = Math.max(160, Math.min(480, startW + (ev.clientX - startX))) + 'px'
+            pipEl.style.height = Math.max(100, Math.min(300, startH - (ev.clientY - startY))) + 'px'
+        }
+
+        function onUp() {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+            pipEl.style.transition = ''
+            setPipSize({
+                w: parseFloat(pipEl.style.width)  || startW,
+                h: parseFloat(pipEl.style.height) || startH,
+            })
+            setTimeout(() => { isResizingRef.current = false }, 50)
+        }
+
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+    }
 
     const [ending, setEnding] = useState(false)
     const [capturing, setCapturing] = useState(false)
@@ -143,18 +200,33 @@ function TeacherView() {
             <TopBar activePath="/live/teacher" />
             <div className="tv-body">
                 <div className="tv-feed-area">
-                    <StreamView
-                        ref={primaryStreamRef}
-                        label="Primary · Telescope Feed"
-                        webrtcUrl={streamUrls.primaryWebrtc}
-                        hlsUrl={streamUrls.primaryHls}
-                    />
-                    <div className="tv-pip">
+                    {/* Telescope — always carries the capture ref */}
+                    <div
+                        className={`tv-feed-wrapper ${swapped ? 'tv-feed-wrapper--pip' : 'tv-feed-wrapper--primary'}`}
+                        style={swapped ? { width: pipSize.w, height: pipSize.h } : undefined}
+                        onClick={swapped ? handleSwap : undefined}
+                    >
+                        <StreamView
+                            ref={primaryStreamRef}
+                            label="Primary · Telescope Feed"
+                            webrtcUrl={streamUrls.primaryWebrtc}
+                            hlsUrl={streamUrls.primaryHls}
+                        />
+                        {swapped && <PipControls onResizeMouseDown={handleResizeMouseDown} />}
+                    </div>
+
+                    {/* Site camera */}
+                    <div
+                        className={`tv-feed-wrapper ${swapped ? 'tv-feed-wrapper--primary' : 'tv-feed-wrapper--pip'}`}
+                        style={!swapped ? { width: pipSize.w, height: pipSize.h } : undefined}
+                        onClick={!swapped ? handleSwap : undefined}
+                    >
                         <StreamView
                             label="Site Camera"
                             webrtcUrl={streamUrls.siteWebrtc}
                             hlsUrl={streamUrls.siteHls}
                         />
+                        {!swapped && <PipControls onResizeMouseDown={handleResizeMouseDown} />}
                     </div>
                 </div>
 
