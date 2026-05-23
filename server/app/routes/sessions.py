@@ -10,6 +10,7 @@ from app.services.session_codes import generate_session_code
 from app.services.student_session_manager import get_student_session_manager
 from app.services.rate_limiter import check_join_limit, get_join_remaining
 from app.models.booking import Booking
+from app.models.capture import Capture
 from app.models.session import ObservationSession
 from sqlalchemy.exc import IntegrityError
 
@@ -146,15 +147,27 @@ def get_queue_status(booking_id):
             # Calculate completed count and current target
             completed = 0
             current_target = None
-            
+
             if status == "done":
                 completed = total
             elif status == "running" and total > 0:
-                # For now, assume we're on the first incomplete target
-                # In a full implementation, this would track actual progress
-                current_index = 0
-                current_target = celestial_objects[0].get("name") if celestial_objects else None
-                completed = current_index
+                captured_rows = (
+                    db.query(Capture.object_name)
+                    .filter(
+                        Capture.observation_session_id == obs.id,
+                        Capture.object_name.isnot(None),
+                    )
+                    .distinct()
+                    .all()
+                )
+                captured_names = {row.object_name.lower() for row in captured_rows if row.object_name}
+                target_names_lower = [obj.get("name", "").lower() for obj in celestial_objects]
+                completed = sum(1 for n in target_names_lower if n in captured_names)
+                current_target = next(
+                    (obj.get("name") for obj in celestial_objects
+                     if obj.get("name", "").lower() not in captured_names),
+                    None,
+                )
             
             return jsonify({
                 "total": total,
