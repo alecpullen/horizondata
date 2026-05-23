@@ -13,6 +13,7 @@ import MyBookings   from './pages/MyBookings'
 import MyAccount    from './pages/MyAccount'
 import TeacherView  from './pages/TeacherView'
 import StudentView  from './pages/StudentView'
+import PublicView   from './pages/PublicView'
 import StudentJoin  from './pages/StudentJoin'
 import StudentLobby from './pages/StudentLobby'
 import SessionLobby from './pages/SessionLobby'
@@ -106,6 +107,8 @@ function AppRoutes() {
                 } />
                 {/* Students are anonymous — no auth required */}
                 <Route path="/live/student" element={<StudentView />} />
+                {/* Public telescope viewfinder — no auth required */}
+                <Route path="/live/public"  element={<PublicView />} />
                 <Route path="/lobby/:bookingId?" element={
                     <ProtectedRoute><SessionLobby /></ProtectedRoute>
                 } />

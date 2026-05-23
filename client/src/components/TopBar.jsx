@@ -3,6 +3,12 @@ import AppLogo from './AppLogo'
 import { useAuth } from '../contexts/AuthContext'
 import './TopBar.css'
 
+// Admin-only: direct access to the live session views
+const adminLiveViewLinks = [
+    { label: 'Teacher View', path: '/live/teacher' },
+    { label: 'Student View', path: '/live/student' },
+]
+
 const navLinks = [
     { label: 'Scheduling', path: '/scheduling' },
     { label: 'Captures',   path: '/captures'   },
@@ -16,8 +22,10 @@ const accountLinks = [
 function TopBar({ activePath }) {
     const { user, logoutTeacher, leaveAsStudent, isTeacher } = useAuth()
     const [accountOpen, setAccountOpen] = useState(false)
+    const [liveViewOpen, setLiveViewOpen] = useState(false)
     const [avatarOpen, setAvatarOpen] = useState(false)
     const accountDropdownRef = useRef(null)
+    const liveViewDropdownRef = useRef(null)
     const avatarDropdownRef = useRef(null)
 
     const fullName = user?.fullName || ''
@@ -26,11 +34,15 @@ function TopBar({ activePath }) {
         ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
         : displayName ? displayName[0].toUpperCase() : '?'
     const userRole = user?.role || ''
+    const isAdmin = userRole === 'admin'
 
     useEffect(() => {
         function handleClickOutside(event) {
             if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target)) {
                 setAccountOpen(false)
+            }
+            if (liveViewDropdownRef.current && !liveViewDropdownRef.current.contains(event.target)) {
+                setLiveViewOpen(false)
             }
             if (avatarDropdownRef.current && !avatarDropdownRef.current.contains(event.target)) {
                 setAvatarOpen(false)
@@ -41,6 +53,7 @@ function TopBar({ activePath }) {
     }, [])
 
     const isAccountActive = accountLinks.some(link => link.path === activePath)
+    const isLiveViewActive = adminLiveViewLinks.some(link => link.path === activePath)
 
     const handleLogout = async () => {
         if (isTeacher) {
@@ -57,20 +70,43 @@ function TopBar({ activePath }) {
             <AppLogo />
 
             <nav className="topbar-nav">
-                <a
-                    href="/live/teacher"
-                    className={`nav-link ${activePath === '/live/teacher' ? 'active' : ''}`}
-                >
-                    Live View
-                </a>
+                {/* Live View dropdown — admin accounts only */}
+                {isAdmin && (
+                    <div className="nav-dropdown" ref={liveViewDropdownRef}>
+                        <button
+                            className={`nav-link nav-link--dropdown ${isLiveViewActive ? 'active' : ''}`}
+                            onClick={() => setLiveViewOpen(!liveViewOpen)}
+                            aria-expanded={liveViewOpen}
+                        >
+                            Live View
+                            <svg
+                                className={`dropdown-arrow ${liveViewOpen ? 'dropdown-arrow--open' : ''}`}
+                                viewBox="0 0 24 24"
+                                width="12"
+                                height="12"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                            >
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
 
-                {userRole === 'admin' && (
-                    <a
-                        href="/live/student"
-                        className={`nav-link ${activePath === '/live/student' ? 'active' : ''}`}
-                    >
-                        Student View
-                    </a>
+                        {liveViewOpen && (
+                            <div className="dropdown-menu">
+                                {adminLiveViewLinks.map(link => (
+                                    <a
+                                        key={link.path}
+                                        href={link.path}
+                                        className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
+                                        onClick={() => setLiveViewOpen(false)}
+                                    >
+                                        {link.label}
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {navLinks.map(link => (
@@ -193,9 +229,9 @@ function TopBar({ activePath }) {
                                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                                     <line x1="12" y1="17" x2="12.01" y2="17" />
                                 </svg>
-                                Help & Support
+                                Help &amp; Support
                             </a>
-                            {userRole === 'admin' && (
+                            {isAdmin && (
                                 <>
                                     <div className="avatar-menu-divider" />
                                     <a

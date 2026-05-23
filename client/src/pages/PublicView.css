@@ -1,0 +1,240 @@
+/* ── Shell ────────────────────────────────────────────────────────────────── */
+.pv-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.pv-header {
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 18px;
+    background: var(--surf);
+    border-bottom: 1px solid var(--border);
+}
+
+.pv-header-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    background: rgba(100, 220, 200, 0.08);
+    border: 1px solid rgba(100, 220, 200, 0.18);
+    border-radius: 20px;
+    padding: 4px 12px 4px 10px;
+}
+
+.pv-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    flex-shrink: 0;
+    animation: pv-pulse 2s ease-in-out infinite;
+}
+
+@keyframes pv-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(100, 220, 200, 0.5); }
+    50%       { opacity: 0.7; box-shadow: 0 0 0 5px rgba(100, 220, 200, 0); }
+}
+
+.pv-signin-link {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--t2);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+}
+
+.pv-signin-link:hover {
+    color: var(--t1);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────────── */
+.pv-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* ── Feed area ────────────────────────────────────────────────────────────── */
+.pv-feed-area {
+    flex: 1;
+    position: relative;
+    background: var(--bg);
+}
+
+.pv-feed-wrapper {
+    position: absolute;
+    border-radius: 8px;
+    overflow: hidden;
+    transition:
+        width  0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        bottom 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        left   0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pv-feed-wrapper--primary {
+    bottom: 14px;
+    left: 14px;
+    width: calc(100% - 28px);
+    height: calc(100% - 28px);
+    z-index: 1;
+}
+
+.pv-feed-wrapper--pip {
+    bottom: 28px;
+    left: 28px;
+    z-index: 2;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* PiP hover overlay */
+.pv-pip-hover-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #fff;
+    pointer-events: none;
+    z-index: 3;
+    transition: background 0.2s;
+}
+
+.pv-feed-wrapper--pip:hover .pv-pip-hover-overlay {
+    background: rgba(0, 0, 0, 0.42);
+}
+
+.pv-pip-hover-overlay svg {
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.pv-feed-wrapper--pip:hover .pv-pip-hover-overlay svg {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* PiP resize handle — top-right corner */
+.pv-pip-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 22px;
+    height: 22px;
+    cursor: nesw-resize;
+    z-index: 4;
+}
+
+.pv-pip-resize-handle::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 9px;
+    height: 9px;
+    border-top: 2px solid rgba(255, 255, 255, 0.35);
+    border-right: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 0 2px 0 0;
+    transition: border-color 0.15s;
+}
+
+.pv-pip-resize-handle:hover::before {
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+.pv-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--surf);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.pv-sidebar-section {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.pv-sidebar-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--t3);
+    margin-bottom: 10px;
+}
+
+.pv-scope-name {
+    font-family: var(--disp);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--teal);
+    margin-bottom: 4px;
+}
+
+.pv-scope-sub {
+    font-size: 12px;
+    color: var(--t3);
+}
+
+/* ── CTA section ──────────────────────────────────────────────────────────── */
+.pv-cta-section {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+}
+
+.pv-cta-text {
+    font-size: 13px;
+    color: var(--t2);
+    line-height: 1.5;
+    margin: 0 0 12px;
+}
+
+.pv-cta-btn {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    text-align: center;
+    border-radius: 9px;
+    font-family: var(--disp);
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--teal);
+    color: #060b16;
+    border: none;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.pv-cta-btn:hover {
+    background: #7af5e0;
+}
