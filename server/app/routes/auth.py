@@ -374,7 +374,7 @@ def student_leave():
         
     except Exception as e:
         logger.error(f"Error during student leave: {e}")
-        return jsonify({'success': True})  # Still return success
+        return jsonify({'error': 'internal_error', 'message': 'Failed to leave session'}), 500
 
 
 @auth_bp.route('/student/me', methods=['GET'])
