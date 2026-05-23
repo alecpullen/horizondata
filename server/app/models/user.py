@@ -16,6 +16,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     account_status = Column(String(20), nullable=False, default="pending")
+    role = Column(String(20), nullable=False, default="teacher")
 
     def to_dict(self):
         return {
@@ -25,6 +26,7 @@ class User(Base):
             "username": self.username,
             "institution": self.institution,
             "account_status": self.account_status,
+            "role": self.role,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

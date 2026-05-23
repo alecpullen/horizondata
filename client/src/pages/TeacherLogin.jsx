@@ -17,8 +17,12 @@ const TeacherLogin = () => {
     setError('');
     setIsLoading(true);
     try {
-      await loginTeacher(email, password);
-      navigate('/bookings');
+      const result = await loginTeacher(email, password);
+      if (result.user?.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/bookings');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {

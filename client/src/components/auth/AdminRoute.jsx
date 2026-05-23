@@ -6,14 +6,25 @@ function AdminRoute({ children }) {
     const { isAuthenticated, isLoading, user } = useAuth()
     const location = useLocation()
 
+    console.log('[AdminRoute] render state:', {
+        isAuthenticated,
+        isLoading,
+        userRole: user?.role,
+        path: location.pathname
+    })
+
     if (isLoading) return <LoadingSkeleton />
 
     if (!isAuthenticated) {
+        console.log('[AdminRoute] Redirecting to /login - not authenticated')
         sessionStorage.setItem('authRedirectUrl', location.pathname + location.search)
         return <Navigate to="/login" replace />
     }
 
-    if (user?.role !== 'admin') return <Navigate to="/" replace />
+    if (user?.role !== 'admin') {
+        console.log('[AdminRoute] Redirecting to / - not admin. Role:', user?.role)
+        return <Navigate to="/" replace />
+    }
 
     return children
 }

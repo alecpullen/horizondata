@@ -4,8 +4,31 @@ import './index.css'
 import App from './App.jsx'
 
 async function enableMocking() {
-    // Start MSW worker in all environments
-    // It will check localStorage to decide whether to mock or passthrough
+    let mswEnabled = false
+    try {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+        const res = await fetch(`${API_URL}/api/settings`)
+        if (res.ok) {
+            const data = await res.json()
+            mswEnabled = data.msw_enabled === 'true'
+            console.log('[MSW] Loaded enabled flag from settings API:', mswEnabled)
+        } else {
+            throw new Error(`Status: ${res.status}`)
+        }
+    } catch (err) {
+        console.warn('[MSW] Failed to load settings from API, falling back to localStorage:', err)
+        const stored = localStorage.getItem('msw-enabled')
+        mswEnabled = stored === 'true'
+    }
+
+    // Persist in localStorage so handlers/components can check synchronously
+    localStorage.setItem('msw-enabled', mswEnabled.toString())
+
+    if (!mswEnabled) {
+        console.log('[MSW] Mocking is disabled globally')
+        return
+    }
+
     console.log('[MSW] Initializing worker...')
     const { worker } = await import('./mocks/browser')
     console.log('[MSW] Worker imported, starting...')

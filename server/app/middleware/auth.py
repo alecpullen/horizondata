@@ -19,13 +19,6 @@ from app.services.student_session_manager import get_student_session_manager
 
 logger = logging.getLogger(__name__)
 
-# Admin configuration - comma-separated list of admin email addresses
-ADMIN_EMAILS = set(
-    email.strip().lower() 
-    for email in os.getenv("ADMIN_EMAILS", "").split(",") 
-    if email.strip()
-)
-
 # Cache validated teacher tokens for 60 s to avoid a live HTTP call on every request.
 # Key: sha256(token) — avoids storing raw bearer tokens in memory.
 _token_cache: TTLCache = TTLCache(maxsize=512, ttl=60)
@@ -61,19 +54,12 @@ def validate_teacher() -> Optional[dict]:
         
         with get_db() as db:
             user = db.query(User).filter_by(id=user_id).first()
-            if not user or not user.is_active:
+            if not user or user.is_active is False:
                 return None
             
-            # Determine role - check if user is in admin list
-            user_email = user.email.lower().strip() if user.email else ""
-            is_admin = user_email in ADMIN_EMAILS
-            
-            if is_admin:
-                role = "admin"
-                user_type = "admin"
-            else:
-                role = "teacher"
-                user_type = "teacher"
+            # Determine role directly from user model
+            role = user.role if user.role else "teacher"
+            user_type = role
 
             return {
                 "id": str(user.id),
@@ -177,8 +163,9 @@ def require_auth(roles: Optional[List[str]] = None):
                 else:
                     user_role = 'student'
                 
-                # Check if role is allowed
-                if user_role not in roles:
+                # Check if role is allowed (admins inherit all teacher privileges)
+                is_allowed = user_role in roles or (user_role == 'admin' and 'teacher' in roles)
+                if not is_allowed:
                     return jsonify({
                         'error': 'forbidden',
                         'message': f'Insufficient permissions. Required: {", ".join(roles)}'

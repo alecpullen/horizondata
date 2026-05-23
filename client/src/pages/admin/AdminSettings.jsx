@@ -6,8 +6,10 @@ import './AdminSettings.css'
 function AdminSettings() {
     const [settings, setSettings] = useState({
         primary_stream_url: '',
-        site_camera_url: ''
+        site_camera_url: '',
+        msw_enabled: false
     })
+    const [initialMsw, setInitialMsw] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const { showToast } = useToast()
@@ -17,10 +19,13 @@ function AdminSettings() {
         api.get('/api/settings')
             .then(res => {
                 if (!cancelled) {
+                    const mswVal = res.data.msw_enabled === 'true'
                     setSettings({
                         primary_stream_url: res.data.primary_stream_url || '',
-                        site_camera_url: res.data.site_camera_url || ''
+                        site_camera_url: res.data.site_camera_url || '',
+                        msw_enabled: mswVal
                     })
+                    setInitialMsw(mswVal)
                     setLoading(false)
                 }
             })
@@ -41,12 +46,37 @@ function AdminSettings() {
         }))
     }
 
+    const handleToggleChange = (e) => {
+        const { name, checked } = e.target
+        setSettings(prev => ({
+            ...prev,
+            [name]: checked
+        }))
+    }
+
     const handleSave = async (e) => {
         e.preventDefault()
         setSaving(true)
         try {
-            await api.put('/api/settings', settings)
+            await api.put('/api/settings', {
+                primary_stream_url: settings.primary_stream_url,
+                site_camera_url: settings.site_camera_url,
+                msw_enabled: settings.msw_enabled ? 'true' : 'false'
+            })
+            
+            // Sync with local storage
+            localStorage.setItem('msw-enabled', settings.msw_enabled.toString())
+            
             showToast({ type: 'success', message: 'Settings saved successfully.' })
+
+            // If Mock API mode changed, reload window to mount/unmount the MSW worker
+            if (settings.msw_enabled !== initialMsw) {
+                setTimeout(() => {
+                    window.location.reload()
+                }, 800)
+            } else {
+                setInitialMsw(settings.msw_enabled)
+            }
         } catch (err) {
             showToast({ type: 'error', message: 'Failed to save settings.' })
         } finally {
@@ -96,6 +126,29 @@ function AdminSettings() {
                             onChange={handleChange}
                             placeholder="e.g. http://localhost:8888/allsky/stream.m3u8"
                         />
+                    </div>
+                </section>
+
+                <section className="settings-section">
+                    <h3 className="settings-section-title">Developer Mode</h3>
+                    <p className="settings-section-desc">
+                        Enable Mock API mode to simulate hardware control and captures in client pages without connecting to a live telescope.
+                    </p>
+
+                    <div className="form-group-toggle">
+                        <label className="settings-toggle-label" htmlFor="msw_enabled">
+                            <span>Enable Mock API</span>
+                            <div className="msw-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="msw_enabled"
+                                    name="msw_enabled"
+                                    checked={settings.msw_enabled}
+                                    onChange={handleToggleChange}
+                                />
+                                <span className="msw-toggle-slider" />
+                            </div>
+                        </label>
                     </div>
                 </section>
 

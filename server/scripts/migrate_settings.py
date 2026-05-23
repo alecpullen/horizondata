@@ -41,7 +41,8 @@ def seed_defaults():
     try:
         default_keys = [
             {"key": "primary_stream_url", "value": "", "description": "Telescope Camera Stream URL"},
-            {"key": "site_camera_url", "value": "", "description": "Site Camera Stream URL"}
+            {"key": "site_camera_url", "value": "", "description": "Site Camera Stream URL"},
+            {"key": "msw_enabled", "value": "false", "description": "Mock API mode enabled"}
         ]
 
         for item in default_keys:
