@@ -198,6 +198,32 @@ def teacher_me():
     })
 
 
+@auth_bp.route('/teacher/change-password', methods=['POST'])
+@require_auth(roles=['teacher'])
+def teacher_change_password():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'invalid_request', 'message': 'Request body required'}), 400
+
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+
+    if not current_password:
+        return jsonify({'error': 'validation_error', 'message': 'Current password is required'}), 400
+    if not new_password or len(new_password) < 8:
+        return jsonify({'error': 'validation_error', 'message': 'New password must be at least 8 characters'}), 400
+
+    try:
+        client = get_neon_auth_client()
+        success = client.change_password(g.auth_token, current_password, new_password)
+        if not success:
+            return jsonify({'error': 'password_change_failed', 'message': 'Incorrect current password or password change failed'}), 400
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Unexpected error during password change: {e}")
+        return jsonify({'error': 'internal_error', 'message': 'Password change failed'}), 500
+
+
 @auth_bp.route('/teacher/refresh', methods=['POST'])
 def teacher_refresh():
     """

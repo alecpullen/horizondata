@@ -230,6 +230,16 @@
     color: var(--t3);
 }
 
+.account-form-input--error {
+    border-color: var(--red, #e53e3e);
+}
+
+.account-form-error {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--red, #e53e3e);
+}
+
 .account-form-value {
     font-size: 15px;
     color: var(--t1);
