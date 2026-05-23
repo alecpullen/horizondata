@@ -2,7 +2,7 @@
 Authentication Middleware
 
 Unified authentication and authorization middleware for Flask.
-Handles both teacher (BetterAuth token) and student (session ID) authentication.
+Handles both teacher (JWT token) and student (session ID) authentication.
 """
 
 import hashlib
@@ -14,7 +14,6 @@ from flask import request, g, jsonify
 from typing import Optional, List, Callable
 from cachetools import TTLCache
 
-from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.services.student_session_manager import get_student_session_manager
 
 logger = logging.getLogger(__name__)

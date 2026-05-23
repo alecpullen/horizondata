@@ -40,7 +40,7 @@ def get_account():
     return jsonify({
         'fullName': user.get('name', ''),
         'email': user.get('email', ''),
-        'phone': '',  # Extended profile fields not stored in Neon Auth
+        'phone': '',  # Extended profile fields not stored in user model
         'institution': '',
         'is2FAEnabled': False,
         'notificationsEnabled': True,
@@ -52,7 +52,7 @@ def get_account():
 def update_account():
     """
     Update current teacher account profile.
-    Updates name in Neon Auth. Extended fields (phone, institution, etc.)
+    Updates name in database. Extended fields (phone, institution, etc.)
     are accepted but not persisted (would need additional storage).
 
     Headers:
