@@ -115,7 +115,10 @@ function AdminBookings() {
 
     return (
         <div className="admin-bookings">
-            <h2 className="admin-bookings-title">Bookings</h2>
+            <div className="admin-bookings-header">
+                <h2 className="admin-bookings-title">Bookings</h2>
+                <p className="admin-bookings-desc">Manage all system observation bookings and scheduling.</p>
+            </div>
 
             <div className="bk-tabs">
                 {TABS.map(({ key, label }) => (

@@ -1,18 +1,30 @@
 .admin-safety {
-    max-width: 860px;
+    max-width: 800px;
 }
 
-/* ── Two-column grid ── */
-.safety-page-grid {
-    display: grid;
-    grid-template-columns: 340px 1fr;
+.admin-safety-header {
+    margin-bottom: 32px;
+}
+
+.admin-safety-title {
+    font-family: var(--disp);
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--t1);
+}
+
+.admin-safety-desc {
+    margin: 0;
+    color: var(--t2);
+    font-size: 14px;
+}
+
+/* ── Content container ── */
+.safety-page-content {
+    display: flex;
+    flex-direction: column;
     gap: 24px;
-    align-items: start;
-}
-
-.safety-page-widget-col {
-    position: sticky;
-    top: 24px;
 }
 
 /* ── Conditions panel ── */
@@ -21,6 +33,10 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
+}
+
+.safety-conditions--padded {
+    padding: 24px;
 }
 
 .safety-cond-header {
@@ -41,6 +57,13 @@
     font-weight: 600;
     color: var(--t1);
     margin: 0;
+}
+
+.safety-cond-desc {
+    font-size: 13.5px;
+    color: var(--t2);
+    margin: 8px 0 24px 0;
+    line-height: 1.5;
 }
 
 .safety-cond-updated {
@@ -91,26 +114,39 @@
     color: var(--red);
 }
 
-/* ── Responsive ── */
-@media (max-width: 720px) {
-    .safety-page-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .safety-page-widget-col {
-        position: static;
-    }
+/* ── Threshold form styling (mirrored from AdminSettings.css) ── */
+.safety-thresholds-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-/* ── Threshold form styling (mirrored from AdminSettings.css) ── */
+.safety-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--t2);
+}
+
 .settings-input {
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--t1);
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-radius: 10px;
     font-family: var(--sans);
-    font-size: 13.5px;
+    font-size: 14px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     outline: none;
     width: 100%;
@@ -142,4 +178,11 @@
 .settings-save-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+    .safety-form-row {
+        grid-template-columns: 1fr;
+    }
 }

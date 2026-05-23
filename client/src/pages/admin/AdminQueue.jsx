@@ -64,6 +64,11 @@ function AdminQueue() {
 
     return (
         <div className="admin-queue">
+            <div className="admin-queue-header">
+                <h2 className="admin-queue-title">Queue</h2>
+                <p className="admin-queue-desc">Monitor the real-time observation job queue and execution status.</p>
+            </div>
+
             <div className="queue-section-header">
                 <h2 className="queue-section-title">Observation Queue</h2>
                 <span className="queue-poll-indicator" title="Polling every 10s">
