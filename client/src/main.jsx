@@ -5,26 +5,31 @@ import App from './App.jsx'
 
 async function enableMocking() {
     let mswEnabled = false
+    let mockTelescopeEnabled = false
     try {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
         const res = await fetch(`${API_URL}/api/settings`)
         if (res.ok) {
             const data = await res.json()
             mswEnabled = data.msw_enabled === 'true'
-            console.log('[MSW] Loaded enabled flag from settings API:', mswEnabled)
+            mockTelescopeEnabled = data.mock_telescope_enabled === 'true'
+            console.log('[MSW] Loaded flags from settings API - msw_enabled:', mswEnabled, 'mock_telescope_enabled:', mockTelescopeEnabled)
         } else {
             throw new Error(`Status: ${res.status}`)
         }
     } catch (err) {
         console.warn('[MSW] Failed to load settings from API, falling back to localStorage:', err)
-        const stored = localStorage.getItem('msw-enabled')
-        mswEnabled = stored === 'true'
+        const storedMsw = localStorage.getItem('msw-enabled')
+        const storedTelescope = localStorage.getItem('mock-telescope-enabled')
+        mswEnabled = storedMsw === 'true'
+        mockTelescopeEnabled = storedTelescope === 'true'
     }
 
     // Persist in localStorage so handlers/components can check synchronously
     localStorage.setItem('msw-enabled', mswEnabled.toString())
+    localStorage.setItem('mock-telescope-enabled', mockTelescopeEnabled.toString())
 
-    if (!mswEnabled) {
+    if (!mswEnabled && !mockTelescopeEnabled) {
         console.log('[MSW] Mocking is disabled globally')
         return
     }

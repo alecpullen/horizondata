@@ -9,6 +9,15 @@ function isMswEnabled() {
     return enabled
 }
 
+// Check if Mock Telescope Hardware is enabled (stored in localStorage)
+function isMockTelescopeEnabled() {
+    // Default to false if not set
+    const stored = localStorage.getItem('mock-telescope-enabled')
+    const enabled = stored === null ? false : stored === 'true'
+    console.log('[MSW] isMockTelescopeEnabled:', enabled, '(stored:', stored, ')')
+    return enabled
+}
+
 // Mock users for auth
 const mockUsers = [
     {
@@ -1640,14 +1649,14 @@ export const handlers = [
 
     // GET /api/telescope/status
     http.get(apiUrl('/api/telescope/status'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(150)
         return HttpResponse.json({ ...mockTelescope })
     }),
 
     // POST /api/telescope/connect
     http.post(apiUrl('/api/telescope/connect'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(400)
         const { connected } = await request.json()
         mockTelescope.connected = Boolean(connected)
@@ -1657,7 +1666,7 @@ export const handlers = [
 
     // POST /api/telescope/tracking
     http.post(apiUrl('/api/telescope/tracking'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(300)
         if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
         const { on } = await request.json()
@@ -1667,7 +1676,7 @@ export const handlers = [
 
     // POST /api/telescope/park
     http.post(apiUrl('/api/telescope/park'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(600)
         if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
         const { action } = await request.json()
@@ -1679,7 +1688,7 @@ export const handlers = [
 
     // POST /api/telescope/abort
     http.post(apiUrl('/api/telescope/abort'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(200)
         mockTelescope.slewing = false
         return HttpResponse.json({ ...mockTelescope })
@@ -1687,7 +1696,7 @@ export const handlers = [
 
     // POST /api/telescope/slew/coords
     http.post(apiUrl('/api/telescope/slew/coords'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(800)
         if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
         const { ra, dec } = await request.json()
@@ -1704,7 +1713,7 @@ export const handlers = [
 
     // POST /api/telescope/slew/altaz
     http.post(apiUrl('/api/telescope/slew/altaz'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(800)
         if (!mockTelescope.connected) return HttpResponse.json({ error: 'not_connected', message: 'Telescope must be connected first' }, { status: 400 })
         const { az, alt } = await request.json()
@@ -1718,7 +1727,7 @@ export const handlers = [
 
     // GET /api/telescope/visible-objects
     http.get(apiUrl('/api/telescope/visible-objects'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(350)
         return HttpResponse.json({
             success: true,
@@ -1738,7 +1747,7 @@ export const handlers = [
 
     // POST /api/telescope/select - slew to named space object
     http.post(apiUrl('/api/telescope/select'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(500)
         const { objectId } = await request.json()
         if (!objectId) return HttpResponse.json({ success: false, error: 'missing_field', message: 'objectId is required' }, { status: 400 })
@@ -1759,7 +1768,7 @@ export const handlers = [
 
     // GET /api/safety/status
     http.get(apiUrl('/api/safety/status'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(200)
         const { status } = resolveAdminSafetyStatus()
         const hour = new Date().getHours()
@@ -1778,7 +1787,7 @@ export const handlers = [
 
     // GET /api/safety/comprehensive
     http.get(apiUrl('/api/safety/comprehensive'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(250)
         const hour = new Date().getHours()
         const isNight = hour >= 18 || hour < 6
@@ -1805,14 +1814,14 @@ export const handlers = [
 
     // GET /api/admin/safety/status — richer status for admin widget (source + override)
     http.get(apiUrl('/api/admin/safety/status'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(150)
         return HttpResponse.json(resolveAdminSafetyStatus())
     }),
 
     // POST /api/admin/safety/override — body: { state: 'OPEN'|'CLOSED', durationMins: number }
     http.post(apiUrl('/api/admin/safety/override'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(180)
         const { state, durationMins } = await request.json()
         if (!['OPEN', 'CLOSED'].includes(state) || !durationMins || durationMins <= 0) {
@@ -1825,7 +1834,7 @@ export const handlers = [
 
     // DELETE /api/admin/safety/override — clear the current override
     http.delete(apiUrl('/api/admin/safety/override'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(150)
         mockSafetyOverride = null
         return HttpResponse.json(resolveAdminSafetyStatus())
@@ -1833,14 +1842,14 @@ export const handlers = [
 
     // GET /api/admin/queue — observation job queue
     http.get(apiUrl('/api/admin/queue'), async () => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(180)
         return HttpResponse.json(mockQueue)
     }),
 
     // POST /api/admin/queue/:id/abort — abort a pending or running job
     http.post(apiUrl('/api/admin/queue/:id/abort'), async ({ request }) => {
-        if (!isMswEnabled()) return passthrough()
+        if (!isMockTelescopeEnabled()) return passthrough()
         await delay(200)
         const id = parseInt(pathSegment(request, 3), 10)
         const job = mockQueue.find(q => q.id === id)

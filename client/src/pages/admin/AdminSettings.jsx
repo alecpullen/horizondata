@@ -7,9 +7,11 @@ function AdminSettings() {
     const [settings, setSettings] = useState({
         primary_stream_url: '',
         site_camera_url: '',
-        msw_enabled: false
+        msw_enabled: false,
+        mock_telescope_enabled: false
     })
     const [initialMsw, setInitialMsw] = useState(false)
+    const [initialMockTelescope, setInitialMockTelescope] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const { showToast } = useToast()
@@ -20,12 +22,15 @@ function AdminSettings() {
             .then(res => {
                 if (!cancelled) {
                     const mswVal = res.data.msw_enabled === 'true'
+                    const telescopeVal = res.data.mock_telescope_enabled === 'true'
                     setSettings({
                         primary_stream_url: res.data.primary_stream_url || '',
                         site_camera_url: res.data.site_camera_url || '',
-                        msw_enabled: mswVal
+                        msw_enabled: mswVal,
+                        mock_telescope_enabled: telescopeVal
                     })
                     setInitialMsw(mswVal)
+                    setInitialMockTelescope(telescopeVal)
                     setLoading(false)
                 }
             })
@@ -61,21 +66,24 @@ function AdminSettings() {
             await api.put('/api/settings', {
                 primary_stream_url: settings.primary_stream_url,
                 site_camera_url: settings.site_camera_url,
-                msw_enabled: settings.msw_enabled ? 'true' : 'false'
+                msw_enabled: settings.msw_enabled ? 'true' : 'false',
+                mock_telescope_enabled: settings.mock_telescope_enabled ? 'true' : 'false'
             })
             
             // Sync with local storage
             localStorage.setItem('msw-enabled', settings.msw_enabled.toString())
+            localStorage.setItem('mock-telescope-enabled', settings.mock_telescope_enabled.toString())
             
             showToast({ type: 'success', message: 'Settings saved successfully.' })
 
-            // If Mock API mode changed, reload window to mount/unmount the MSW worker
-            if (settings.msw_enabled !== initialMsw) {
+            // If either Developer Mode setting changed, reload window to refresh the MSW worker
+            if (settings.msw_enabled !== initialMsw || settings.mock_telescope_enabled !== initialMockTelescope) {
                 setTimeout(() => {
                     window.location.reload()
                 }, 800)
             } else {
                 setInitialMsw(settings.msw_enabled)
+                setInitialMockTelescope(settings.mock_telescope_enabled)
             }
         } catch (err) {
             showToast({ type: 'error', message: 'Failed to save settings.' })
@@ -132,18 +140,44 @@ function AdminSettings() {
                 <section className="settings-section">
                     <h3 className="settings-section-title">Developer Mode</h3>
                     <p className="settings-section-desc">
-                        Enable Mock API mode to simulate hardware control and captures in client pages without connecting to a live telescope.
+                        Configure client-side request mocking to simulate system behaviors without hardware dependencies.
                     </p>
 
                     <div className="form-group-toggle">
                         <label className="settings-toggle-label" htmlFor="msw_enabled">
-                            <span>Enable Mock API</span>
+                            <div>
+                                <span style={{ display: 'block', fontWeight: 600 }}>Mock API Services</span>
+                                <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--t3)', marginTop: '2px', fontWeight: 400 }}>
+                                    Mock user accounts, logins, bookings, and session history.
+                                </span>
+                            </div>
                             <div className="msw-toggle">
                                 <input
                                     type="checkbox"
                                     id="msw_enabled"
                                     name="msw_enabled"
                                     checked={settings.msw_enabled}
+                                    onChange={handleToggleChange}
+                                />
+                                <span className="msw-toggle-slider" />
+                            </div>
+                        </label>
+                    </div>
+
+                    <div className="form-group-toggle" style={{ marginTop: '16px' }}>
+                        <label className="settings-toggle-label" htmlFor="mock_telescope_enabled">
+                            <div>
+                                <span style={{ display: 'block', fontWeight: 600 }}>Mock Telescope Hardware</span>
+                                <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--t3)', marginTop: '2px', fontWeight: 400 }}>
+                                    Mock telescope operations, coordinates slewing, safety overrides, and scheduler queue.
+                                </span>
+                            </div>
+                            <div className="msw-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="mock_telescope_enabled"
+                                    name="mock_telescope_enabled"
+                                    checked={settings.mock_telescope_enabled}
                                     onChange={handleToggleChange}
                                 />
                                 <span className="msw-toggle-slider" />

@@ -28,10 +28,6 @@ function TopBar({ activePath }) {
     const [accountOpen, setAccountOpen] = useState(false)
     const [liveViewOpen, setLiveViewOpen] = useState(false)
     const [avatarOpen, setAvatarOpen] = useState(false)
-    const [mswEnabled, setMswEnabled] = useState(() => {
-        const stored = localStorage.getItem('msw-enabled')
-        return stored === null ? false : stored === 'true'
-    })
     const accountDropdownRef = useRef(null)
     const liveViewDropdownRef = useRef(null)
     const avatarDropdownRef = useRef(null)
@@ -39,19 +35,6 @@ function TopBar({ activePath }) {
     // Derive user info from auth context
     const fullName = user?.fullName || ''
     const userRole = user?.role || ''
-
-    // Persist MSW toggle state and reload to apply changes
-    useEffect(() => {
-        const prev = localStorage.getItem('msw-enabled')
-        const next = mswEnabled.toString()
-        if (prev !== null && prev !== next) {
-            localStorage.setItem('msw-enabled', next)
-            window.location.reload()
-        } else {
-            localStorage.setItem('msw-enabled', next)
-        }
-    }, [mswEnabled])
-
     // Close dropdowns when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
@@ -173,16 +156,6 @@ function TopBar({ activePath }) {
             </nav>
 
             <div className="topbar-right">
-                <label className="msw-toggle" title="Toggle mock API">
-                    <span className="msw-toggle-label">MOCK API</span>
-                    <input
-                        type="checkbox"
-                        checked={mswEnabled}
-                        onChange={(e) => setMswEnabled(e.target.checked)}
-                    />
-                    <span className="msw-toggle-slider" />
-                </label>
-
                 {/* Avatar Dropdown */}
                 <div className="avatar-dropdown" ref={avatarDropdownRef}>
                     <button
