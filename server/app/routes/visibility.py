@@ -96,7 +96,7 @@ def get_visible_objects():
             visible_objects = visibility_service.get_objects_in_constellation(constellation, observation_time)
         
         # Apply additional elevation filter if specified
-        if min_elevation is not None and object_type is None and constellation is None:
+        if min_elevation is not None:
             visible_objects = visibility_service.filter_by_elevation(visible_objects, min_elevation)
         
         # Apply limit
