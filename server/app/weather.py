@@ -14,14 +14,22 @@ weather_bp = Blueprint('weather', __name__, url_prefix='/weather')
 
 # ThingSpeak API configuration
 THINGSPEAK_API_BASE_URL = os.getenv('THINGSPEAK_API_BASE_URL', 'https://api.thingspeak.com')
-THINGSPEAK_CHANNEL_ID = os.getenv('THINGSPEAK_CHANNEL_ID', '270748')
 
-# API URL paths
-get_feeds_endpoint = f"{THINGSPEAK_API_BASE_URL}/channels/{THINGSPEAK_CHANNEL_ID}/feeds.json?results=10"
-get_temperature_endpoint = f"{THINGSPEAK_API_BASE_URL}/channels/{THINGSPEAK_CHANNEL_ID}/fields/1.json?results=2"
-get_humidity_endpoint = f"{THINGSPEAK_API_BASE_URL}/channels/{THINGSPEAK_CHANNEL_ID}/fields/2.json?results=2"
-get_pressure_endpoint = f"{THINGSPEAK_API_BASE_URL}/channels/{THINGSPEAK_CHANNEL_ID}/fields/3.json?results=2"
-get_dew_point_endpoint = f"{THINGSPEAK_API_BASE_URL}/channels/{THINGSPEAK_CHANNEL_ID}/fields/4.json?results=2"
+def _get_thingspeak_channel_id():
+    from app.services.database import get_db
+    from app.models.setting import SystemSetting
+    try:
+        with get_db() as db:
+            setting = db.query(SystemSetting).filter_by(key="thingspeak_channel_id").first()
+            if setting and setting.value:
+                return setting.value
+    except Exception as e:
+        pass
+    return os.getenv('THINGSPEAK_CHANNEL_ID', '270748')
+
+def _get_endpoint(path_template):
+    channel_id = _get_thingspeak_channel_id()
+    return f"{THINGSPEAK_API_BASE_URL.rstrip('/')}/channels/{channel_id}/{path_template}"
 
 # 2. Create the routes and attach them to the blueprint.
 # This route will now be accessible at /weather/feeds
@@ -30,7 +38,7 @@ get_dew_point_endpoint = f"{THINGSPEAK_API_BASE_URL}/channels/{THINGSPEAK_CHANNE
 def get_weather_feeds():
     """Fetches the complete weather feed data."""
     try:
-        response = requests.get(get_feeds_endpoint)
+        response = requests.get(_get_endpoint("feeds.json?results=10"))
         response.raise_for_status()  # Raise an exception for bad status codes
         data = response.json()
         return jsonify(data)
@@ -44,7 +52,7 @@ def get_weather_feeds():
 def get_temperature_data():
     """Fetches only the temperature data."""
     try:
-        response = requests.get(get_temperature_endpoint)
+        response = requests.get(_get_endpoint("fields/1.json?results=2"))
         response.raise_for_status()
         data = response.json()
         return jsonify(data)
@@ -58,7 +66,7 @@ def get_temperature_data():
 def get_humidity_data():
     """Fetches only the humidity data."""
     try:
-        response = requests.get(get_humidity_endpoint)
+        response = requests.get(_get_endpoint("fields/2.json?results=2"))
         response.raise_for_status()
         data = response.json()
         return jsonify(data)
@@ -72,7 +80,7 @@ def get_humidity_data():
 def get_pressure_data():
     """Fetches only the pressure data."""
     try:
-        response = requests.get(get_pressure_endpoint)
+        response = requests.get(_get_endpoint("fields/3.json?results=2"))
         response.raise_for_status()
         data = response.json()
         return jsonify(data)
@@ -86,7 +94,7 @@ def get_pressure_data():
 def get_dew_point_data():
     """Fetches only the dew_point data."""
     try:
-        response = requests.get(get_dew_point_endpoint)
+        response = requests.get(_get_endpoint("fields/4.json?results=2"))
         response.raise_for_status()
         data = response.json()
         return jsonify(data)
@@ -99,7 +107,7 @@ def get_dew_point_data():
 def get_weather_trends():
     """Fetches the last 10 readings for trend analysis."""
     try:
-        response = requests.get(get_feeds_endpoint)
+        response = requests.get(_get_endpoint("feeds.json?results=10"))
         response.raise_for_status()
         data = response.json()
         return jsonify(data)

@@ -8,7 +8,9 @@ function AdminSettings() {
         primary_stream_url: '',
         site_camera_url: '',
         msw_enabled: false,
-        mock_telescope_enabled: false
+        mock_telescope_enabled: false,
+        alpaca_base: '',
+        thingspeak_channel_id: ''
     })
     const [initialMsw, setInitialMsw] = useState(false)
     const [initialMockTelescope, setInitialMockTelescope] = useState(false)
@@ -27,7 +29,9 @@ function AdminSettings() {
                         primary_stream_url: res.data.primary_stream_url || '',
                         site_camera_url: res.data.site_camera_url || '',
                         msw_enabled: mswVal,
-                        mock_telescope_enabled: telescopeVal
+                        mock_telescope_enabled: telescopeVal,
+                        alpaca_base: res.data.alpaca_base || '',
+                        thingspeak_channel_id: res.data.thingspeak_channel_id || ''
                     })
                     setInitialMsw(mswVal)
                     setInitialMockTelescope(telescopeVal)
@@ -67,7 +71,9 @@ function AdminSettings() {
                 primary_stream_url: settings.primary_stream_url,
                 site_camera_url: settings.site_camera_url,
                 msw_enabled: settings.msw_enabled ? 'true' : 'false',
-                mock_telescope_enabled: settings.mock_telescope_enabled ? 'true' : 'false'
+                mock_telescope_enabled: settings.mock_telescope_enabled ? 'true' : 'false',
+                alpaca_base: settings.alpaca_base,
+                thingspeak_channel_id: settings.thingspeak_channel_id
             })
             
             // Sync with local storage
@@ -133,6 +139,39 @@ function AdminSettings() {
                             value={settings.site_camera_url}
                             onChange={handleChange}
                             placeholder="e.g. http://localhost:8888/allsky/stream.m3u8"
+                        />
+                    </div>
+                </section>
+
+                <section className="settings-section">
+                    <h3 className="settings-section-title">Hardware & Integration</h3>
+                    <p className="settings-section-desc">
+                        Configure connection endpoints to physical telescope mounts (ASCOM Alpaca) and weather telemetry APIs.
+                    </p>
+
+                    <div className="form-group">
+                        <label htmlFor="alpaca_base">Alpaca Telescope Base URL</label>
+                        <input
+                            type="url"
+                            id="alpaca_base"
+                            name="alpaca_base"
+                            className="settings-input"
+                            value={settings.alpaca_base}
+                            onChange={handleChange}
+                            placeholder="e.g. http://localhost:32323/api/v1/telescope/0"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="thingspeak_channel_id">ThingSpeak Weather Channel ID</label>
+                        <input
+                            type="text"
+                            id="thingspeak_channel_id"
+                            name="thingspeak_channel_id"
+                            className="settings-input"
+                            value={settings.thingspeak_channel_id}
+                            onChange={handleChange}
+                            placeholder="e.g. 270748"
                         />
                     </div>
                 </section>

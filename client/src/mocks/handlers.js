@@ -18,6 +18,23 @@ function isMockTelescopeEnabled() {
     return enabled
 }
 
+// In-memory store for mock settings, synced with localStorage for persistence
+const mockSettings = {
+    primary_stream_url: localStorage.getItem('primary-stream-url') || '',
+    site_camera_url: localStorage.getItem('site-camera-url') || '',
+    msw_enabled: localStorage.getItem('msw-enabled') || 'false',
+    mock_telescope_enabled: localStorage.getItem('mock-telescope-enabled') || 'false',
+    alpaca_base: localStorage.getItem('alpaca-base') || 'http://localhost:32323/api/v1/telescope/0',
+    thingspeak_channel_id: localStorage.getItem('thingspeak-channel-id') || '270748',
+    safety_max_wind_speed: localStorage.getItem('safety-max-wind-speed') || '25.0',
+    safety_min_temperature: localStorage.getItem('safety-min-temperature') || '-5.0',
+    safety_max_temperature: localStorage.getItem('safety-max-temperature') || '45.0',
+    safety_max_humidity: localStorage.getItem('safety-max-humidity') || '95.0',
+    safety_min_pressure: localStorage.getItem('safety-min-pressure') || '980.0',
+    safety_max_pressure: localStorage.getItem('safety-max-pressure') || '1040.0',
+    safety_max_dew_point_diff: localStorage.getItem('safety-max-dew-point-diff') || '2.0'
+}
+
 // Mock users for auth
 const mockUsers = [
     {
@@ -2035,5 +2052,25 @@ export const handlers = [
         if (!teacher) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
         teacher.status = 'suspended'
         return HttpResponse.json({ id: teacher.id, status: teacher.status })
+    }),
+
+    // GET /api/settings — Retrieve mock settings
+    http.get(apiUrl('/api/settings'), async () => {
+        if (!isMswEnabled() && !isMockTelescopeEnabled()) return passthrough()
+        await delay(100)
+        return HttpResponse.json(mockSettings)
+    }),
+
+    // PUT /api/settings — Update mock settings
+    http.put(apiUrl('/api/settings'), async ({ request }) => {
+        if (!isMswEnabled() && !isMockTelescopeEnabled()) return passthrough()
+        await delay(150)
+        const data = await request.json()
+        Object.assign(mockSettings, data)
+        // Sync to localStorage
+        for (const [key, val] of Object.entries(data)) {
+            localStorage.setItem(key.replace(/_/g, '-'), val)
+        }
+        return HttpResponse.json(mockSettings)
     }),
 ]

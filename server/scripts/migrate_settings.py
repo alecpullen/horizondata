@@ -43,7 +43,16 @@ def seed_defaults():
             {"key": "primary_stream_url", "value": "", "description": "Telescope Camera Stream URL"},
             {"key": "site_camera_url", "value": "", "description": "Site Camera Stream URL"},
             {"key": "msw_enabled", "value": "false", "description": "Mock API mode enabled"},
-            {"key": "mock_telescope_enabled", "value": "false", "description": "Mock Telescope mode enabled"}
+            {"key": "mock_telescope_enabled", "value": "false", "description": "Mock Telescope mode enabled"},
+            {"key": "alpaca_base", "value": os.getenv('ALPACA_BASE', 'http://localhost:32323/api/v1/telescope/0'), "description": "Alpaca Telescope Base URL"},
+            {"key": "thingspeak_channel_id", "value": os.getenv('THINGSPEAK_CHANNEL_ID', '270748'), "description": "ThingSpeak Weather Channel ID"},
+            {"key": "safety_max_wind_speed", "value": "25.0", "description": "Safety Max Wind Speed (km/h)"},
+            {"key": "safety_min_temperature", "value": "-5.0", "description": "Safety Min Temperature (C)"},
+            {"key": "safety_max_temperature", "value": "45.0", "description": "Safety Max Temperature (C)"},
+            {"key": "safety_max_humidity", "value": "95.0", "description": "Safety Max Humidity (%)"},
+            {"key": "safety_min_pressure", "value": "980.0", "description": "Safety Min Pressure (hPa)"},
+            {"key": "safety_max_pressure", "value": "1040.0", "description": "Safety Max Pressure (hPa)"},
+            {"key": "safety_max_dew_point_diff", "value": "2.0", "description": "Safety Min Temperature-Dew Point Diff (C)"}
         ]
 
         for item in default_keys:
@@ -55,9 +64,13 @@ def seed_defaults():
                     description=item["description"]
                 )
                 session.add(setting)
-                print(f"✅ Inserted default setting: {item['key']}")
+                print(f"✅ Inserted default setting: {item['key']} = {item['value']}")
             else:
-                print(f"ℹ️ Setting already exists: {item['key']}")
+                if item["key"] in ["thingspeak_channel_id", "alpaca_base"] and existing.value != item["value"]:
+                    existing.value = item["value"]
+                    print(f"🔄 Updated setting to match ENV default: {item['key']} = {item['value']}")
+                else:
+                    print(f"ℹ️ Setting already exists: {item['key']}")
         session.commit()
     except Exception as e:
         print(f"❌ Seeding failed: {e}")
