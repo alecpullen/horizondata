@@ -10,6 +10,7 @@ const NAV_LINKS = [
     { to: '/admin/sessions', label: 'Sessions' },
     { to: '/admin/safety',   label: 'Safety' },
     { to: '/admin/queue',    label: 'Queue' },
+    { to: '/admin/settings', label: 'Settings' },
 ]
 
 function AdminShell() {

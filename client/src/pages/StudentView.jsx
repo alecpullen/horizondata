@@ -26,6 +26,20 @@ function StudentView() {
     const streamRef = useRef(null)
     const [capturing, setCapturing] = useState(false)
     const [captureCount, setCaptureCount] = useState(0)
+    const [streamUrl, setStreamUrl] = useState(null)
+
+    useEffect(() => {
+        let cancelled = false
+        fetch(`${API_BASE}/api/settings`, {
+            headers: { Accept: 'application/json' },
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (!cancelled) setStreamUrl(data.primary_stream_url || null)
+            })
+            .catch(() => {})
+        return () => { cancelled = true }
+    }, [])
 
     useEffect(() => {
         if (!bookingId) return
@@ -115,7 +129,7 @@ function StudentView() {
             </header>
 
             <div className="sv-feed-area">
-                <StreamView ref={streamRef} label="Primary · Telescope Feed" />
+                <StreamView ref={streamRef} label="Primary · Telescope Feed" streamUrl={streamUrl} />
 
                 <div className="sv-object-overlay">
                     <div className="sv-object-name">{SESSION.object}</div>

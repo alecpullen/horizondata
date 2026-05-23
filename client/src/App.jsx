@@ -28,6 +28,7 @@ import AdminBookings  from './pages/admin/AdminBookings'
 import AdminSessions  from './pages/admin/AdminSessions'
 import AdminSafety    from './pages/admin/AdminSafety'
 import AdminQueue     from './pages/admin/AdminQueue'
+import AdminSettings  from './pages/admin/AdminSettings'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/AuthContext'
 import { useSessionTimeout } from './hooks/useSessionTimeout'
@@ -123,6 +124,7 @@ function AppRoutes() {
                     <Route path="sessions"  element={<AdminSessions />} />
                     <Route path="safety"    element={<AdminSafety />} />
                     <Route path="queue"     element={<AdminQueue />} />
+                    <Route path="settings"  element={<AdminSettings />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -39,6 +39,19 @@ function TeacherView() {
     const [participants, setParticipants] = useState([])
 
     const primaryStreamRef = useRef(null)
+    const [streamUrls, setStreamUrls] = useState({ primary: null, site: null })
+
+    // Fetch stream settings
+    useEffect(() => {
+        api.get('/api/settings')
+            .then(res => {
+                setStreamUrls({
+                    primary: res.data.primary_stream_url || null,
+                    site: res.data.site_camera_url || null
+                })
+            })
+            .catch(err => console.error('Failed to load stream settings:', err))
+    }, [])
 
     // Fetch booking data
     useEffect(() => {
@@ -123,9 +136,9 @@ function TeacherView() {
             <TopBar activePath="/live/teacher" />
             <div className="tv-body">
                 <div className="tv-feed-area">
-                    <StreamView ref={primaryStreamRef} label="Primary · Telescope Feed" />
+                    <StreamView ref={primaryStreamRef} label="Primary · Telescope Feed" streamUrl={streamUrls.primary} />
                     <div className="tv-pip">
-                        <StreamView label="Site Camera" />
+                        <StreamView label="Site Camera" streamUrl={streamUrls.site} />
                     </div>
                 </div>
 
