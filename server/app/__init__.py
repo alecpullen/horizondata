@@ -25,7 +25,21 @@ def create_app():
     """
     app = Flask(__name__)
 
-    # app = setup_telemetry(app)  # Temporarily disabled
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-default-key-change-me")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900  # 15 minutes
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 604800  # 7 days
+
+    from flask_jwt_extended import JWTManager
+    jwt = JWTManager(app)
+
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
+        jti = jwt_payload["jti"]
+        from app.services.database import get_db
+        from app.models.token_blocklist import TokenBlocklist
+        with get_db() as db:
+            token = db.query(TokenBlocklist.id).filter_by(jti=jti).scalar()
+            return token is not None
 
     cors_origins = os.getenv(
         "CORS_ORIGINS",

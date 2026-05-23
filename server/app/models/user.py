@@ -29,3 +29,13 @@ class User(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+    def set_password(self, password):
+        from werkzeug.security import generate_password_hash
+        self.hashed_password = generate_password_hash(password)
+
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        if not self.hashed_password:
+            return False
+        return check_password_hash(self.hashed_password, password)

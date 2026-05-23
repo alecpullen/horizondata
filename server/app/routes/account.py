@@ -8,8 +8,8 @@ These routes are at /api/account (not /api/auth) to match frontend expectations.
 import logging
 from flask import Blueprint, request, jsonify, g
 
-from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.middleware.auth import require_auth
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 logger = logging.getLogger(__name__)
 
@@ -79,17 +79,23 @@ def update_account():
         return jsonify({'error': 'invalid_request', 'message': 'Request body required'}), 400
 
     try:
-        client = get_neon_auth_client()
-        token = g.auth_token
+        from app.services.database import get_db
+        from app.models.user import User
 
-        # Update name in Neon Auth if provided
-        name = data.get('fullName', '').strip()
-        if name:
-            client.update_user(token, {'name': name})
+        with get_db() as db:
+            user = db.query(User).filter_by(id=g.user['id']).first()
+            if not user:
+                return jsonify({'error': 'not_found', 'message': 'User not found'}), 404
 
-        # Note: Extended fields (phone, institution, is2FAEnabled, notificationsEnabled)
-        # are not persisted as they require additional storage beyond Neon Auth.
-        # They are accepted for API compatibility and returned in the response.
+            name = data.get('fullName', '').strip()
+            if name:
+                user.username = name
+                
+            institution = data.get('institution', '').strip()
+            if institution:
+                user.institution = institution
+                
+            db.commit()
 
         # Return updated profile
         return jsonify({
@@ -98,14 +104,12 @@ def update_account():
                 'fullName': name or g.user.get('name', ''),
                 'email': data.get('email', g.user.get('email', '')),
                 'phone': data.get('phone', ''),
-                'institution': data.get('institution', ''),
+                'institution': institution or g.user.get('institution', ''),
                 'is2FAEnabled': data.get('is2FAEnabled', False),
                 'notificationsEnabled': data.get('notificationsEnabled', True),
             }
         })
 
-    except NeonAuthError as e:
-        return jsonify({'error': 'auth_error', 'message': e.message}), e.status_code or 500
     except Exception as e:
         logger.error(f"Error updating account: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Failed to update account'}), 500

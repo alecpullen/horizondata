@@ -45,93 +45,61 @@ def extract_session_id() -> Optional[str]:
     return request.headers.get('X-Session-ID')
 
 
-def validate_teacher(token: str) -> Optional[dict]:
+def validate_teacher() -> Optional[dict]:
     """
-    Validate a teacher's session token by querying the neon_auth schema
-    directly in the database. Neon Auth uses cookie-based sessions, so the
-    HTTP /get-session endpoint only works when the full signed cookie is
-    present. The session token from the sign-in response body is stored in
-    neon_auth.session.token, so we validate by checking that row.
-
-    Results are cached for 60 s (keyed on sha256 of the token) to avoid
-    a DB round-trip on every protected request.
-
-    Args:
-        token: Session token from the sign-in / sign-up response body
-
-    Returns:
-        User dict if valid, None otherwise
+    Validate a teacher's session token using flask_jwt_extended.
     """
-    cache_key = hashlib.sha256(token.encode()).hexdigest()
-
-    with _token_cache_lock:
-        cached = _token_cache.get(cache_key)
-    if cached is not None:
-        return cached
+    from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+    from flask_jwt_extended.exceptions import JWTExtendedException
 
     try:
-        from app.services.database import engine
-        from sqlalchemy import text
-
-        with engine.connect() as conn:
-            result = conn.execute(
-                text("""
-                    SELECT u.id, u.email, u.name, u.role
-                    FROM neon_auth.session s
-                    JOIN neon_auth.user u ON u.id = s."userId"
-                    WHERE s.token = :token
-                      AND s."expiresAt" > NOW()
-                """),
-                {"token": token},
-            )
-            row = result.fetchone()
-
-        if row is None:
-            return None
-
-        # Determine role - check if user is in admin list
-        user_email = row.email.lower().strip() if row.email else ""
-        is_admin = user_email in ADMIN_EMAILS
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
         
-        if is_admin:
-            role = "admin"
-            user_type = "admin"
-        else:
-            role = "teacher"
-            user_type = "teacher"
+        from app.services.database import get_db
+        from app.models.user import User
+        
+        with get_db() as db:
+            user = db.query(User).filter_by(id=user_id).first()
+            if not user or not user.is_active:
+                return None
+            
+            # Determine role - check if user is in admin list
+            user_email = user.email.lower().strip() if user.email else ""
+            is_admin = user_email in ADMIN_EMAILS
+            
+            if is_admin:
+                role = "admin"
+                user_type = "admin"
+            else:
+                role = "teacher"
+                user_type = "teacher"
 
-        result = {
-            "id": str(row.id),
-            "email": row.email,
-            "name": row.name,
-            "role": role,
-            "user_type": user_type,
-        }
-        with _token_cache_lock:
-            _token_cache[cache_key] = result
-        return result
-
+            return {
+                "id": str(user.id),
+                "email": user.email,
+                "name": user.username or user.email,
+                "role": role,
+                "user_type": user_type,
+            }
+    except JWTExtendedException as e:
+        logger.warning(f"JWT validation failed: {e}")
+        return None
     except Exception as e:
-        logger.error(f"Error validating teacher token via database: {e}")
+        logger.error(f"Error validating teacher token: {e}")
         return None
 
 
-def invalidate_token(token: str) -> None:
-    """Remove a teacher token from cache and delete its session row from the DB."""
-    cache_key = hashlib.sha256(token.encode()).hexdigest()
-    with _token_cache_lock:
-        _token_cache.pop(cache_key, None)
-
+def invalidate_token(jti: str) -> None:
+    """Add a token's JTI to the blocklist."""
     try:
-        from app.services.database import engine
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(
-                text("DELETE FROM neon_auth.session WHERE token = :token"),
-                {"token": token},
-            )
+        from app.services.database import get_db
+        from app.models.token_blocklist import TokenBlocklist
+        with get_db() as db:
+            db.add(TokenBlocklist(jti=jti))
+            db.commit()
     except Exception as e:
-        logger.warning(f"Could not delete session from DB during logout: {e}")
+        logger.warning(f"Could not add JTI to blocklist during logout: {e}")
 
 
 def validate_student(session_id: str) -> Optional[dict]:
@@ -182,7 +150,7 @@ def require_auth(roles: Optional[List[str]] = None):
             # Try teacher authentication (Bearer token)
             bearer_token = extract_bearer_token()
             if bearer_token:
-                user = validate_teacher(bearer_token)
+                user = validate_teacher()
                 if user:
                     user_type = 'teacher'
             

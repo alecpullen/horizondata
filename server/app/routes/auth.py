@@ -11,11 +11,18 @@ import logging
 from flask import Blueprint, request, jsonify, g
 from datetime import datetime
 
-from app.services.neon_auth_client import get_neon_auth_client, NeonAuthError
 from app.services.student_session_manager import get_student_session_manager
 from app.services.rate_limiter import check_capture_limit, get_capture_remaining
 from app.services.session_codes import generate_session_code
 from app.middleware.auth import require_auth, invalidate_token
+
+from flask_jwt_extended import (
+    create_access_token, 
+    create_refresh_token, 
+    jwt_required, 
+    get_jwt_identity, 
+    get_jwt
+)
 
 import uuid as _uuid
 
@@ -74,21 +81,35 @@ def teacher_signup():
         return jsonify({'error': 'validation_error', 'message': 'Name is required'}), 400
     
     try:
-        client = get_neon_auth_client()
-        result = client.sign_up(email, password, name, role='teacher')
+        from app.models.user import User
+        with get_db() as db:
+            if db.query(User).filter_by(email=email).first():
+                return jsonify({'error': 'email_exists', 'message': 'An account with this email already exists'}), 409
+            
+            new_user = User(
+                email=email,
+                username=name,
+                account_status="approved", # Automatically approve for this example
+                external_id=str(_uuid.uuid4())
+            )
+            new_user.set_password(password)
+            db.add(new_user)
+            db.commit()
+            
+            user_id_str = str(new_user.id)
+            user_dict = new_user.to_dict()
+            user_dict['role'] = 'teacher'
+            
+        access_token = create_access_token(identity=user_id_str)
+        refresh_token = create_refresh_token(identity=user_id_str)
         
-        token = result.get('token')
         return jsonify({
             'success': True,
-            'user': result.get('user'),
-            'token': token,
-            'refresh_token': token
+            'user': user_dict,
+            'token': access_token,
+            'refresh_token': refresh_token
         }), 201
         
-    except NeonAuthError as e:
-        if e.status_code == 409 or 'already exists' in e.message.lower():
-            return jsonify({'error': 'email_exists', 'message': 'An account with this email already exists'}), 409
-        return jsonify({'error': 'auth_error', 'message': e.message}), e.status_code or 500
     except Exception as e:
         logger.error(f"Unexpected error during teacher signup: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Registration failed'}), 500
@@ -130,43 +151,40 @@ def teacher_login():
         return jsonify({'error': 'validation_error', 'message': 'Email and password are required'}), 400
     
     try:
-        client = get_neon_auth_client()
-        result = client.sign_in(email, password)
+        from app.models.user import User
+        with get_db() as db:
+            user = db.query(User).filter_by(email=email).first()
+            if not user or not user.check_password(password):
+                return jsonify({'error': 'invalid_credentials', 'message': 'Invalid email or password'}), 401
+            
+            user_id_str = str(user.id)
+            user_dict = user.to_dict()
+            user_dict['role'] = 'teacher'
+            
+        access_token = create_access_token(identity=user_id_str)
+        refresh_token = create_refresh_token(identity=user_id_str)
         
-        token = result.get('token')
         return jsonify({
             'success': True,
-            'user': result.get('user'),
-            'token': token,
-            'refresh_token': token
+            'user': user_dict,
+            'token': access_token,
+            'refresh_token': refresh_token
         })
         
-    except NeonAuthError as e:
-        if e.status_code == 401:
-            return jsonify({'error': 'invalid_credentials', 'message': 'Invalid email or password'}), 401
-        return jsonify({'error': 'auth_error', 'message': e.message}), e.status_code or 500
     except Exception as e:
         logger.error(f"Unexpected error during teacher login: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Login failed'}), 500
 
 
 @auth_bp.route('/teacher/logout', methods=['POST'])
+@jwt_required()
 def teacher_logout():
     """
-    Log out a teacher. Best-effort: always returns 200 so the client can
-    clear its token even if it has already expired.
-
-    Headers:
-        Authorization: Bearer <token>  (optional — used to invalidate server-side session)
-
-    Returns:
-        {"success": true}
+    Log out a teacher by blocklisting their JWT JTI.
     """
     try:
-        auth_header = request.headers.get('Authorization', '')
-        token = auth_header[7:] if auth_header.startswith('Bearer ') else None
-        if token:
-            invalidate_token(token)
+        jti = get_jwt()["jti"]
+        invalidate_token(jti)
     except Exception as e:
         logger.warning(f"Error during logout (non-fatal): {e}")
 
@@ -214,10 +232,15 @@ def teacher_change_password():
         return jsonify({'error': 'validation_error', 'message': 'New password must be at least 8 characters'}), 400
 
     try:
-        client = get_neon_auth_client()
-        success = client.change_password(g.auth_token, current_password, new_password)
-        if not success:
-            return jsonify({'error': 'password_change_failed', 'message': 'Incorrect current password or password change failed'}), 400
+        from app.models.user import User
+        with get_db() as db:
+            user = db.query(User).filter_by(id=g.user['id']).first()
+            if not user or not user.check_password(current_password):
+                return jsonify({'error': 'password_change_failed', 'message': 'Incorrect current password or password change failed'}), 400
+                
+            user.set_password(new_password)
+            db.commit()
+            
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Unexpected error during password change: {e}")
@@ -225,59 +248,24 @@ def teacher_change_password():
 
 
 @auth_bp.route('/teacher/refresh', methods=['POST'])
+@jwt_required(refresh=True)
 def teacher_refresh():
     """
     Refresh access token.
-
-    Neon Auth (Better Auth) uses cookie-based sessions and does not expose
-    a working standalone refresh endpoint for email/password auth.  The
-    session token returned at login is valid until its DB expiresAt (7 days).
-    We "refresh" by validating the token still exists and is not expired,
-    then return the same token so the client can update its stored copy.
-
-    Request Body:
-        {
-            "refresh_token": "..."
-        }
-
-    Returns:
-        {
-            "success": true,
-            "token": "...",
-            "refresh_token": "..."
-        }
     """
-    data = request.get_json()
-
-    if not data or not data.get('refresh_token'):
-        return jsonify({'error': 'invalid_request', 'message': 'Refresh token required'}), 400
-
     try:
-        from app.services.database import engine
-        from sqlalchemy import text
-
-        with engine.connect() as conn:
-            result = conn.execute(
-                text("""
-                    SELECT s.token, s."expiresAt", u.id
-                    FROM neon_auth.session s
-                    JOIN neon_auth.user u ON u.id = s."userId"
-                    WHERE s.token = :token
-                      AND s."expiresAt" > NOW()
-                """),
-                {"token": data['refresh_token']},
-            )
-            row = result.fetchone()
-
-        if row is None:
-            return jsonify({'error': 'invalid_token', 'message': 'Invalid or expired refresh token'}), 401
-
+        user_id = get_jwt_identity()
+        access_token = create_access_token(identity=user_id)
+        
+        # We don't rotate the refresh token here, just return the existing one for client compatibility
+        auth_header = request.headers.get('Authorization', '')
+        refresh_token = auth_header[7:] if auth_header.startswith('Bearer ') else None
+        
         return jsonify({
             'success': True,
-            'token': row.token,
-            'refresh_token': row.token,
+            'token': access_token,
+            'refresh_token': refresh_token,
         })
-
     except Exception as e:
         logger.error(f"Error refreshing token: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Token refresh failed'}), 500
