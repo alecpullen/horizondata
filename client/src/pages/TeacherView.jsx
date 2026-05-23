@@ -35,16 +35,38 @@ function TeacherView() {
     const [capturing, setCapturing] = useState(false)
     const [lastCapture, setLastCapture] = useState(null) // { id, ts }
     const [booking, setBooking] = useState(null)
+    const [session, setSession] = useState(null)
+    const [participants, setParticipants] = useState([])
 
     const primaryStreamRef = useRef(null)
 
     // Fetch booking data
     useEffect(() => {
-        if (bookingId) {
-            api.get(`/api/bookings/${bookingId}`)
-                .then(res => setBooking(res.data))
-                .catch(err => console.error('Failed to load booking:', err))
+        if (!bookingId) return
+        api.get(`/api/bookings/${bookingId}`)
+            .then(res => setBooking(res.data))
+            .catch(err => console.error('Failed to load booking:', err))
+    }, [bookingId])
+
+    // Fetch session for joinCode
+    useEffect(() => {
+        if (!bookingId) return
+        api.get(`/api/sessions/${bookingId}`)
+            .then(res => setSession(res.data.session))
+            .catch(err => console.error('Failed to load session:', err))
+    }, [bookingId])
+
+    // Poll participants every 10 s
+    useEffect(() => {
+        if (!bookingId) return
+        const fetchParticipants = () => {
+            api.get(`/api/sessions/${bookingId}/participants`)
+                .then(res => setParticipants(res.data.participants || []))
+                .catch(() => {})
         }
+        fetchParticipants()
+        const intervalId = setInterval(fetchParticipants, 10000)
+        return () => clearInterval(intervalId)
     }, [bookingId])
 
     const handleCapture = async () => {
@@ -113,16 +135,16 @@ function TeacherView() {
                     {/*session info*/}
                     <div className="tv-sidebar-section">
                         <div className="tv-sidebar-label">Session</div>
-                        <div className="tv-session-ref">{SESSION.ref}</div>
-                        <div className="tv-session-date">{SESSION.date}</div>
-                        <div className="tv-session-time">{SESSION.time}</div>
+                        <div className="tv-session-ref">{session?.joinCode ?? '—'}</div>
+                        <div className="tv-session-date">{booking?.date ?? '—'}</div>
+                        <div className="tv-session-time">{booking?.time ?? '—'}</div>
                     </div>
 
                     {/*current object*/}
                     <div className="tv-sidebar-section">
                         <div className="tv-sidebar-label">Current Object</div>
-                        <div className="tv-object-name">{SESSION.object}</div>
-                        <div className="tv-object-scope">{SESSION.telescope}</div>
+                        <div className="tv-object-name">{booking?.title ?? 'Unknown'}</div>
+                        <div className="tv-object-scope">Horizon Telescope</div>
                     </div>
 
                     {/*conditions*/}
@@ -131,10 +153,10 @@ function TeacherView() {
                     {/*students in session */}
                     <div className="tv-sidebar-section tv-sidebar-section--grow">
                         <div className="tv-sidebar-label">
-                            Students in Session — {STUDENTS.length}
+                            Students in Session — {participants.length}
                         </div>
                         <ul className="tv-student-list">
-                            {STUDENTS.map(student => (
+                            {participants.map(student => (
                                 <li key={student.id} className="tv-student-item">
                                     <div className="student-avatar">
                                         {student.name[0]}
@@ -175,7 +197,7 @@ function TeacherView() {
                                     className="tv-btn tv-btn--secondary"
                                     onClick={() => safeDownload(
                                         `/api/captures/${lastCapture.id}/download`,
-                                        `${SESSION.object}_${lastCapture.id}.png`,
+                                        `${booking?.title ?? 'capture'}_${lastCapture.id}.png`,
                                         showToast
                                     )}
                                 >
@@ -185,7 +207,7 @@ function TeacherView() {
                                     className="tv-btn tv-btn--secondary"
                                     onClick={() => safeDownload(
                                         `/api/captures/${lastCapture.id}/metadata`,
-                                        `${SESSION.object}_${lastCapture.id}.json`,
+                                        `${booking?.title ?? 'capture'}_${lastCapture.id}.json`,
                                         showToast
                                     )}
                                 >
