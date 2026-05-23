@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import StreamView from '../components/StreamView'
 import WeatherWidget from '../components/WeatherWidget'
 import AppLogo from '../components/AppLogo'
@@ -22,6 +23,7 @@ function PipControls({ onResizeMouseDown }) {
 }
 
 function PublicView() {
+    const navigate = useNavigate()
     const [swapped, setSwapped] = useState(false)
     const [pipSize, setPipSize] = useState({ w: 240, h: 148 })
     const isResizingRef = useRef(false)
@@ -33,7 +35,6 @@ function PublicView() {
         siteHls: null,
     })
 
-    // Fetch stream URLs from settings (same endpoint as TeacherView)
     useEffect(() => {
         api.get('/api/settings')
             .then(res => {
@@ -86,20 +87,19 @@ function PublicView() {
 
     return (
         <div className="pv-shell">
-            {/* Minimal top bar — logo + "Live View" label only */}
+            {/* Header */}
             <header className="pv-header">
                 <AppLogo />
                 <div className="pv-header-badge">
                     <span className="pv-live-dot" />
                     Live Telescope
                 </div>
-                <a href="/login" className="pv-signin-link">Sign in</a>
             </header>
 
             <div className="pv-body">
-                {/* Feed area — same PiP/swap behaviour as TeacherView */}
+                {/* Feed area */}
                 <div className="pv-feed-area">
-                    {/* Telescope — primary feed */}
+                    {/* Telescope — primary */}
                     <div
                         className={`pv-feed-wrapper ${swapped ? 'pv-feed-wrapper--pip' : 'pv-feed-wrapper--primary'}`}
                         style={swapped ? { width: pipSize.w, height: pipSize.h } : undefined}
@@ -128,23 +128,57 @@ function PublicView() {
                     </div>
                 </div>
 
-                {/* Slim sidebar — conditions only */}
+                {/* Sidebar */}
                 <aside className="pv-sidebar">
+                    {/* Telescope identity */}
                     <div className="pv-sidebar-section">
                         <div className="pv-sidebar-label">Telescope</div>
                         <div className="pv-scope-name">Horizon Telescope</div>
                         <div className="pv-scope-sub">La Trobe University · Melbourne, AU</div>
                     </div>
 
+                    {/* Weather / conditions */}
                     <WeatherWidget />
 
+                    {/* CTA cards — mirrors the old landing page */}
                     <div className="pv-sidebar-section pv-cta-section">
-                        <p className="pv-cta-text">
-                            Want to book a live session or capture images?
-                        </p>
-                        <a href="/login" className="pv-cta-btn">
-                            Sign in to get started
-                        </a>
+                        <p className="pv-cta-heading">Join a session</p>
+
+                        <button
+                            className="pv-cta-card pv-cta-card--teal"
+                            onClick={() => navigate('/login')}
+                        >
+                            <div className="pv-cta-card-inner">
+                                <svg className="pv-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                <div>
+                                    <div className="pv-cta-card-title">Teacher Sign In</div>
+                                    <div className="pv-cta-card-desc">Manage bookings &amp; run live sessions</div>
+                                </div>
+                            </div>
+                            <span className="pv-cta-arrow">→</span>
+                        </button>
+
+                        <button
+                            className="pv-cta-card pv-cta-card--gold"
+                            onClick={() => navigate('/join')}
+                        >
+                            <div className="pv-cta-card-inner">
+                                <svg className="pv-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                                <div>
+                                    <div className="pv-cta-card-title">Student Join</div>
+                                    <div className="pv-cta-card-desc">Enter with your 6-digit session code</div>
+                                </div>
+                            </div>
+                            <span className="pv-cta-arrow">→</span>
+                        </button>
                     </div>
                 </aside>
             </div>

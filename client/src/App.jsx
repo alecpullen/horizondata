@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ToastProvider from './components/ui/ToastProvider'
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import Landing      from './pages/Landing'
 import TeacherLogin from './pages/TeacherLogin'
 import TeacherSignup from './pages/TeacherSignup'
 import ForgotPassword from './pages/ForgotPassword'
@@ -79,7 +78,8 @@ function AppRoutes() {
         <SessionTimeoutWrapper>
             <Routes>
                 {/* Public routes */}
-                <Route path="/"                 element={<Landing />}           />
+                <Route path="/"                 element={<PublicView />}        />
+                <Route path="/live/public"       element={<PublicView />}        />
                 <Route path="/login"           element={<TeacherLogin />}      />
                 <Route path="/signup"          element={<TeacherSignup />}     />
                 <Route path="/forgot-password" element={<ForgotPassword />}    />
@@ -107,8 +107,6 @@ function AppRoutes() {
                 } />
                 {/* Students are anonymous — no auth required */}
                 <Route path="/live/student" element={<StudentView />} />
-                {/* Public telescope viewfinder — no auth required */}
-                <Route path="/live/public"  element={<PublicView />} />
                 <Route path="/lobby/:bookingId?" element={
                     <ProtectedRoute><SessionLobby /></ProtectedRoute>
                 } />
