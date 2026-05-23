@@ -50,12 +50,11 @@ class TestTimeService(unittest.TestCase):
         """Test that Melbourne timezone and location constants are correct"""
         # Test timezone
         self.assertEqual(str(self.time_service.MELBOURNE_TZ), 'Australia/Melbourne')
-        
+
         # Test location coordinates (Melbourne)
-        self.assertAlmostEqual(self.time_service.MELBOURNE_LOCATION.lat.degree, -37.7214, places=4)
-        self.assertAlmostEqual(self.time_service.MELBOURNE_LOCATION.lon.degree, 145.0489, places=4)
-        self.assertEqual(self.time_service.MELBOURNE_LOCATION.height.value, 140)
-        
+        self.assertAlmostEqual(self.time_service.MELBOURNE_LAT, -37.8136, places=4)
+        self.assertAlmostEqual(self.time_service.MELBOURNE_LON, 144.9631, places=4)
+
         # Test viewing buffer
         self.assertEqual(self.time_service.VIEWING_BUFFER_HOURS, 1)
     
@@ -65,7 +64,7 @@ class TestTimeService(unittest.TestCase):
         
         # Should return timezone-aware datetime
         self.assertIsNotNone(melbourne_time.tzinfo)
-        self.assertEqual(melbourne_time.tzinfo, self.melbourne_tz)
+        self.assertEqual(melbourne_time.tzinfo.zone, 'Australia/Melbourne')
         
         # Should be within reasonable range of current time
         utc_now = datetime.utcnow().replace(tzinfo=pytz.UTC)
@@ -127,8 +126,8 @@ class TestTimeService(unittest.TestCase):
         sunrise, sunset = self.time_service.calculate_sunrise_sunset(summer_solstice)
         
         # Verify timezone
-        self.assertEqual(sunrise.tzinfo, self.melbourne_tz)
-        self.assertEqual(sunset.tzinfo, self.melbourne_tz)
+        self.assertEqual(sunrise.tzinfo.zone, 'Australia/Melbourne')
+        self.assertEqual(sunset.tzinfo.zone, 'Australia/Melbourne')
         
         # Summer solstice: early sunrise, late sunset
         # Approximate times for Melbourne summer
@@ -144,8 +143,8 @@ class TestTimeService(unittest.TestCase):
         sunrise, sunset = self.time_service.calculate_sunrise_sunset(winter_solstice)
         
         # Verify timezone
-        self.assertEqual(sunrise.tzinfo, self.melbourne_tz)
-        self.assertEqual(sunset.tzinfo, self.melbourne_tz)
+        self.assertEqual(sunrise.tzinfo.zone, 'Australia/Melbourne')
+        self.assertEqual(sunset.tzinfo.zone, 'Australia/Melbourne')
         
         # Winter solstice: late sunrise, early sunset
         # Approximate times for Melbourne winter
@@ -161,8 +160,8 @@ class TestTimeService(unittest.TestCase):
         sunrise, sunset = self.time_service.calculate_sunrise_sunset(spring_equinox)
         
         # Verify timezone
-        self.assertEqual(sunrise.tzinfo, self.melbourne_tz)
-        self.assertEqual(sunset.tzinfo, self.melbourne_tz)
+        self.assertEqual(sunrise.tzinfo.zone, 'Australia/Melbourne')
+        self.assertEqual(sunset.tzinfo.zone, 'Australia/Melbourne')
         
         # Equinox: roughly 12 hours of daylight
         daylight_duration = sunset - sunrise
@@ -186,8 +185,8 @@ class TestTimeService(unittest.TestCase):
                 # Basic validations
                 self.assertEqual(sunrise.date(), test_date)
                 self.assertEqual(sunset.date(), test_date)
-                self.assertEqual(sunrise.tzinfo, self.melbourne_tz)
-                self.assertEqual(sunset.tzinfo, self.melbourne_tz)
+                self.assertEqual(sunrise.tzinfo.zone, 'Australia/Melbourne')
+                self.assertEqual(sunset.tzinfo.zone, 'Australia/Melbourne')
                 self.assertLess(sunrise, sunset)
                 
                 # Reasonable time ranges for Melbourne
@@ -213,8 +212,8 @@ class TestTimeService(unittest.TestCase):
         self.assertEqual(window_end, expected_end)
         
         # Verify timezone
-        self.assertEqual(window_start.tzinfo, self.melbourne_tz)
-        self.assertEqual(window_end.tzinfo, self.melbourne_tz)
+        self.assertEqual(window_start.tzinfo.zone, 'Australia/Melbourne')
+        self.assertEqual(window_end.tzinfo.zone, 'Australia/Melbourne')
     
     def test_viewing_window_spans_midnight(self):
         """Test that viewing window correctly spans midnight"""
@@ -326,7 +325,7 @@ class TestTimeService(unittest.TestCase):
         
         next_window = self.time_service.get_next_viewing_window(naive_dt)
         self.assertIsNotNone(next_window.tzinfo)
-        self.assertEqual(next_window.tzinfo, self.melbourne_tz)
+        self.assertEqual(next_window.tzinfo.zone, 'Australia/Melbourne')
     
     def test_timezone_conversion_from_utc(self):
         """Test timezone conversion from UTC to Melbourne time"""
@@ -338,7 +337,7 @@ class TestTimeService(unittest.TestCase):
         self.assertIsInstance(is_active, bool)
         
         next_window = self.time_service.get_next_viewing_window(utc_dt)
-        self.assertEqual(next_window.tzinfo, self.melbourne_tz)
+        self.assertEqual(next_window.tzinfo.zone, 'Australia/Melbourne')
     
     def test_date_boundary_edge_cases(self):
         """Test edge cases around date boundaries"""

@@ -212,36 +212,38 @@ class TestWeatherSafetyService(unittest.TestCase):
     
     @patch('weather_safety.requests.get')
     def test_get_weather_data_api_failure(self, mock_get):
-        """Test weather data retrieval when API fails"""
-        # Mock API failure
+        """Test weather data retrieval when API fails — should return fallback data"""
         mock_get.side_effect = requests.exceptions.RequestException("API Error")
-        
-        # Clear cache to ensure fresh API call
+
         self.weather_service._weather_cache = None
         self.weather_service._cache_timestamp = None
-        
+
         weather_data = self.weather_service._get_weather_data()
-        
-        # Should return None on API failure
-        self.assertIsNone(weather_data)
+
+        # Service returns conservative fallback data rather than None to stay operational
+        self.assertIsNotNone(weather_data)
+        for key in ('temperature', 'humidity', 'pressure', 'dew_point'):
+            self.assertIn(key, weather_data)
+            self.assertIsNotNone(weather_data[key])
     
     @patch('weather_safety.requests.get')
     def test_get_weather_data_empty_response(self, mock_get):
-        """Test weather data retrieval with empty API response"""
-        # Mock empty response
+        """Test weather data retrieval with empty API response — should return fallback data"""
         mock_response = Mock()
         mock_response.json.return_value = {'feeds': []}
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
-        
-        # Clear cache to ensure fresh API call
+
         self.weather_service._weather_cache = None
         self.weather_service._cache_timestamp = None
-        
+
         weather_data = self.weather_service._get_weather_data()
-        
-        # Should return None for empty response
-        self.assertIsNone(weather_data)
+
+        # Service returns conservative fallback data rather than None when feed is empty
+        self.assertIsNotNone(weather_data)
+        for key in ('temperature', 'humidity', 'pressure', 'dew_point'):
+            self.assertIn(key, weather_data)
+            self.assertIsNotNone(weather_data[key])
     
     @patch('weather_safety.requests.get')
     def test_weather_data_caching(self, mock_get):

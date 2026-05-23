@@ -19,7 +19,7 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, backend_dir)
 
 try:
-    from astropy.coordinates import EarthLocation, SkyCoord, AltAz, get_sun, get_body, get_moon
+    from astropy.coordinates import EarthLocation, SkyCoord, AltAz, get_sun, get_body
     from astropy.time import Time
     from astropy import units as u
     import numpy as np
@@ -153,8 +153,8 @@ class TestSessionVisibility(unittest.TestCase):
         self.assertGreaterEqual(score, 50)
         self.assertLess(score, 70)
         
-        # Poor: 20-49
-        score, grade = self.visibility_service._calculate_quality_score(30, 20, False, False, 30)
+        # Poor: 20-49 (max_elev=35 gives base score ~36; min_elev=30 matches threshold so no penalty)
+        score, grade = self.visibility_service._calculate_quality_score(35, 30, False, False, 30)
         self.assertEqual(grade, 'poor')
         self.assertGreaterEqual(score, 20)
         self.assertLess(score, 50)

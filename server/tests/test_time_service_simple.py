@@ -9,7 +9,7 @@ Requirements tested: 1.1, 1.4
 """
 
 import unittest
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, tzinfo as _TzInfo
 from unittest.mock import Mock, patch, MagicMock
 import sys
 import os
@@ -19,21 +19,33 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, backend_dir)
 
 
-class MockTimeZone:
-    """Mock timezone for testing"""
+class MockTimeZone(_TzInfo):
+    """Mock timezone for testing — must subclass datetime.tzinfo for dt.replace()."""
+    _OFFSET = timedelta(hours=10)  # AEST baseline
+
     def __init__(self, name):
         self.zone = name
-    
+
+    def utcoffset(self, dt):
+        return self._OFFSET
+
+    def tzname(self, dt):
+        return self.zone
+
+    def dst(self, dt):
+        return timedelta(0)
+
     def localize(self, dt):
-        """Mock localize method"""
-        dt_with_tz = dt.replace(tzinfo=self)
-        return dt_with_tz
-    
+        return dt.replace(tzinfo=self)
+
     def __str__(self):
         return self.zone
-    
+
     def __eq__(self, other):
         return str(self) == str(other)
+
+    def __hash__(self):
+        return hash(self.zone)
 
 
 class MockDateTime:
@@ -115,14 +127,10 @@ class TestTimeServiceLogic(unittest.TestCase):
         else:  # Spring/Autumn
             sunrise_hour, sunset_hour = 6, 18
         
-        sunrise = self.melbourne_tz.localize(
-            datetime.combine(target_date, datetime.min.time().replace(hour=sunrise_hour))
-        )
-        sunset = self.melbourne_tz.localize(
-            datetime.combine(target_date, datetime.min.time().replace(hour=sunset_hour))
-        )
-        
-        return MockDateTime(sunrise.dt, self.melbourne_tz), MockDateTime(sunset.dt, self.melbourne_tz)
+        sunrise_dt = datetime.combine(target_date, datetime.min.time().replace(hour=sunrise_hour))
+        sunset_dt = datetime.combine(target_date, datetime.min.time().replace(hour=sunset_hour))
+
+        return MockDateTime(sunrise_dt, self.melbourne_tz), MockDateTime(sunset_dt, self.melbourne_tz)
     
     def mock_get_viewing_window(self, target_date):
         """Mock viewing window calculation"""
@@ -141,19 +149,27 @@ class TestTimeServiceLogic(unittest.TestCase):
         """Mock viewing window check"""
         if check_time is None:
             check_time = self.mock_get_melbourne_time()
-        
-        current_date = check_time.date() if hasattr(check_time, 'date') else check_time.dt.date()
-        window_start, window_end = self.mock_get_viewing_window(current_date)
-        
+
         check_dt = check_time.dt if hasattr(check_time, 'dt') else check_time
-        start_dt = window_start.dt if hasattr(window_start, 'dt') else window_start
-        end_dt = window_end.dt if hasattr(window_end, 'dt') else window_end
-        
-        # Handle midnight spanning
-        if start_dt.date() != end_dt.date():
-            return check_dt >= start_dt or check_dt <= end_dt
-        else:
-            return start_dt <= check_dt <= end_dt
+        check_date = check_dt.date()
+
+        def _in_window(c_dt, ws_dt, we_dt):
+            if ws_dt.date() != we_dt.date():
+                if c_dt.date() == ws_dt.date():
+                    return c_dt >= ws_dt
+                elif c_dt.date() == we_dt.date():
+                    return c_dt <= we_dt
+                return False
+            return ws_dt <= c_dt <= we_dt
+
+        # Check current-date window
+        ws, we = self.mock_get_viewing_window(check_date)
+        if _in_window(check_dt, ws.dt, we.dt):
+            return True
+
+        # Also check previous night's window (handles early-morning times like midnight)
+        prev_ws, prev_we = self.mock_get_viewing_window(check_date - timedelta(days=1))
+        return _in_window(check_dt, prev_ws.dt, prev_we.dt)
     
     def mock_get_next_viewing_window(self, from_time=None):
         """Mock next viewing window calculation"""
