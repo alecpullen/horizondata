@@ -380,3 +380,64 @@ def join_session():
     except Exception as e:
         logger.error(f"Error joining session with code {join_code}: {e}")
         return jsonify({"error": "internal_error", "message": "Failed to join session"}), 500
+
+
+@sessions_bp.route("", methods=["POST"])
+@require_auth(roles=["teacher"])
+def create_booking():
+    data = request.get_json(force=True) or {}
+    title = (data.get("title") or "").strip()
+    scheduled_start = data.get("scheduledStart")
+    scheduled_end = data.get("scheduledEnd")
+
+    if not title or not scheduled_start or not scheduled_end:
+        return jsonify({
+            "error": "validation_error",
+            "message": "title, scheduledStart, and scheduledEnd are required"
+        }), 400
+
+    try:
+        start_dt = datetime.fromisoformat(scheduled_start)
+        end_dt = datetime.fromisoformat(scheduled_end)
+    except ValueError:
+        return jsonify({"error": "validation_error", "message": "Invalid datetime format"}), 400
+
+    try:
+        with get_db() as db:
+            overlapping = (
+                db.query(Booking)
+                .filter(
+                    Booking.scheduled_start < end_dt,
+                    Booking.scheduled_end > start_dt,
+                    Booking.status != "cancelled",
+                )
+                .with_for_update()
+                .first()
+            )
+
+            if overlapping:
+                return jsonify({
+                    "error": "slot_taken",
+                    "message": "This time slot has already been booked."
+                }), 409
+
+            booking = Booking(
+                teacher_id=g.user["id"],
+                title=title,
+                scheduled_start=start_dt,
+                scheduled_end=end_dt,
+                status="confirmed",
+            )
+            db.add(booking)
+            db.flush()
+
+            return jsonify({
+                "success": True,
+                "booking_id": str(booking.id)
+            }), 201
+
+    except IntegrityError:
+        return jsonify({
+            "error": "slot_taken",
+            "message": "Another user booked this slot first."
+        }), 409
