@@ -3,6 +3,7 @@ import TopBar from '../components/TopBar'
 import AccountNav from '../components/auth/AccountNav'
 import { useToast } from '../components/ui/ToastProvider'
 import api from '../lib/api'
+import { validatePassword, doPasswordsMatch } from '../utils/validation'
 import './MyAccount.css'
 
 function MyAccount() {
@@ -22,6 +23,11 @@ function MyAccount() {
     })
 
     const [originalData, setOriginalData] = useState(null)
+
+    const [isChangingPassword, setIsChangingPassword] = useState(false)
+    const [isSavingPassword, setIsSavingPassword] = useState(false)
+    const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    const [passwordErrors, setPasswordErrors] = useState({})
 
     // Fetch account data on mount
     useEffect(() => {
@@ -98,10 +104,46 @@ function MyAccount() {
     }
 
     const handleChangePassword = () => {
-        showToast({
-            type: 'info',
-            message: 'Password change feature coming soon'
-        })
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+        setPasswordErrors({})
+        setIsChangingPassword(true)
+    }
+
+    const handleCancelPassword = () => {
+        setIsChangingPassword(false)
+        setPasswordErrors({})
+    }
+
+    const handleSubmitPassword = async () => {
+        const errors = {}
+        if (!passwordForm.currentPassword) errors.currentPassword = 'Current password is required'
+        const pwdResult = validatePassword(passwordForm.newPassword)
+        if (!pwdResult.isValid) {
+            const msgs = []
+            if (pwdResult.errors.minLength) msgs.push('at least 8 characters')
+            if (pwdResult.errors.upper) msgs.push('an uppercase letter')
+            if (pwdResult.errors.lower) msgs.push('a lowercase letter')
+            if (pwdResult.errors.number) msgs.push('a number')
+            errors.newPassword = `Password needs: ${msgs.join(', ')}`
+        }
+        const matchResult = doPasswordsMatch(passwordForm.newPassword, passwordForm.confirmPassword)
+        if (!matchResult.isValid) errors.confirmPassword = matchResult.error
+        if (Object.keys(errors).length) { setPasswordErrors(errors); return }
+
+        setIsSavingPassword(true)
+        try {
+            await api.post('/api/auth/teacher/change-password', {
+                current_password: passwordForm.currentPassword,
+                new_password: passwordForm.newPassword
+            })
+            setIsChangingPassword(false)
+            showToast({ type: 'success', message: 'Password changed successfully' })
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Password change failed'
+            showToast({ type: 'error', message: msg })
+        } finally {
+            setIsSavingPassword(false)
+        }
     }
 
     return (
@@ -268,17 +310,83 @@ function MyAccount() {
                             <h3 className="account-section-title">Security</h3>
 
                             <div className="account-settings-list">
-                                <div className="account-setting-item">
-                                    <div className="account-setting-info">
-                                        <h4 className="account-setting-title">Password</h4>
-                                        <p className="account-setting-desc">Last changed 3 months ago</p>
+                                <div className="account-setting-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div className="account-setting-info">
+                                            <h4 className="account-setting-title">Password</h4>
+                                            <p className="account-setting-desc">Update your account password</p>
+                                        </div>
+                                        {!isChangingPassword && (
+                                            <button
+                                                className="account-btn account-btn--secondary"
+                                                onClick={handleChangePassword}
+                                            >
+                                                Change Password
+                                            </button>
+                                        )}
                                     </div>
-                                    <button
-                                        className="account-btn account-btn--secondary"
-                                        onClick={handleChangePassword}
-                                    >
-                                        Change Password
-                                    </button>
+                                    {isChangingPassword && (
+                                        <div className="account-form" style={{ marginTop: '4px' }}>
+                                            <div className="account-form-field">
+                                                <label className="account-form-label">Current Password</label>
+                                                <input
+                                                    type="password"
+                                                    className={`account-form-input${passwordErrors.currentPassword ? ' account-form-input--error' : ''}`}
+                                                    value={passwordForm.currentPassword}
+                                                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                                    autoFocus
+                                                />
+                                                {passwordErrors.currentPassword && (
+                                                    <p className="account-form-error">{passwordErrors.currentPassword}</p>
+                                                )}
+                                            </div>
+                                            <div className="account-form-field">
+                                                <label className="account-form-label">New Password</label>
+                                                <input
+                                                    type="password"
+                                                    className={`account-form-input${passwordErrors.newPassword ? ' account-form-input--error' : ''}`}
+                                                    value={passwordForm.newPassword}
+                                                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                                />
+                                                {passwordErrors.newPassword && (
+                                                    <p className="account-form-error">{passwordErrors.newPassword}</p>
+                                                )}
+                                            </div>
+                                            <div className="account-form-field">
+                                                <label className="account-form-label">Confirm New Password</label>
+                                                <input
+                                                    type="password"
+                                                    className={`account-form-input${passwordErrors.confirmPassword ? ' account-form-input--error' : ''}`}
+                                                    value={passwordForm.confirmPassword}
+                                                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                                />
+                                                {passwordErrors.confirmPassword && (
+                                                    <p className="account-form-error">{passwordErrors.confirmPassword}</p>
+                                                )}
+                                            </div>
+                                            <div className="account-form-actions">
+                                                <button
+                                                    className="account-btn account-btn--primary"
+                                                    onClick={handleSubmitPassword}
+                                                    disabled={isSavingPassword}
+                                                >
+                                                    {isSavingPassword ? (
+                                                        <>
+                                                            <span className="account-btn-spinner" />
+                                                            Saving...
+                                                        </>
+                                                    ) : 'Update Password'}
+                                                </button>
+                                                <button
+                                                    className="account-btn account-btn--secondary"
+                                                    onClick={handleCancelPassword}
+                                                    disabled={isSavingPassword}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="account-setting-item">
