@@ -99,6 +99,7 @@ def teacher_signup():
             user_id_str = str(new_user.id)
             user_dict = new_user.to_dict()
             user_dict['role'] = new_user.role
+            user_dict['name'] = new_user.username
             
         access_token = create_access_token(identity=user_id_str)
         refresh_token = create_refresh_token(identity=user_id_str)
