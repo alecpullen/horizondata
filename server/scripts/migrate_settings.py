@@ -40,8 +40,10 @@ def seed_defaults():
     session = Session()
     try:
         default_keys = [
-            {"key": "primary_stream_url", "value": "", "description": "Telescope Camera Stream URL"},
-            {"key": "site_camera_url", "value": "", "description": "Site Camera Stream URL"},
+            {"key": "primary_stream_url", "value": "", "description": "Telescope Camera HLS Stream URL"},
+            {"key": "primary_stream_webrtc_url", "value": "", "description": "Telescope Camera WebRTC (WHEP) URL"},
+            {"key": "site_camera_url", "value": "", "description": "Site Camera HLS Stream URL"},
+            {"key": "site_camera_webrtc_url", "value": "", "description": "Site Camera WebRTC (WHEP) URL"},
             {"key": "msw_enabled", "value": "false", "description": "Mock API mode enabled"},
             {"key": "mock_telescope_enabled", "value": "false", "description": "Mock Telescope mode enabled"},
             {"key": "alpaca_base", "value": os.getenv('ALPACA_BASE', 'http://localhost:32323/api/v1/telescope/0'), "description": "Alpaca Telescope Base URL"},

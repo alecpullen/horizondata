@@ -77,3 +77,15 @@
     padding: 3px 9px;
     pointer-events: none;
 }
+
+.stream-protocol-badge {
+    position: absolute;
+    bottom: 2rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    color: #aaa;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    pointer-events: none;
+}

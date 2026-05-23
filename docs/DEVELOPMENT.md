@@ -112,28 +112,44 @@ Mock credentials when MSW is enabled:
 
 ## Full Functionality — Video Streams (Docker)
 
-The live telescope and allsky camera feeds require MediaMTX (RTSP/HLS relay) and ffmpeg publishers. These run via Docker Compose.
+The streaming stack (MediaMTX relay + FFmpeg simulators) is a separate Docker Compose project in `streaming/`. It runs independently of the Flask API and frontend.
+
+### Option A — Streaming only (typical for dev)
 
 ```bash
-cd server/
+cd streaming/
 docker compose up
 ```
 
-This starts:
+Then configure stream URLs in the **admin UI → System Settings**:
+- **Primary WebRTC URL**: `http://localhost:8889/telescope-camera/whep`
+- **Primary HLS URL**: `http://localhost:8888/telescope-camera/index.m3u8`
+- **Site WebRTC URL**: `http://localhost:8889/allsky/whep`
+- **Site HLS URL**: `http://localhost:8888/allsky/index.m3u8`
 
-| Service | Port(s) | Purpose |
-|---------|---------|---------|
-| `api` | 8080 | Flask API (containerised) |
-| `frontend` | 5173 | Nginx-served client build |
-| `mediamtx` | 8554 / 8888 / 8889 / 8890 | RTSP · HLS · WebRTC · SRT relay |
-| `ffmpeg_telescope` | — | Publishes `telescope-camera` stream |
-| `ffmpeg_telescope_view` | — | Publishes `telescope-view` stream |
-| `ffmpeg_allsky` | — | Publishes `allsky` stream |
-| `otel-lgtm` | 3000 | Grafana observability stack |
+Add to `server/.env` for headless frame grabs:
+```
+MEDIAMTX_RTSP_URL=rtsp://localhost:8554/telescope-camera
+```
 
-> When using Docker Compose, the containerised API and frontend replace the manually started servers. You do not need to run `python run.py` or `npm run dev` separately.
+### Option B — Full containerised stack
+
+Run both Docker Compose projects:
+```bash
+cd streaming/ && docker compose up -d
+cd server/ && docker compose up --build
+```
+
+When the API runs inside Docker, use `host.docker.internal`:
+```
+MEDIAMTX_RTSP_URL=rtsp://host.docker.internal:8554/telescope-camera
+```
 
 **Grafana:** `http://localhost:3000` — login `admin` / `admin`.
+
+### Option C — External streaming server
+
+Deploy `streaming/` on a separate machine. Copy `.mp4` simulator files into `streaming/` on that server, update the volume paths in `streaming/docker-compose.yml` to `./example1-video.mp4`, then run `docker compose up -d`. Configure all four stream URLs in the admin UI with that server's IP.
 
 ---
 
@@ -188,7 +204,7 @@ lsof -ti :8080 | xargs kill
 A previous Vite process is still running. Kill it the same way (`lsof -ti :5173 | xargs kill`) or just use the port Vite chose — it prints the actual URL on startup.
 
 **Video streams not loading**
-Docker Compose is not running. Start it with `docker compose up` from `server/`.
+The streaming stack is not running. Start it with `docker compose up` from `streaming/`. Then set the stream URLs in the admin UI (see "Full Functionality — Video Streams" above).
 
 **CORS errors in the browser**
 The client origin is not in `CORS_ORIGINS` in `server/.env`. Add it (e.g. `http://localhost:5174`) and restart Flask.

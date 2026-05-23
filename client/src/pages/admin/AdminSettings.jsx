@@ -6,7 +6,9 @@ import './AdminSettings.css'
 function AdminSettings() {
     const [settings, setSettings] = useState({
         primary_stream_url: '',
+        primary_stream_webrtc_url: '',
         site_camera_url: '',
+        site_camera_webrtc_url: '',
         msw_enabled: false,
         mock_telescope_enabled: false,
         alpaca_base: '',
@@ -27,7 +29,9 @@ function AdminSettings() {
                     const telescopeVal = res.data.mock_telescope_enabled === 'true'
                     setSettings({
                         primary_stream_url: res.data.primary_stream_url || '',
+                        primary_stream_webrtc_url: res.data.primary_stream_webrtc_url || '',
                         site_camera_url: res.data.site_camera_url || '',
+                        site_camera_webrtc_url: res.data.site_camera_webrtc_url || '',
                         msw_enabled: mswVal,
                         mock_telescope_enabled: telescopeVal,
                         alpaca_base: res.data.alpaca_base || '',
@@ -69,7 +73,9 @@ function AdminSettings() {
         try {
             await api.put('/api/settings', {
                 primary_stream_url: settings.primary_stream_url,
+                primary_stream_webrtc_url: settings.primary_stream_webrtc_url,
                 site_camera_url: settings.site_camera_url,
+                site_camera_webrtc_url: settings.site_camera_webrtc_url,
                 msw_enabled: settings.msw_enabled ? 'true' : 'false',
                 mock_telescope_enabled: settings.mock_telescope_enabled ? 'true' : 'false',
                 alpaca_base: settings.alpaca_base,
@@ -111,13 +117,26 @@ function AdminSettings() {
                 <section className="settings-section">
                     <h3 className="settings-section-title">Video Streams</h3>
                     <p className="settings-section-desc">
-                        These URLs are provided directly to the Student and Teacher views. 
-                        They must be accessible by the client browser (e.g., HLS .m3u8 URLs or HTTP-FLV).
-                        Leave blank to disable the stream.
+                        These URLs are provided directly to the Student and Teacher views.
+                        The player uses WebRTC (WHEP) as primary for low latency, with HLS as fallback for high-latency or low-bandwidth conditions.
+                        All URLs must be accessible from the client browser. Leave blank to disable.
                     </p>
 
                     <div className="form-group">
-                        <label htmlFor="primary_stream_url">Primary Telescope Stream URL</label>
+                        <label htmlFor="primary_stream_webrtc_url">Primary Telescope Stream — WebRTC URL</label>
+                        <input
+                            type="url"
+                            id="primary_stream_webrtc_url"
+                            name="primary_stream_webrtc_url"
+                            className="settings-input"
+                            value={settings.primary_stream_webrtc_url}
+                            onChange={handleChange}
+                            placeholder="e.g. http://localhost:8889/telescope-camera/whep"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="primary_stream_url">Primary Telescope Stream — HLS URL (fallback)</label>
                         <input
                             type="url"
                             id="primary_stream_url"
@@ -125,12 +144,25 @@ function AdminSettings() {
                             className="settings-input"
                             value={settings.primary_stream_url}
                             onChange={handleChange}
-                            placeholder="e.g. http://localhost:8888/telescope-camera/stream.m3u8"
+                            placeholder="e.g. http://localhost:8888/telescope-camera/index.m3u8"
                         />
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="site_camera_url">Site Camera Stream URL</label>
+                        <label htmlFor="site_camera_webrtc_url">Site Camera Stream — WebRTC URL</label>
+                        <input
+                            type="url"
+                            id="site_camera_webrtc_url"
+                            name="site_camera_webrtc_url"
+                            className="settings-input"
+                            value={settings.site_camera_webrtc_url}
+                            onChange={handleChange}
+                            placeholder="e.g. http://localhost:8889/allsky/whep"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="site_camera_url">Site Camera Stream — HLS URL (fallback)</label>
                         <input
                             type="url"
                             id="site_camera_url"
@@ -138,7 +170,7 @@ function AdminSettings() {
                             className="settings-input"
                             value={settings.site_camera_url}
                             onChange={handleChange}
-                            placeholder="e.g. http://localhost:8888/allsky/stream.m3u8"
+                            placeholder="e.g. http://localhost:8888/allsky/index.m3u8"
                         />
                     </div>
                 </section>

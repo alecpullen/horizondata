@@ -1,0 +1,81 @@
+# streaming/docker-compose.yml
+#
+# Standalone streaming stack — MediaMTX relay + FFmpeg simulator sources.
+# Deploy independently on any server with Docker.
+#
+# Usage:
+#   cd streaming/
+#   docker compose up -d
+#
+# Stream endpoints after startup (replace <host> with server IP):
+#   WebRTC (WHEP): http://<host>:8889/<stream>/whep
+#   HLS:           http://<host>:8888/<stream>/index.m3u8
+#   RTSP:          rtsp://<host>:8554/<stream>
+#
+# Streams: telescope-camera | allsky | telescope-view
+#
+# Configure in admin UI → System Settings:
+#   Primary WebRTC URL:  http://<host>:8889/telescope-camera/whep
+#   Primary HLS URL:     http://<host>:8888/telescope-camera/index.m3u8
+#   Site WebRTC URL:     http://<host>:8889/allsky/whep
+#   Site HLS URL:        http://<host>:8888/allsky/index.m3u8
+#
+# Video files: simulator inputs are read from ../server/ relative to this file.
+# For standalone remote deployment, copy .mp4 files into this directory and
+# update the volume paths to ./example1-video.mp4 etc.
+
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx
+    ports:
+      - "1935:1935"       # RTMP
+      - "8554:8554"       # RTSP
+      - "8888:8888"       # HLS
+      - "8889:8889"       # WebRTC (WHEP/WHIP)
+      - "8890:8890/udp"   # SRT ingest
+      - "8000:8000/udp"
+      - "8001:8001/udp"
+      - "8189:8189/udp"   # WebRTC ICE
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    restart: unless-stopped
+
+  ffmpeg_telescope:
+    image: jrottenberg/ffmpeg:5.1-ubuntu
+    depends_on:
+      - mediamtx
+    volumes:
+      - ../server/example1-video.mp4:/media/example1-video.mp4:ro
+    command: >
+      -re -stream_loop -1 -i /media/example1-video.mp4
+      -c:v libx264 -preset veryfast -tune zerolatency -b:v 4M -maxrate 4M -bufsize 2M -g 30 -sc_threshold 0
+      -c:a aac -ar 48000
+      -f mpegts "srt://mediamtx:8890?mode=caller&streamid=publish:telescope-camera"
+    restart: unless-stopped
+
+  ffmpeg_allsky:
+    image: jrottenberg/ffmpeg:5.1-ubuntu
+    depends_on:
+      - mediamtx
+    volumes:
+      - ../server/example1-video.mp4:/media/example1-video.mp4:ro
+    command: >
+      -re -stream_loop -1 -i /media/example1-video.mp4
+      -c:v libx264 -preset veryfast -tune zerolatency -b:v 2.5M -maxrate 2.5M -bufsize 1.25M -g 30 -sc_threshold 0
+      -c:a aac -ar 48000
+      -f mpegts "srt://mediamtx:8890?mode=caller&streamid=publish:allsky"
+    restart: unless-stopped
+
+  ffmpeg_telescope_view:
+    image: jrottenberg/ffmpeg:5.1-ubuntu
+    depends_on:
+      - mediamtx
+    volumes:
+      - ../server/example-video.mp4:/media/example-video.mp4:ro
+    command: >
+      -re -stream_loop -1 -i /media/example-video.mp4
+      -c:v libx264 -preset veryfast -tune zerolatency -b:v 3M -maxrate 3M -bufsize 1.5M -g 30 -sc_threshold 0
+      -c:a aac -ar 48000
+      -f mpegts "srt://mediamtx:8890?mode=caller&streamid=publish:telescope-view"
+    restart: unless-stopped

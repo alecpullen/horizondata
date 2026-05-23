@@ -1,9 +1,9 @@
-import { Component, useState, useCallback, forwardRef } from 'react'
+import { Component, useState, useCallback, useEffect, useRef, forwardRef } from 'react'
+import { useWhepStream } from '../hooks/useWhepStream'
+import { useHlsStream } from '../hooks/useHlsStream'
 import './StreamView.css'
 
 // ── Error Boundary ──────────────────────────────────────────────────────────
-// Catches unexpected JS errors inside a stream so one failure cannot unmount
-// or crash sibling streams.
 class StreamErrorBoundary extends Component {
     constructor(props) {
         super(props)
@@ -27,7 +27,6 @@ class StreamErrorBoundary extends Component {
     }
 }
 
-
 // ── Offline placeholder ─────────────────────────────────────────────────────
 function StreamOffline({ label, onRetry }) {
     return (
@@ -46,48 +45,95 @@ function StreamOffline({ label, onRetry }) {
     )
 }
 
-// ── Live video player ───────────────────────────────────────────────────────
-function StreamVideo({ label, streamUrl, videoRef }) {
-    const [failed, setFailed] = useState(false)
-    const [retryKey, setRetryKey] = useState(0)
+// ── WebRTC (WHEP) player ────────────────────────────────────────────────────
+function WhepVideo({ label, url, videoRef, onFailed }) {
+    const { status } = useWhepStream(url, videoRef)
 
-    const handleError = useCallback(() => setFailed(true), [])
+    useEffect(() => {
+        if (status === 'failed') onFailed()
+    }, [status, onFailed])
 
-    const handleRetry = useCallback(() => {
-        setFailed(false)
-        setRetryKey(k => k + 1)
-    }, [])
-
-    if (failed) {
-        return <StreamOffline label={label} onRetry={handleRetry} />
-    }
+    if (status === 'failed') return null
 
     return (
         <div className="stream-container">
             <video
-                key={retryKey}
                 ref={videoRef}
                 className="stream-video"
-                src={streamUrl}
                 autoPlay
                 muted
                 playsInline
-                onError={handleError}
             />
             <div className="stream-label">{label}</div>
         </div>
     )
 }
 
+// ── HLS player ──────────────────────────────────────────────────────────────
+function HlsVideo({ label, url, videoRef }) {
+    const internalRef = useRef(null)
+    const ref = videoRef || internalRef
+    const { status } = useHlsStream(url, ref)
+
+    if (status === 'failed') {
+        return <StreamOffline label={label} />
+    }
+
+    return (
+        <div className="stream-container">
+            <video
+                ref={ref}
+                className="stream-video"
+                autoPlay
+                muted
+                playsInline
+            />
+            <div className="stream-label">{label}</div>
+            <div className="stream-protocol-badge">HLS</div>
+        </div>
+    )
+}
+
+// ── Protocol switcher ───────────────────────────────────────────────────────
+function StreamVideo({ label, webrtcUrl, hlsUrl, videoRef }) {
+    const internalRef = useRef(null)
+    const ref = videoRef || internalRef
+    const [useHls, setUseHls] = useState(!webrtcUrl)
+
+    const handleWebRtcFailed = useCallback(() => {
+        if (hlsUrl) setUseHls(true)
+    }, [hlsUrl])
+
+    if (!useHls && webrtcUrl) {
+        return (
+            <WhepVideo
+                label={label}
+                url={webrtcUrl}
+                videoRef={ref}
+                onFailed={handleWebRtcFailed}
+            />
+        )
+    }
+
+    if (hlsUrl) {
+        return <HlsVideo label={label} url={hlsUrl} videoRef={ref} />
+    }
+
+    return <StreamOffline label={label} />
+}
+
 // ── Public component ────────────────────────────────────────────────────────
-const StreamView = forwardRef(function StreamView({ label = 'Stream', streamUrl = null }, ref) {
-    if (!streamUrl) {
+const StreamView = forwardRef(function StreamView(
+    { label = 'Stream', webrtcUrl = null, hlsUrl = null },
+    ref
+) {
+    if (!webrtcUrl && !hlsUrl) {
         return <StreamOffline label={label} />
     }
 
     return (
         <StreamErrorBoundary label={label}>
-            <StreamVideo label={label} streamUrl={streamUrl} videoRef={ref} />
+            <StreamVideo label={label} webrtcUrl={webrtcUrl} hlsUrl={hlsUrl} videoRef={ref} />
         </StreamErrorBoundary>
     )
 })

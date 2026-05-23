@@ -1,3 +1,13 @@
+# server/docker-compose.yml
+#
+# Local dev stack — Flask API + React frontend + Grafana observability.
+# Video streaming is NOT included here; run it from streaming/ instead.
+#
+# For video streams alongside this stack:
+#   cd streaming/ && docker compose up -d
+# Then set in server/.env:
+#   MEDIAMTX_RTSP_URL=rtsp://host.docker.internal:8554/telescope-camera
+
 services:
   api:
     build: .
@@ -15,12 +25,14 @@ services:
       ASCOM_BASE_URL: http://host.docker.internal:32323
       CLIENT_ID: "1"
       CAPTURES_DIR: /data/captures
+      # Override when MediaMTX runs on a separate host:
+      # MEDIAMTX_RTSP_URL: rtsp://host.docker.internal:8554/telescope-camera
     restart: unless-stopped
     networks:
       - cse3cap-rsdcc
     volumes:
       - ./app/oapi.yaml:/app/app/oapi.yaml:ro
-      - ./captures:/data/captures   # NEW - persist snapshots on host
+      - ./captures:/data/captures
 
   frontend:
     build:
@@ -33,26 +45,6 @@ services:
     networks:
       - cse3cap-rsdcc
     restart: unless-stopped
-    depends_on:
-      - ffmpeg_telescope
-      - ffmpeg_telescope_view
-
-  mediamtx:
-    image: bluenviron/mediamtx:latest
-    container_name: mediamtx
-    ports:
-      - "1935:1935"
-      - "8888:8888"
-      - "8889:8889"
-      - "8554:8554"
-      - "8000:8000/udp"
-      - "8001:8001/udp"
-      - "8189:8189/udp"
-    volumes:
-      - ./mediamtx.yml:/mediamtx.yml:ro
-    networks:
-      - cse3cap-rsdcc
-    restart: unless-stopped
 
   otel-lgtm:
     image: grafana/otel-lgtm:latest
@@ -62,9 +54,9 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SMTP_ENABLED=true
-      - GF_SMTP_HOST=sandbox.smtp.mailtrap.io:2525 
+      - GF_SMTP_HOST=sandbox.smtp.mailtrap.io:2525
       - GF_SMTP_USER=00a9ce522425fd
-      - GF_SMTP_PASSWORD=44c848846b9607 
+      - GF_SMTP_PASSWORD=44c848846b9607
       - GF_SMTP_SKIP_VERIFY=true
       - GF_SMTP_FROM_ADDRESS=grafana@cse3cap-rsdcc.com
     volumes:
@@ -72,52 +64,6 @@ services:
     networks:
       - cse3cap-rsdcc
     restart: unless-stopped
-
-  ffmpeg_telescope:
-    image: jrottenberg/ffmpeg:5.1-ubuntu
-    depends_on:
-      - mediamtx
-    volumes:
-      - ./example1-video.mp4:/media/example1-video.mp4:ro
-    command: >
-      -re -stream_loop -1 -i /media/example1-video.mp4
-      -c:v libx264 -preset veryfast -tune zerolatency -b:v 4M -maxrate 4M -bufsize 2M -g 30 -sc_threshold 0
-      -c:a aac -ar 48000
-      -f mpegts "srt://mediamtx:8890?mode=caller&streamid=publish:telescope-camera"
-    restart: unless-stopped
-    networks:
-      - cse3cap-rsdcc
-
-  ffmpeg_allsky:
-    image: jrottenberg/ffmpeg:5.1-ubuntu
-    depends_on:
-      - mediamtx
-    volumes:
-      - ./example1-video.mp4:/media/example1-video.mp4:ro
-    command: >
-      -re -stream_loop -1 -i /media/example1-video.mp4
-      -c:v libx264 -preset veryfast -tune zerolatency -b:v 2.5M -maxrate 2.5M -bufsize 1.25M -g 30 -sc_threshold 0
-      -c:a aac -ar 48000
-      -f mpegts "srt://mediamtx:8890?mode=caller&streamid=publish:allsky"
-    restart: unless-stopped
-    networks:
-      - cse3cap-rsdcc
-
-  ffmpeg_telescope_view:
-    image: jrottenberg/ffmpeg:5.1-ubuntu
-    depends_on:
-      - mediamtx
-      - ffmpeg_telescope
-    volumes:
-      - ./example-video.mp4:/media/example-video.mp4:ro
-    command: >
-      -re -stream_loop -1 -i /media/example-video.mp4
-      -c:v libx264 -preset veryfast -tune zerolatency -b:v 3M -maxrate 3M -bufsize 1.5M -g 30 -sc_threshold 0
-      -c:a aac -ar 48000
-      -f mpegts "srt://mediamtx:8890?mode=caller&streamid=publish:telescope-view"
-    restart: unless-stopped
-    networks:
-      - cse3cap-rsdcc
 
 volumes:
   lgtm-data:
