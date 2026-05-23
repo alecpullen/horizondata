@@ -9,7 +9,6 @@ import logging
 from flask import Blueprint, request, jsonify, g
 
 from app.middleware.auth import require_auth
-from flask_jwt_extended import get_jwt_identity, jwt_required
 
 logger = logging.getLogger(__name__)
 

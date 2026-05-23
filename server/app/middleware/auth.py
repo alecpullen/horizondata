@@ -223,4 +223,5 @@ def require_admin(f: Callable) -> Callable:
 
 def is_admin() -> bool:
     """Check if current user is an admin"""
-    return get_current_user_type() == 'admin'
+    user = get_current_user()
+    return user is not None and user.get('role') == 'admin'

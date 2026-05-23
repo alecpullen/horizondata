@@ -160,10 +160,11 @@ def teacher_login():
             user_id_str = str(user.id)
             user_dict = user.to_dict()
             user_dict['role'] = user.role
-            
+            user_dict['name'] = user.username
+
         access_token = create_access_token(identity=user_id_str)
         refresh_token = create_refresh_token(identity=user_id_str)
-        
+
         return jsonify({
             'success': True,
             'user': user_dict,

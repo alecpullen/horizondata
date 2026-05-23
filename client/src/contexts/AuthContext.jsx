@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import api from '../lib/api';
+import api, { rawApi } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -192,8 +192,8 @@ export const AuthProvider = ({ children }) => {
     if (!refreshToken) return null;
 
     try {
-      const response = await api.post('/api/auth/teacher/refresh', {
-        refresh_token: refreshToken,
+      const response = await rawApi.post('/api/auth/teacher/refresh', {}, {
+        headers: { Authorization: `Bearer ${refreshToken}` },
       });
 
       const { token, refresh_token } = response.data;
