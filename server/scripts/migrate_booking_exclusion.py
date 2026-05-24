@@ -31,7 +31,7 @@ def add_exclusion_constraint():
                     ALTER TABLE app.bookings
                     ADD CONSTRAINT no_overlap
                     EXCLUDE USING gist (
-                        tsrange(scheduled_start, scheduled_end) WITH &&
+                        tstzrange(scheduled_start, scheduled_end) WITH &&
                     )
                     WHERE (status != 'cancelled');
                 END IF;

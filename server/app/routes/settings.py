@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.database import get_db
 from app.models.setting import SystemSetting
-from app.middleware.auth import require_any_auth
+from app.middleware.auth import require_any_auth, require_auth
 import logging
 
 logger = logging.getLogger(__name__)
