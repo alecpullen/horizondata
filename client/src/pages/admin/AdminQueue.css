@@ -2,6 +2,24 @@
     max-width: 1060px;
 }
 
+.admin-queue-header {
+    margin-bottom: 32px;
+}
+
+.admin-queue-title {
+    font-family: var(--disp);
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--t1);
+}
+
+.admin-queue-desc {
+    margin: 0;
+    color: var(--t2);
+    font-size: 14px;
+}
+
 /* ── Header ── */
 .queue-section-header {
     display: flex;

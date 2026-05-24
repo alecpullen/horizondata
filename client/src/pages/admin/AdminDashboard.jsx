@@ -133,7 +133,10 @@ function AdminDashboard() {
 
     return (
         <div className="admin-dashboard">
-            <h2 className="admin-dashboard-title">Dashboard</h2>
+            <div className="admin-dashboard-header">
+                <h2 className="admin-dashboard-title">Dashboard</h2>
+                <p className="admin-dashboard-desc">Overview of system activity and current status.</p>
+            </div>
             {error && <p className="admin-dashboard-error">Could not load stats: {error}</p>}
             <div className="dash-grid">
                 <PendingAccountsCard data={data} loading={loading} />

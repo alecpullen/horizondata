@@ -14,20 +14,92 @@
 .tv-feed-area {
     flex: 1;
     position: relative;
-    padding: 14px;
     background: var(--bg);
 }
 
-.tv-pip {
+.tv-feed-wrapper {
     position: absolute;
-    bottom: 28px;
-    left: 28px;
-    width: 240px;
-    height: 148px;
     border-radius: 8px;
     overflow: hidden;
+    transition:
+        width  0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        bottom 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        left   0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tv-feed-wrapper--primary {
+    bottom: 14px;
+    left: 14px;
+    width: calc(100% - 28px);
+    height: calc(100% - 28px);
+    z-index: 1;
+}
+
+.tv-feed-wrapper--pip {
+    bottom: 28px;
+    left: 28px;
+    z-index: 2;
+    cursor: pointer;
     border: 1px solid rgba(255,255,255,0.12);
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* Hover overlay shown when feed is in PiP position */
+.tv-pip-hover-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #fff;
+    pointer-events: none;
+    z-index: 3;
+    transition: background 0.2s;
+}
+
+.tv-feed-wrapper--pip:hover .tv-pip-hover-overlay {
+    background: rgba(0, 0, 0, 0.42);
+}
+
+.tv-pip-hover-overlay svg {
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.tv-feed-wrapper--pip:hover .tv-pip-hover-overlay svg {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Resize handle — top-right corner of the PiP */
+.tv-pip-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 22px;
+    height: 22px;
+    cursor: nesw-resize;
+    z-index: 4;
+}
+
+.tv-pip-resize-handle::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 9px;
+    height: 9px;
+    border-top: 2px solid rgba(255,255,255,0.35);
+    border-right: 2px solid rgba(255,255,255,0.35);
+    border-radius: 0 2px 0 0;
+    transition: border-color 0.15s;
+}
+
+.tv-pip-resize-handle:hover::before {
+    border-color: rgba(255,255,255,0.8);
 }
 
 .tv-sidebar {

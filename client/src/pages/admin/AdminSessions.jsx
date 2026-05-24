@@ -201,31 +201,38 @@ function AdminSessions() {
 
     return (
         <div className="admin-sessions">
-            <div className="sess-section">
-                <div className="sess-section-header">
-                    <h2 className="sess-section-title">Active Sessions</h2>
-                    <span className="sess-poll-indicator" title="Polling every 5s">
-                        <span className="sess-poll-dot" />
-                        Live
-                    </span>
-                </div>
-
-                {error && <p className="sess-empty sess-empty--error">Error: {error}</p>}
-                <ActiveTable
-                    sessions={active}
-                    onTerminate={handleTerminate}
-                    terminatingId={terminatingId}
-                    setTerminatingId={setTerminatingId}
-                    busyId={busyId}
-                />
+            <div className="admin-sessions-header">
+                <h2 className="admin-sessions-title">Sessions</h2>
+                <p className="admin-sessions-desc">Monitor and manage active and past telescope observation sessions.</p>
             </div>
 
-            <div className="sess-section sess-section--past">
-                <h2 className="sess-section-title">Past Sessions</h2>
-                {loadingPast
-                    ? <p className="sess-empty">Loading…</p>
-                    : <PastTable sessions={past} />
-                }
+            <div className="sessions-page-content">
+                <div className="sess-section">
+                    <div className="sess-section-header">
+                        <h2 className="sess-section-title">Active Sessions</h2>
+                        <span className="sess-poll-indicator" title="Polling every 5s">
+                            <span className="sess-poll-dot" />
+                            Live
+                        </span>
+                    </div>
+
+                    {error && <p className="sess-empty sess-empty--error">Error: {error}</p>}
+                    <ActiveTable
+                        sessions={active}
+                        onTerminate={handleTerminate}
+                        terminatingId={terminatingId}
+                        setTerminatingId={setTerminatingId}
+                        busyId={busyId}
+                    />
+                </div>
+
+                <div className="sess-section sess-section--past">
+                    <h2 className="sess-section-title">Past Sessions</h2>
+                    {loadingPast
+                        ? <p className="sess-empty">Loading…</p>
+                        : <PastTable sessions={past} />
+                    }
+                </div>
             </div>
         </div>
     )

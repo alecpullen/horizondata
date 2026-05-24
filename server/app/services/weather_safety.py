@@ -16,17 +16,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class WeatherSafetyService:
     """
     Service for evaluating weather conditions and determining telescope safety.
     Integrates with ThingSpeak API and applies configurable safety thresholds.
     """
     
-    # ThingSpeak API configuration (reusing from weather.py)
+    # ThingSpeak API configuration
     THINGSPEAK_API_BASE_URL = os.getenv('THINGSPEAK_API_BASE_URL', 'https://api.thingspeak.com')
-    THINGSPEAK_CHANNEL_ID = os.getenv('THINGSPEAK_CHANNEL_ID', '270748')
-    
+
     # Safety thresholds for Melbourne climate conditions
     DEFAULT_SAFETY_THRESHOLDS = {
         'max_wind_speed': 25.0,        # km/h - Maximum safe wind speed
@@ -37,7 +35,50 @@ class WeatherSafetyService:
         'max_pressure': 1040.0,        # hPa - Maximum safe atmospheric pressure
         'max_dew_point_diff': 2.0,     # °C - Minimum difference between temperature and dew point
     }
-    
+
+    @property
+    def THINGSPEAK_CHANNEL_ID(self) -> str:
+        try:
+            from flask import has_app_context
+            if has_app_context():
+                from app.services.database import get_db
+                from app.models.setting import SystemSetting
+                with get_db() as db:
+                    setting = db.query(SystemSetting).filter_by(key="thingspeak_channel_id").first()
+                    if setting and setting.value:
+                        return setting.value
+        except Exception as e:
+            logger.warning(f"Failed to fetch thingspeak_channel_id from DB settings: {e}")
+        return os.getenv('THINGSPEAK_CHANNEL_ID', '270748')
+
+    @property
+    def safety_thresholds(self) -> Dict:
+        thresholds = self._safety_thresholds.copy()
+        try:
+            from flask import has_app_context
+            if has_app_context():
+                from app.services.database import get_db
+                from app.models.setting import SystemSetting
+                with get_db() as db:
+                    keys = [
+                        'max_wind_speed', 'min_temperature', 'max_temperature',
+                        'max_humidity', 'min_pressure', 'max_pressure', 'max_dew_point_diff'
+                    ]
+                    for key in keys:
+                        setting = db.query(SystemSetting).filter_by(key=f"safety_{key}").first()
+                        if setting and setting.value is not None:
+                            try:
+                                thresholds[key] = float(setting.value)
+                            except ValueError:
+                                pass
+        except Exception as e:
+            logger.warning(f"Failed to fetch safety thresholds from DB settings: {e}")
+        return thresholds
+
+    @safety_thresholds.setter
+    def safety_thresholds(self, value):
+        self._safety_thresholds = value
+
     def __init__(self, custom_thresholds: Optional[Dict] = None):
         """
         Initialize weather safety service with configurable thresholds.
@@ -45,9 +86,9 @@ class WeatherSafetyService:
         Args:
             custom_thresholds: Optional dict to override default safety thresholds
         """
-        self.safety_thresholds = self.DEFAULT_SAFETY_THRESHOLDS.copy()
+        self._safety_thresholds = self.DEFAULT_SAFETY_THRESHOLDS.copy()
         if custom_thresholds:
-            self.safety_thresholds.update(custom_thresholds)
+            self._safety_thresholds.update(custom_thresholds)
         
         # Cache for weather data to avoid excessive API calls
         self._weather_cache = None
@@ -70,7 +111,7 @@ class WeatherSafetyService:
         Args:
             new_thresholds: Dict containing threshold updates
         """
-        self.safety_thresholds.update(new_thresholds)
+        self._safety_thresholds.update(new_thresholds)
         logger.info(f"Updated safety thresholds: {new_thresholds}")
     
     def _get_weather_data(self) -> Optional[Dict]:

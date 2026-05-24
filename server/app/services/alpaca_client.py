@@ -16,9 +16,24 @@ class AlpacaClient:
     """Client for communicating with ASCOM Alpaca telescope simulator"""
     
     def __init__(self, base_url: str, client_id: int = 1):
-        self.base_url = base_url.rstrip('/')
+        self._base_url = base_url.rstrip('/')
         self.client_id = client_id
         self._transaction_id = 0
+        
+    @property
+    def base_url(self) -> str:
+        try:
+            from flask import has_app_context
+            if has_app_context():
+                from app.services.database import get_db
+                from app.models.setting import SystemSetting
+                with get_db() as db:
+                    setting = db.query(SystemSetting).filter_by(key="alpaca_base").first()
+                    if setting and setting.value:
+                        return setting.value.rstrip('/')
+        except Exception as e:
+            logger.warning(f"Failed to fetch alpaca_base from DB settings: {e}")
+        return self._base_url
         
     def _get_next_transaction_id(self) -> int:
         """Get monotonically increasing transaction ID"""

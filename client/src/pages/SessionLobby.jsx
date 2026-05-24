@@ -16,23 +16,7 @@ function SessionLobby() {
     const [loading, setLoading] = useState(true)
     const [joinCode, setJoinCode] = useState('')
 
-    // MSW toggle state - synced with localStorage
-    const [mswEnabled, setMswEnabled] = useState(() => {
-        const stored = localStorage.getItem('msw-enabled')
-        return stored === null ? false : stored === 'true'
-    })
 
-    // Persist MSW toggle state and reload to apply changes
-    useEffect(() => {
-        const prev = localStorage.getItem('msw-enabled')
-        const next = mswEnabled.toString()
-        if (prev !== null && prev !== next) {
-            localStorage.setItem('msw-enabled', next)
-            window.location.reload()
-        } else {
-            localStorage.setItem('msw-enabled', next)
-        }
-    }, [mswEnabled])
 
     // Fetch booking details and session info
     useEffect(() => {
@@ -206,16 +190,7 @@ function SessionLobby() {
                         <span className="lobby-status-dot" />
                         Session ready - waiting for students
                     </div>
-                    {/* Mock API Toggle */}
-                    <label className="lobby-msw-toggle" title="Toggle mock API">
-                        <span className="lobby-msw-label">Mock API</span>
-                        <input
-                            type="checkbox"
-                            checked={mswEnabled}
-                            onChange={(e) => setMswEnabled(e.target.checked)}
-                        />
-                        <span className="lobby-msw-slider" />
-                    </label>
+
                 </div>
                 <button
                     className="lobby-begin-btn"

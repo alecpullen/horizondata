@@ -100,7 +100,10 @@ function AdminTeachers() {
 
     return (
         <div className="admin-teachers">
-            <h2 className="admin-teachers-title">Teachers</h2>
+            <div className="admin-teachers-header">
+                <h2 className="admin-teachers-title">Teachers</h2>
+                <p className="admin-teachers-desc">Manage teacher accounts, registrations, and access permissions.</p>
+            </div>
 
             <div className="teacher-tabs">
                 {TABS.map(tab => (

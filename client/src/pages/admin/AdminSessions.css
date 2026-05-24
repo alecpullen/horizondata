@@ -2,6 +2,29 @@
     max-width: 1060px;
     display: flex;
     flex-direction: column;
+}
+
+.admin-sessions-header {
+    margin-bottom: 32px;
+}
+
+.admin-sessions-title {
+    font-family: var(--disp);
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--t1);
+}
+
+.admin-sessions-desc {
+    margin: 0;
+    color: var(--t2);
+    font-size: 14px;
+}
+
+.sessions-page-content {
+    display: flex;
+    flex-direction: column;
     gap: 48px;
 }
 

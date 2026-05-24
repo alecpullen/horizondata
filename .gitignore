@@ -21,6 +21,9 @@ client/dist/
 
 # ── Environment variables ──────────────────
 .env
+
+# ── Video simulator files ──────────────────
+streaming/*.mp4
 .env.local
 .env.*.local
 client/.env

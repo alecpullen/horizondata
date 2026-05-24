@@ -11,7 +11,7 @@ import './Login.css'
 function Login() {
     const { showToast } = useToast()
     const { loginTeacher: authLogin, isAuthenticated, isLoading: isAuthLoading } = useAuth()
-    const { redirect, getRedirectUrl } = useRedirectAfterAuth()
+    const { redirect, redirectTo, getRedirectUrl } = useRedirectAfterAuth()
     const navigate = useNavigate()
 
     // Loading state for session check (just use auth loading state)
@@ -72,8 +72,27 @@ function Login() {
                     type: 'info',
                     message: 'Welcome back!'
                 })
-                // Redirect to saved URL or default
-                navigate(getRedirectUrl())
+                
+                // User object is not directly available in this effect's dependencies,
+                // but we can retrieve it from localStorage or the auth context if we add it.
+                // It's cleaner to just get it from localStorage since that's what hydrated the context.
+                const storedUser = localStorage.getItem('user');
+                let role = 'teacher';
+                if (storedUser) {
+                    try {
+                        const parsedUser = JSON.parse(storedUser);
+                        role = parsedUser.role || 'teacher';
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+
+                if (role === 'admin') {
+                    navigate('/admin')
+                } else {
+                    // Redirect to saved URL or default
+                    navigate(getRedirectUrl())
+                }
                 return
             }
 
@@ -182,7 +201,11 @@ function Login() {
 
             // Redirect after success animation
             setTimeout(() => {
-                redirect()
+                if (result.user?.role === 'admin') {
+                    redirectTo('/admin')
+                } else {
+                    redirect()
+                }
             }, 1200)
 
         } catch {

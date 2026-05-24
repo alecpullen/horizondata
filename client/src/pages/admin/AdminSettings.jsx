@@ -6,8 +6,16 @@ import './AdminSettings.css'
 function AdminSettings() {
     const [settings, setSettings] = useState({
         primary_stream_url: '',
-        site_camera_url: ''
+        primary_stream_webrtc_url: '',
+        site_camera_url: '',
+        site_camera_webrtc_url: '',
+        msw_enabled: false,
+        mock_telescope_enabled: false,
+        alpaca_base: '',
+        thingspeak_channel_id: ''
     })
+    const [initialMsw, setInitialMsw] = useState(false)
+    const [initialMockTelescope, setInitialMockTelescope] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const { showToast } = useToast()
@@ -17,10 +25,20 @@ function AdminSettings() {
         api.get('/api/settings')
             .then(res => {
                 if (!cancelled) {
+                    const mswVal = res.data.msw_enabled === 'true'
+                    const telescopeVal = res.data.mock_telescope_enabled === 'true'
                     setSettings({
                         primary_stream_url: res.data.primary_stream_url || '',
-                        site_camera_url: res.data.site_camera_url || ''
+                        primary_stream_webrtc_url: res.data.primary_stream_webrtc_url || '',
+                        site_camera_url: res.data.site_camera_url || '',
+                        site_camera_webrtc_url: res.data.site_camera_webrtc_url || '',
+                        msw_enabled: mswVal,
+                        mock_telescope_enabled: telescopeVal,
+                        alpaca_base: res.data.alpaca_base || '',
+                        thingspeak_channel_id: res.data.thingspeak_channel_id || ''
                     })
+                    setInitialMsw(mswVal)
+                    setInitialMockTelescope(telescopeVal)
                     setLoading(false)
                 }
             })
@@ -41,12 +59,44 @@ function AdminSettings() {
         }))
     }
 
+    const handleToggleChange = (e) => {
+        const { name, checked } = e.target
+        setSettings(prev => ({
+            ...prev,
+            [name]: checked
+        }))
+    }
+
     const handleSave = async (e) => {
         e.preventDefault()
         setSaving(true)
         try {
-            await api.put('/api/settings', settings)
+            await api.put('/api/settings', {
+                primary_stream_url: settings.primary_stream_url,
+                primary_stream_webrtc_url: settings.primary_stream_webrtc_url,
+                site_camera_url: settings.site_camera_url,
+                site_camera_webrtc_url: settings.site_camera_webrtc_url,
+                msw_enabled: settings.msw_enabled ? 'true' : 'false',
+                mock_telescope_enabled: settings.mock_telescope_enabled ? 'true' : 'false',
+                alpaca_base: settings.alpaca_base,
+                thingspeak_channel_id: settings.thingspeak_channel_id
+            })
+            
+            // Sync with local storage
+            localStorage.setItem('msw-enabled', settings.msw_enabled.toString())
+            localStorage.setItem('mock-telescope-enabled', settings.mock_telescope_enabled.toString())
+            
             showToast({ type: 'success', message: 'Settings saved successfully.' })
+
+            // If either Developer Mode setting changed, reload window to refresh the MSW worker
+            if (settings.msw_enabled !== initialMsw || settings.mock_telescope_enabled !== initialMockTelescope) {
+                setTimeout(() => {
+                    window.location.reload()
+                }, 800)
+            } else {
+                setInitialMsw(settings.msw_enabled)
+                setInitialMockTelescope(settings.mock_telescope_enabled)
+            }
         } catch (err) {
             showToast({ type: 'error', message: 'Failed to save settings.' })
         } finally {
@@ -67,13 +117,26 @@ function AdminSettings() {
                 <section className="settings-section">
                     <h3 className="settings-section-title">Video Streams</h3>
                     <p className="settings-section-desc">
-                        These URLs are provided directly to the Student and Teacher views. 
-                        They must be accessible by the client browser (e.g., HLS .m3u8 URLs or HTTP-FLV).
-                        Leave blank to disable the stream.
+                        These URLs are provided directly to the Student and Teacher views.
+                        The player uses WebRTC (WHEP) as primary for low latency, with HLS as fallback for high-latency or low-bandwidth conditions.
+                        All URLs must be accessible from the client browser. Leave blank to disable.
                     </p>
 
                     <div className="form-group">
-                        <label htmlFor="primary_stream_url">Primary Telescope Stream URL</label>
+                        <label htmlFor="primary_stream_webrtc_url">Primary Telescope Stream — WebRTC URL</label>
+                        <input
+                            type="url"
+                            id="primary_stream_webrtc_url"
+                            name="primary_stream_webrtc_url"
+                            className="settings-input"
+                            value={settings.primary_stream_webrtc_url}
+                            onChange={handleChange}
+                            placeholder="e.g. http://localhost:8889/telescope-camera/whep"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="primary_stream_url">Primary Telescope Stream — HLS URL (fallback)</label>
                         <input
                             type="url"
                             id="primary_stream_url"
@@ -81,12 +144,25 @@ function AdminSettings() {
                             className="settings-input"
                             value={settings.primary_stream_url}
                             onChange={handleChange}
-                            placeholder="e.g. http://localhost:8888/telescope-camera/stream.m3u8"
+                            placeholder="e.g. http://localhost:8888/telescope-camera/index.m3u8"
                         />
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="site_camera_url">Site Camera Stream URL</label>
+                        <label htmlFor="site_camera_webrtc_url">Site Camera Stream — WebRTC URL</label>
+                        <input
+                            type="url"
+                            id="site_camera_webrtc_url"
+                            name="site_camera_webrtc_url"
+                            className="settings-input"
+                            value={settings.site_camera_webrtc_url}
+                            onChange={handleChange}
+                            placeholder="e.g. http://localhost:8889/allsky/whep"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="site_camera_url">Site Camera Stream — HLS URL (fallback)</label>
                         <input
                             type="url"
                             id="site_camera_url"
@@ -94,8 +170,90 @@ function AdminSettings() {
                             className="settings-input"
                             value={settings.site_camera_url}
                             onChange={handleChange}
-                            placeholder="e.g. http://localhost:8888/allsky/stream.m3u8"
+                            placeholder="e.g. http://localhost:8888/allsky/index.m3u8"
                         />
+                    </div>
+                </section>
+
+                <section className="settings-section">
+                    <h3 className="settings-section-title">Hardware & Integration</h3>
+                    <p className="settings-section-desc">
+                        Configure connection endpoints to physical telescope mounts (ASCOM Alpaca) and weather telemetry APIs.
+                    </p>
+
+                    <div className="form-group">
+                        <label htmlFor="alpaca_base">Alpaca Telescope Base URL</label>
+                        <input
+                            type="url"
+                            id="alpaca_base"
+                            name="alpaca_base"
+                            className="settings-input"
+                            value={settings.alpaca_base}
+                            onChange={handleChange}
+                            placeholder="e.g. http://localhost:32323/api/v1/telescope/0"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="thingspeak_channel_id">ThingSpeak Weather Channel ID</label>
+                        <input
+                            type="text"
+                            id="thingspeak_channel_id"
+                            name="thingspeak_channel_id"
+                            className="settings-input"
+                            value={settings.thingspeak_channel_id}
+                            onChange={handleChange}
+                            placeholder="e.g. 270748"
+                        />
+                    </div>
+                </section>
+
+                <section className="settings-section">
+                    <h3 className="settings-section-title">Developer Mode</h3>
+                    <p className="settings-section-desc">
+                        Configure client-side request mocking to simulate system behaviors without hardware dependencies.
+                    </p>
+
+                    <div className="form-group-toggle">
+                        <label className="settings-toggle-label" htmlFor="msw_enabled">
+                            <div>
+                                <span style={{ display: 'block', fontWeight: 600 }}>Mock API Services</span>
+                                <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--t3)', marginTop: '2px', fontWeight: 400 }}>
+                                    Mock user accounts, logins, bookings, and session history.
+                                </span>
+                            </div>
+                            <div className="msw-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="msw_enabled"
+                                    name="msw_enabled"
+                                    checked={settings.msw_enabled}
+                                    onChange={handleToggleChange}
+                                />
+                                <span className="msw-toggle-slider" />
+                            </div>
+                        </label>
+                    </div>
+
+                    <div className="form-group-toggle" style={{ marginTop: '16px' }}>
+                        <label className="settings-toggle-label" htmlFor="mock_telescope_enabled">
+                            <div>
+                                <span style={{ display: 'block', fontWeight: 600 }}>Mock Telescope Hardware</span>
+                                <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--t3)', marginTop: '2px', fontWeight: 400 }}>
+                                    Mock telescope operations, coordinates slewing, safety overrides, and scheduler queue.
+                                </span>
+                            </div>
+                            <div className="msw-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="mock_telescope_enabled"
+                                    name="mock_telescope_enabled"
+                                    checked={settings.mock_telescope_enabled}
+                                    onChange={handleToggleChange}
+                                />
+                                <span className="msw-toggle-slider" />
+                            </div>
+                        </label>
                     </div>
                 </section>
 

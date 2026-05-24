@@ -2,12 +2,22 @@
     max-width: 860px;
 }
 
+.admin-dashboard-header {
+    margin-bottom: 32px;
+}
+
 .admin-dashboard-title {
     font-family: var(--disp);
     font-size: 22px;
     font-weight: 600;
+    margin: 0 0 8px 0;
     color: var(--t1);
-    margin: 0 0 20px;
+}
+
+.admin-dashboard-desc {
+    margin: 0;
+    color: var(--t2);
+    font-size: 14px;
 }
 
 .admin-dashboard-error {

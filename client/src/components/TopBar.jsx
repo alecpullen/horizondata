@@ -3,19 +3,15 @@ import AppLogo from './AppLogo'
 import { useAuth } from '../contexts/AuthContext'
 import './TopBar.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+// Admin-only: direct access to the live session views
+const adminLiveViewLinks = [
+    { label: 'Teacher View', path: '/live/teacher' },
+    { label: 'Student View', path: '/live/student' },
+]
 
 const navLinks = [
-    {
-        label: 'Live View',
-        children: [
-            { label: 'Teacher', path: '/live/teacher' },
-            { label: 'Student', path: '/live/student' },
-        ],
-    },
-    { label: 'Scheduling',  path: '/scheduling'  },
-    { label: 'Sky Chart',   path: '/sky-chart'   },
-    { label: 'Captures',    path: '/captures'    },
+    { label: 'Scheduling', path: '/scheduling' },
+    { label: 'Captures',   path: '/captures'   },
 ]
 
 const accountLinks = [
@@ -28,31 +24,18 @@ function TopBar({ activePath }) {
     const [accountOpen, setAccountOpen] = useState(false)
     const [liveViewOpen, setLiveViewOpen] = useState(false)
     const [avatarOpen, setAvatarOpen] = useState(false)
-    const [mswEnabled, setMswEnabled] = useState(() => {
-        const stored = localStorage.getItem('msw-enabled')
-        return stored === null ? false : stored === 'true'
-    })
     const accountDropdownRef = useRef(null)
     const liveViewDropdownRef = useRef(null)
     const avatarDropdownRef = useRef(null)
 
-    // Derive user info from auth context
     const fullName = user?.fullName || ''
+    const displayName = fullName || user?.email || ''
+    const initials = fullName
+        ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+        : displayName ? displayName[0].toUpperCase() : '?'
     const userRole = user?.role || ''
+    const isAdmin = userRole === 'admin'
 
-    // Persist MSW toggle state and reload to apply changes
-    useEffect(() => {
-        const prev = localStorage.getItem('msw-enabled')
-        const next = mswEnabled.toString()
-        if (prev !== null && prev !== next) {
-            localStorage.setItem('msw-enabled', next)
-            window.location.reload()
-        } else {
-            localStorage.setItem('msw-enabled', next)
-        }
-    }, [mswEnabled])
-
-    // Close dropdowns when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
             if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target)) {
@@ -70,7 +53,7 @@ function TopBar({ activePath }) {
     }, [])
 
     const isAccountActive = accountLinks.some(link => link.path === activePath)
-    const isLiveViewActive = navLinks[0].children.some(link => link.path === activePath)
+    const isLiveViewActive = adminLiveViewLinks.some(link => link.path === activePath)
 
     const handleLogout = async () => {
         if (isTeacher) {
@@ -87,44 +70,46 @@ function TopBar({ activePath }) {
             <AppLogo />
 
             <nav className="topbar-nav">
-                {/* Live View Dropdown */}
-                <div className="nav-dropdown" ref={liveViewDropdownRef}>
-                    <button
-                        className={`nav-link nav-link--dropdown ${isLiveViewActive ? 'active' : ''}`}
-                        onClick={() => setLiveViewOpen(!liveViewOpen)}
-                        aria-expanded={liveViewOpen}
-                    >
-                        Live View
-                        <svg
-                            className={`dropdown-arrow ${liveViewOpen ? 'dropdown-arrow--open' : ''}`}
-                            viewBox="0 0 24 24"
-                            width="12"
-                            height="12"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
+                {/* Live View dropdown — admin accounts only */}
+                {isAdmin && (
+                    <div className="nav-dropdown" ref={liveViewDropdownRef}>
+                        <button
+                            className={`nav-link nav-link--dropdown ${isLiveViewActive ? 'active' : ''}`}
+                            onClick={() => setLiveViewOpen(!liveViewOpen)}
+                            aria-expanded={liveViewOpen}
                         >
-                            <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                    </button>
+                            Live View
+                            <svg
+                                className={`dropdown-arrow ${liveViewOpen ? 'dropdown-arrow--open' : ''}`}
+                                viewBox="0 0 24 24"
+                                width="12"
+                                height="12"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                            >
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
 
-                    {liveViewOpen && (
-                        <div className="dropdown-menu">
-                            {navLinks[0].children.map(link => (
-                                <a
-                                    key={link.path}
-                                    href={link.path}
-                                    className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
-                                    onClick={() => setLiveViewOpen(false)}
-                                >
-                                    {link.label}
-                                </a>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                        {liveViewOpen && (
+                            <div className="dropdown-menu">
+                                {adminLiveViewLinks.map(link => (
+                                    <a
+                                        key={link.path}
+                                        href={link.path}
+                                        className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
+                                        onClick={() => setLiveViewOpen(false)}
+                                    >
+                                        {link.label}
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
-                {navLinks.slice(1).map(link => (
+                {navLinks.map(link => (
                     <a
                         key={link.path}
                         href={link.path}
@@ -173,16 +158,6 @@ function TopBar({ activePath }) {
             </nav>
 
             <div className="topbar-right">
-                <label className="msw-toggle" title="Toggle mock API">
-                    <span className="msw-toggle-label">MOCK API</span>
-                    <input
-                        type="checkbox"
-                        checked={mswEnabled}
-                        onChange={(e) => setMswEnabled(e.target.checked)}
-                    />
-                    <span className="msw-toggle-slider" />
-                </label>
-
                 {/* Avatar Dropdown */}
                 <div className="avatar-dropdown" ref={avatarDropdownRef}>
                     <button
@@ -190,23 +165,19 @@ function TopBar({ activePath }) {
                         onClick={() => setAvatarOpen(!avatarOpen)}
                         aria-expanded={avatarOpen}
                         aria-label="User menu"
-                        title={fullName || 'Guest'}
+                        title={displayName || 'User menu'}
                     >
-                        {fullName
-                            ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                            : '??'}
+                        {initials}
                     </button>
 
                     {avatarOpen && (
                         <div className="avatar-menu">
                             <div className="avatar-menu-header">
                                 <div className="avatar-menu-initials">
-                                    {fullName
-                                        ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                                        : '??'}
+                                    {initials}
                                 </div>
                                 <div className="avatar-menu-info">
-                                    <div className="avatar-menu-name">{fullName || 'Guest User'}</div>
+                                    <div className="avatar-menu-name">{displayName || 'Unknown User'}</div>
                                     {userRole && (
                                         <div className="avatar-menu-role">{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</div>
                                     )}
@@ -258,8 +229,23 @@ function TopBar({ activePath }) {
                                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                                     <line x1="12" y1="17" x2="12.01" y2="17" />
                                 </svg>
-                                Help & Support
+                                Help &amp; Support
                             </a>
+                            {isAdmin && (
+                                <>
+                                    <div className="avatar-menu-divider" />
+                                    <a
+                                        href="/admin"
+                                        className="avatar-menu-item"
+                                        onClick={() => setAvatarOpen(false)}
+                                    >
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        </svg>
+                                        Admin Panel
+                                    </a>
+                                </>
+                            )}
                             <div className="avatar-menu-divider" />
                             <button
                                 className="avatar-menu-item avatar-menu-item--danger"

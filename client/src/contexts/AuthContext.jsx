@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import api from '../lib/api';
+import api, { rawApi } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
       const storedSessionId = localStorage.getItem('sessionId');
       const storedUser = localStorage.getItem('user');
 
+      console.log('[AuthContext] loadAuthState initial:', { storedUserType, storedToken, storedUser })
+
       if (storedUserType === 'teacher' && storedToken) {
         const parsedUser = storedUser ? JSON.parse(storedUser) : null
         // Normalize user data to include both 'name' and 'fullName'
@@ -35,14 +37,17 @@ export const AuthProvider = ({ children }) => {
           fullName: parsedUser.fullName || parsedUser.name || '',
         } : null
 
+        console.log('[AuthContext] loadAuthState setting teacher:', normalizedUser)
         setUserType('teacher');
         setToken(storedToken);
         setUser(normalizedUser);
         setIsAuthenticated(true);
       } else if (storedUserType === 'student' && storedSessionId) {
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null
+        console.log('[AuthContext] loadAuthState setting student:', parsedUser)
         setUserType('student');
         setSessionId(storedSessionId);
-        setUser(storedUser ? JSON.parse(storedUser) : null);
+        setUser(parsedUser);
         setIsAuthenticated(true);
       }
 
@@ -102,6 +107,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', token);
     localStorage.setItem('refreshToken', refresh_token);
     localStorage.setItem('user', JSON.stringify(normalizedUser));
+
+    console.log('[AuthContext] loginTeacher success:', normalizedUser);
 
     setUserType('teacher');
     setToken(token);
@@ -185,8 +192,8 @@ export const AuthProvider = ({ children }) => {
     if (!refreshToken) return null;
 
     try {
-      const response = await api.post('/api/auth/teacher/refresh', {
-        refresh_token: refreshToken,
+      const response = await rawApi.post('/api/auth/teacher/refresh', {}, {
+        headers: { Authorization: `Bearer ${refreshToken}` },
       });
 
       const { token, refresh_token } = response.data;

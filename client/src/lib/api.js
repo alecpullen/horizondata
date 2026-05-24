@@ -9,6 +9,12 @@ const api = axios.create({
   },
 });
 
+// No interceptors — used for auth calls that must not have the access token injected
+const rawApi = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
 // Request interceptor to add auth headers
 api.interceptors.request.use(
   (config) => {
@@ -80,8 +86,10 @@ api.interceptors.response.use(
 
     // Deduplicate concurrent refresh attempts.
     if (!refreshPromise) {
-      refreshPromise = api
-        .post('/api/auth/teacher/refresh', { refresh_token: storedRefreshToken })
+      refreshPromise = rawApi
+        .post('/api/auth/teacher/refresh', {}, {
+          headers: { Authorization: `Bearer ${storedRefreshToken}` },
+        })
         .then((res) => {
           const { token, refresh_token } = res.data;
           localStorage.setItem('token', token);
@@ -106,4 +114,5 @@ api.interceptors.response.use(
   }
 );
 
+export { rawApi };
 export default api;
