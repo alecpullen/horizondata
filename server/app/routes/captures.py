@@ -195,6 +195,7 @@ def upload_capture():
                 object_name=object_name,
                 coordinates=meta["coordinates"],
                 captured_at=dt,
+                file_size_bytes=file_size,
             ))
     except Exception as e:
         current_app.logger.error(f"Failed to persist capture to DB: {e}")

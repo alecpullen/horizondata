@@ -22,9 +22,19 @@ from app.models.session import ObservationSession
 logger = logging.getLogger(__name__)
 
 MEDIAMTX_RTSP_URL = os.getenv("MEDIAMTX_RTSP_URL", "rtsp://mediamtx:8554/telescope-camera")
-FRAME_GRAB_TIMEOUT = int(os.getenv("FRAME_GRAB_TIMEOUT", "15"))
-HEADLESS_SETTLE_SECONDS = int(os.getenv("HEADLESS_SETTLE_SECONDS", "5"))
-HEADLESS_SLEW_TIMEOUT = int(os.getenv("HEADLESS_SLEW_TIMEOUT", "120"))
+
+
+def _int_env(key: str, default: int) -> int:
+    try:
+        return int(os.getenv(key, str(default)))
+    except (TypeError, ValueError):
+        logger.warning("Invalid %s=%r, using default %s", key, os.getenv(key), default)
+        return default
+
+
+FRAME_GRAB_TIMEOUT = _int_env("FRAME_GRAB_TIMEOUT", 15)
+HEADLESS_SETTLE_SECONDS = _int_env("HEADLESS_SETTLE_SECONDS", 5)
+HEADLESS_SLEW_TIMEOUT = _int_env("HEADLESS_SLEW_TIMEOUT", 120)
 
 scheduler: BackgroundScheduler = None
 

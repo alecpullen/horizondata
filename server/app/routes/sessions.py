@@ -415,6 +415,11 @@ def create_booking():
     except ValueError:
         return jsonify({"error": "validation_error", "message": "Invalid datetime format"}), 400
 
+    if end_dt <= start_dt:
+        return jsonify({"error": "validation_error", "message": "End time must be after start time"}), 400
+    if start_dt <= datetime.now(timezone.utc):
+        return jsonify({"error": "validation_error", "message": "Start time must be in the future"}), 400
+
     try:
         with get_db() as db:
             overlapping = (

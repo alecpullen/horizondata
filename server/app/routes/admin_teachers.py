@@ -39,23 +39,20 @@ def list_teachers():
         limit = min(request.args.get("limit", 20, type=int), 100)
         
         with get_db() as db:
-            # Get total count
-            total = db.query(User).count()
-            
-            # Get paginated results
+            total = db.query(User).filter(User.role == "teacher").count()
             offset = (page - 1) * limit
             users = (
                 db.query(User)
+                .filter(User.role == "teacher")
                 .order_by(User.created_at.desc())
                 .offset(offset)
                 .limit(limit)
                 .all()
             )
-            
             items = [
                 {
                     "id": user.id,
-                    "name": user.institution or "Unknown",
+                    "name": user.username or user.institution or "Unknown",
                     "email": user.email,
                     "account_status": user.account_status,
                     "created_at": user.created_at.isoformat() if user.created_at else None,
@@ -90,8 +87,8 @@ def update_teacher_status(teacher_id):
         return jsonify({"error": "invalid_request", "message": "Request body required"}), 400
     
     new_status = data.get("status")
-    if new_status not in ["approved", "suspended"]:
-        return jsonify({"error": "validation_error", "message": "status must be 'approved' or 'suspended'"}), 400
+    if new_status not in ["approved", "suspended", "pending"]:
+        return jsonify({"error": "validation_error", "message": "status must be 'approved', 'suspended', or 'pending'"}), 400
     
     try:
         with get_db() as db:

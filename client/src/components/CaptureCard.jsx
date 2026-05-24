@@ -80,7 +80,7 @@ export function CaptureCard({ item }) {
                     className="cap-btn cap-btn--primary"
                     onClick={() => downloadFile(
                         `/api/captures/${item.id}/download`,
-                        `${item.objectName || 'capture'}_${item.id}.png`
+                        `${item.objectName || 'capture'}_${item.id}`
                     ).catch(() => showToast({ type: 'error', message: 'Download failed. Please try again.' }))}
                 >
                     Download Image

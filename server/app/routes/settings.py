@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.database import get_db
 from app.models.setting import SystemSetting
-from app.middleware.auth import require_auth
+from app.middleware.auth import require_any_auth
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,10 +9,10 @@ logger = logging.getLogger(__name__)
 settings_bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 
 @settings_bp.route("", methods=["GET"])
+@require_any_auth
 def get_settings():
     """
-    Get all public system settings.
-    This endpoint is public so that anonymous students can access stream URLs.
+    Get all system settings for authenticated users.
     """
     try:
         with get_db() as db:
