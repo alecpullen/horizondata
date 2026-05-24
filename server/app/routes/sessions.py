@@ -93,89 +93,63 @@ def get_session(booking_id):
         return jsonify({"error": "internal_error", "message": "Failed to fetch session"}), 500
 
 
+def _compute_queue_status(booking, obs, db):
+    """Shared helper: compute queue status dict (total, completed, current_target, status)."""
+    if not obs:
+        return {"total": 0, "completed": 0, "current_target": None, "status": "pending"}
+
+    status_map = {
+        "active": "running",
+        "completed": "done",
+        "terminated": "aborted",
+        "ended": "done",
+    }
+    status = status_map.get(obs.status or "pending", "pending")
+
+    targets = booking.targets or {}
+    celestial_objects = targets.get("celestialObjects", [])
+    total = len(celestial_objects)
+    completed = 0
+    current_target = None
+
+    if status == "done":
+        completed = total
+    elif status == "running" and total > 0:
+        captured_rows = (
+            db.query(Capture.object_name)
+            .filter(
+                Capture.observation_session_id == obs.id,
+                Capture.object_name.isnot(None),
+            )
+            .distinct()
+            .all()
+        )
+        captured_names = {row.object_name.lower() for row in captured_rows if row.object_name}
+        target_names_lower = [obj.get("name", "").lower() for obj in celestial_objects]
+        completed = sum(1 for n in target_names_lower if n in captured_names)
+        current_target = next(
+            (obj.get("name") for obj in celestial_objects
+             if obj.get("name", "").lower() not in captured_names),
+            None,
+        )
+
+    return {"total": total, "completed": completed, "current_target": current_target, "status": status}
+
+
 @sessions_bp.route("/<uuid:booking_id>/queue-status", methods=["GET"])
 @require_auth(roles=["teacher"])
 def get_queue_status(booking_id):
-    """
-    Get the queue status for a booking's observation session.
-    
-    Returns:
-        {
-            total: int,
-            completed: int,
-            current_target: str | null,
-            status: "pending" | "running" | "done" | "aborted"
-        }
-    """
     try:
         with get_db() as db:
             booking, err = _load_booking_owned(db, booking_id)
             if err:
                 return err
-            
             obs = (
                 db.query(ObservationSession)
                 .filter(ObservationSession.booking_id == booking.id)
                 .first()
             )
-            
-            if not obs:
-                return jsonify({
-                    "total": 0,
-                    "completed": 0,
-                    "current_target": None,
-                    "status": "pending"
-                })
-            
-            # Get targets from booking
-            targets = booking.targets or {}
-            celestial_objects = targets.get("celestialObjects", [])
-            total = len(celestial_objects)
-            
-            # Determine status based on session status
-            session_status = obs.status if obs.status else "pending"
-            
-            # Map session status to queue status
-            status_map = {
-                "active": "running",
-                "completed": "done",
-                "terminated": "aborted",
-                "ended": "done",
-            }
-            status = status_map.get(session_status, "pending")
-            
-            # Calculate completed count and current target
-            completed = 0
-            current_target = None
-
-            if status == "done":
-                completed = total
-            elif status == "running" and total > 0:
-                captured_rows = (
-                    db.query(Capture.object_name)
-                    .filter(
-                        Capture.observation_session_id == obs.id,
-                        Capture.object_name.isnot(None),
-                    )
-                    .distinct()
-                    .all()
-                )
-                captured_names = {row.object_name.lower() for row in captured_rows if row.object_name}
-                target_names_lower = [obj.get("name", "").lower() for obj in celestial_objects]
-                completed = sum(1 for n in target_names_lower if n in captured_names)
-                current_target = next(
-                    (obj.get("name") for obj in celestial_objects
-                     if obj.get("name", "").lower() not in captured_names),
-                    None,
-                )
-            
-            return jsonify({
-                "total": total,
-                "completed": completed,
-                "current_target": current_target,
-                "status": status
-            })
-    
+            return jsonify(_compute_queue_status(booking, obs, db))
     except Exception as e:
         logger.error(f"Error fetching queue status for booking {booking_id}: {e}")
         return jsonify({"error": "internal_error", "message": "Failed to fetch queue status"}), 500
