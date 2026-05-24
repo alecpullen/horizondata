@@ -179,7 +179,10 @@ function Login() {
             const result = await authLogin(email, password)
 
             if (!result.success) {
-                // Map error to banner type
+                if (result.error === 'account_pending') {
+                    navigate('/pending-approval', { replace: true })
+                    return
+                }
                 const errorType = result.error?.toLowerCase().includes('password')
                     ? 'INVALID_CREDENTIALS'
                     : 'UNKNOWN'

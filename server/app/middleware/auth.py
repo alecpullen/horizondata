@@ -57,6 +57,7 @@ def validate_teacher() -> Optional[dict]:
                 "name": user.username or user.email,
                 "role": role,
                 "user_type": user_type,
+                "account_status": user.account_status,
             }
     except JWTExtendedException as e:
         logger.warning(f"JWT validation failed: {e}")

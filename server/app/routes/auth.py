@@ -157,6 +157,8 @@ def teacher_login():
             user = db.query(User).filter_by(email=email).first()
             if not user or not user.check_password(password):
                 return jsonify({'error': 'invalid_credentials', 'message': 'Invalid email or password'}), 401
+            if user.account_status == "pending":
+                return jsonify({'error': 'account_pending', 'message': 'Your account is pending administrator approval'}), 403
             
             user_id_str = str(user.id)
             user_dict = user.to_dict()

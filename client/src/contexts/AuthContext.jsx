@@ -89,33 +89,39 @@ export const AuthProvider = ({ children }) => {
 
   // Teacher login
   const loginTeacher = useCallback(async (email, password) => {
-    const response = await api.post('/api/auth/teacher/login', {
-      email,
-      password,
-    });
+    try {
+      const response = await api.post('/api/auth/teacher/login', {
+        email,
+        password,
+      });
 
-    const { user, token, refresh_token } = response.data;
+      const { user, token, refresh_token } = response.data;
 
-    // Normalize user data to include both 'name' and 'fullName'
-    const normalizedUser = {
-      ...user,
-      fullName: user.name || '',
+      const normalizedUser = {
+        ...user,
+        fullName: user.name || '',
+      }
+
+      localStorage.setItem('userType', 'teacher');
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refresh_token);
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+
+      console.log('[AuthContext] loginTeacher success:', normalizedUser);
+
+      setUserType('teacher');
+      setToken(token);
+      setUser(normalizedUser);
+      setIsAuthenticated(true);
+
+      return response.data;
+    } catch (err) {
+      const errorCode = err.response?.data?.error
+      if (errorCode === 'account_pending') {
+        return { success: false, error: 'account_pending' }
+      }
+      throw err
     }
-
-    // Store auth state
-    localStorage.setItem('userType', 'teacher');
-    localStorage.setItem('token', token);
-    localStorage.setItem('refreshToken', refresh_token);
-    localStorage.setItem('user', JSON.stringify(normalizedUser));
-
-    console.log('[AuthContext] loginTeacher success:', normalizedUser);
-
-    setUserType('teacher');
-    setToken(token);
-    setUser(normalizedUser);
-    setIsAuthenticated(true);
-
-    return response.data;
   }, []);
 
   // Teacher logout
