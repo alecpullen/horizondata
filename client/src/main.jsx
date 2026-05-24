@@ -18,11 +18,9 @@ async function enableMocking() {
             throw new Error(`Status: ${res.status}`)
         }
     } catch (err) {
-        console.warn('[MSW] Failed to load settings from API, falling back to localStorage:', err)
-        const storedMsw = localStorage.getItem('msw-enabled')
-        const storedTelescope = localStorage.getItem('mock-telescope-enabled')
-        mswEnabled = storedMsw === 'true'
-        mockTelescopeEnabled = storedTelescope === 'true'
+        console.warn('[MSW] Failed to load settings from API, defaulting to disabled:', err)
+        mswEnabled = false
+        mockTelescopeEnabled = false
     }
 
     // Persist in localStorage so handlers/components can check synchronously
