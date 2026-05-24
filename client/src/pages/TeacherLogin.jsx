@@ -7,6 +7,7 @@ const TeacherLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [errorSecondary, setErrorSecondary] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const { loginTeacher } = useAuth();
@@ -15,6 +16,7 @@ const TeacherLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setErrorSecondary(null);
     setIsLoading(true);
     try {
       const result = await loginTeacher(email, password);
@@ -24,7 +26,18 @@ const TeacherLogin = () => {
         navigate('/bookings');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      const code = err.response?.data?.error;
+      if (code === 'email_not_verified') {
+        setError('Please verify your email before signing in.');
+        setErrorSecondary(
+          <>
+            Didn't receive the email?{' '}
+            <Link to="/forgot-password" className="auth-link">Resend it here</Link>
+          </>
+        );
+      } else {
+        setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +56,12 @@ const TeacherLogin = () => {
       subtitle="Sign in to manage telescope sessions"
       footer={footer}
     >
-      {error && <div className="auth-error">{error}</div>}
+      {error && (
+        <div className="auth-error">
+          <div>{error}</div>
+          {errorSecondary && <div style={{ marginTop: '6px', fontSize: '0.875rem' }}>{errorSecondary}</div>}
+        </div>
+      )}
       <form className="auth-form" onSubmit={handleSubmit}>
         <div className="auth-field">
           <label className="auth-label" htmlFor="email">Email</label>
@@ -68,6 +86,11 @@ const TeacherLogin = () => {
             required
             placeholder="••••••••"
           />
+          <div style={{ textAlign: 'right', marginTop: '4px' }}>
+            <Link to="/forgot-password" className="auth-link" style={{ fontSize: '0.8125rem' }}>
+              Forgot password?
+            </Link>
+          </div>
         </div>
         <button className="auth-submit" type="submit" disabled={isLoading}>
           {isLoading ? 'Signing in…' : 'Sign In'}
