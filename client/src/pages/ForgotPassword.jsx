@@ -4,6 +4,7 @@ import AuthShell from '../components/auth/AuthShell'
 import { useToast } from '../components/ui/ToastProvider'
 import { validateEmail } from '../utils/validation'
 import './ForgotPassword.css'
+import api from '../lib/api'
 
 function ForgotPassword() {
     const { showToast } = useToast()
@@ -17,33 +18,29 @@ function ForgotPassword() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!emailValidation.isValid) {
-            return
-        }
+        if (!emailValidation.isValid) return
 
         setIsLoading(true)
-
-        // Simulate API call
-        await new Promise(r => setTimeout(r, 1000))
-
-        setIsSent(true)
-        setResendCooldown(30)
-        showToast({
-            type: 'success',
-            message: 'Reset link sent! Check your email.'
-        })
-
-        setIsLoading(false)
+        try {
+            await api.post('/api/auth/forgot-password', { email })
+            setIsSent(true)
+            setResendCooldown(30)
+        } catch (err) {
+            showToast({ type: 'error', message: 'Something went wrong. Please try again.' })
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const handleResend = async () => {
         if (resendCooldown > 0) return
 
-        setResendCooldown(30)
-        showToast({
-            type: 'info',
-            message: 'New reset link sent!'
-        })
+        try {
+            await api.post('/api/auth/forgot-password', { email })
+            setResendCooldown(30)
+        } catch (err) {
+            showToast({ type: 'error', message: 'Resend failed. Please try again.' })
+        }
     }
 
     // Countdown timer for resend button
