@@ -76,7 +76,6 @@ function ResetPassword() {
         return (
             <AuthShell title="Reset failed" subtitle={errorState.message} footer={null}>
                 <div className="reset-success">
-                    <p className="reset-success__text">{errorState.message}</p>
                     {errorState.showForgotLink && (
                         <Link to="/forgot-password" className="reset-success__button">
                             Request new link
