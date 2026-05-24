@@ -12,7 +12,15 @@ function AdminSettings() {
         msw_enabled: false,
         mock_telescope_enabled: false,
         alpaca_base: '',
-        thingspeak_channel_id: ''
+        thingspeak_channel_id: '',
+        email_enabled: false,
+        smtp_host: '',
+        smtp_port: '587',
+        smtp_use_tls: true,
+        smtp_user: '',
+        smtp_password: '',
+        mail_from: '',
+        frontend_url: '',
     })
     const [initialMsw, setInitialMsw] = useState(false)
     const [initialMockTelescope, setInitialMockTelescope] = useState(false)
@@ -35,7 +43,15 @@ function AdminSettings() {
                         msw_enabled: mswVal,
                         mock_telescope_enabled: telescopeVal,
                         alpaca_base: res.data.alpaca_base || '',
-                        thingspeak_channel_id: res.data.thingspeak_channel_id || ''
+                        thingspeak_channel_id: res.data.thingspeak_channel_id || '',
+                        email_enabled: res.data.email_enabled === 'true',
+                        smtp_host: res.data.smtp_host || '',
+                        smtp_port: res.data.smtp_port || '587',
+                        smtp_use_tls: res.data.smtp_use_tls !== 'false',
+                        smtp_user: res.data.smtp_user || '',
+                        smtp_password: res.data.smtp_password || '',
+                        mail_from: res.data.mail_from || '',
+                        frontend_url: res.data.frontend_url || '',
                     })
                     setInitialMsw(mswVal)
                     setInitialMockTelescope(telescopeVal)
@@ -79,7 +95,15 @@ function AdminSettings() {
                 msw_enabled: settings.msw_enabled ? 'true' : 'false',
                 mock_telescope_enabled: settings.mock_telescope_enabled ? 'true' : 'false',
                 alpaca_base: settings.alpaca_base,
-                thingspeak_channel_id: settings.thingspeak_channel_id
+                thingspeak_channel_id: settings.thingspeak_channel_id,
+                email_enabled: settings.email_enabled ? 'true' : 'false',
+                smtp_host: settings.smtp_host,
+                smtp_port: settings.smtp_port,
+                smtp_use_tls: settings.smtp_use_tls ? 'true' : 'false',
+                smtp_user: settings.smtp_user,
+                smtp_password: settings.smtp_password,
+                mail_from: settings.mail_from,
+                frontend_url: settings.frontend_url,
             })
             
             // Sync with local storage
@@ -255,6 +279,140 @@ function AdminSettings() {
                             </div>
                         </label>
                     </div>
+                </section>
+
+                <section className="settings-section">
+                    <h3 className="settings-section-title">Email</h3>
+                    <p className="settings-section-desc">
+                        Configure SMTP to enable password reset and email verification.
+                        Disable until a mail server is available — all flows still work without it.
+                    </p>
+
+                    <div className="form-group-toggle">
+                        <label className="settings-toggle-label" htmlFor="email_enabled">
+                            <div>
+                                <span style={{ display: 'block', fontWeight: 600 }}>Enable Email Sending</span>
+                                <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--t3)', marginTop: '2px', fontWeight: 400 }}>
+                                    Send password reset and verification emails via SMTP.
+                                </span>
+                            </div>
+                            <div className="msw-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="email_enabled"
+                                    name="email_enabled"
+                                    checked={settings.email_enabled}
+                                    onChange={handleToggleChange}
+                                />
+                                <span className="msw-toggle-slider" />
+                            </div>
+                        </label>
+                    </div>
+
+                    {settings.email_enabled && (
+                        <>
+                            <div className="form-group" style={{ marginTop: '16px' }}>
+                                <label htmlFor="smtp_host">SMTP Host</label>
+                                <input
+                                    type="text"
+                                    id="smtp_host"
+                                    name="smtp_host"
+                                    className="settings-input"
+                                    value={settings.smtp_host}
+                                    onChange={handleChange}
+                                    placeholder="e.g. smtp.gmail.com"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="smtp_port">SMTP Port</label>
+                                <input
+                                    type="text"
+                                    id="smtp_port"
+                                    name="smtp_port"
+                                    className="settings-input"
+                                    value={settings.smtp_port}
+                                    onChange={handleChange}
+                                    placeholder="587"
+                                />
+                            </div>
+
+                            <div className="form-group-toggle" style={{ marginTop: '12px' }}>
+                                <label className="settings-toggle-label" htmlFor="smtp_use_tls">
+                                    <div>
+                                        <span style={{ display: 'block', fontWeight: 600 }}>Use STARTTLS</span>
+                                        <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--t3)', marginTop: '2px', fontWeight: 400 }}>
+                                            Required by most providers (port 587).
+                                        </span>
+                                    </div>
+                                    <div className="msw-toggle">
+                                        <input
+                                            type="checkbox"
+                                            id="smtp_use_tls"
+                                            name="smtp_use_tls"
+                                            checked={settings.smtp_use_tls}
+                                            onChange={handleToggleChange}
+                                        />
+                                        <span className="msw-toggle-slider" />
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="form-group" style={{ marginTop: '12px' }}>
+                                <label htmlFor="smtp_user">SMTP Username</label>
+                                <input
+                                    type="text"
+                                    id="smtp_user"
+                                    name="smtp_user"
+                                    className="settings-input"
+                                    value={settings.smtp_user}
+                                    onChange={handleChange}
+                                    placeholder="your@email.com"
+                                    autoComplete="off"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="smtp_password">SMTP Password</label>
+                                <input
+                                    type="password"
+                                    id="smtp_password"
+                                    name="smtp_password"
+                                    className="settings-input"
+                                    value={settings.smtp_password}
+                                    onChange={handleChange}
+                                    placeholder="App password or SMTP password"
+                                    autoComplete="new-password"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="mail_from">From Address</label>
+                                <input
+                                    type="text"
+                                    id="mail_from"
+                                    name="mail_from"
+                                    className="settings-input"
+                                    value={settings.mail_from}
+                                    onChange={handleChange}
+                                    placeholder="noreply@horizon.edu.au"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="frontend_url">Frontend Base URL</label>
+                                <input
+                                    type="text"
+                                    id="frontend_url"
+                                    name="frontend_url"
+                                    className="settings-input"
+                                    value={settings.frontend_url}
+                                    onChange={handleChange}
+                                    placeholder="http://localhost:5173"
+                                />
+                            </div>
+                        </>
+                    )}
                 </section>
 
                 <div className="settings-actions">

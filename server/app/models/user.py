@@ -17,6 +17,7 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     account_status = Column(String(20), nullable=False, default="pending")
     role = Column(String(20), nullable=False, default="teacher")
+    email_verified = Column(Boolean, nullable=False, default=False)
 
     def to_dict(self):
         return {
