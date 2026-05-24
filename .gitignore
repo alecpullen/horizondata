@@ -23,6 +23,7 @@ client/dist/
 # ── Environment variables ──────────────────
 .env
 
+
 # ── Video simulator files ──────────────────
 streaming/*.mp4
 .env.local
@@ -48,6 +49,9 @@ skills-lock.json
 .aider.chat.history.md
 .aider.input.history
 .aider.tags.cache.*/
+
+# ── TLS certificates ────────────────────
+certs/*.pem
 
 # ── OS ─────────────────────────────────────
 .DS_Store

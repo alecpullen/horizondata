@@ -27,6 +27,7 @@ services:
       CAPTURES_DIR: /data/captures
       # Override when MediaMTX runs on a separate host:
       # MEDIAMTX_RTSP_URL: rtsp://host.docker.internal:8554/telescope-camera
+      CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,https://localhost,https://localhost:8443"
     restart: unless-stopped
     networks:
       - cse3cap-rsdcc
@@ -38,10 +39,27 @@ services:
     build:
       context: ../client
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: https://localhost:8443
     ports:
       - "5173:80"
-    environment:
-      VITE_API_URL: http://localhost:8080
+    networks:
+      - cse3cap-rsdcc
+    restart: unless-stopped
+
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "8443:8443"
+      - "3443:3443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - frontend
+      - otel-lgtm
     networks:
       - cse3cap-rsdcc
     restart: unless-stopped

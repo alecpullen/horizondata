@@ -78,6 +78,8 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+> **Using Docker instead?** See Option B below. The Docker stack serves the frontend over HTTPS at `https://localhost` — run `bash certs/generate-dev-cert.sh` once first, then trust the cert in your browser (see `HTTPS.md`).
+
 ---
 
 ## MSW (Mock API) vs Live API
@@ -121,11 +123,19 @@ cd streaming/
 docker compose up
 ```
 
-Then configure stream URLs in the **admin UI → System Settings**:
+Then configure stream URLs in the **admin UI → System Settings**.
+
+If your frontend is the **Vite dev server** (`http://localhost:5173`), use the HTTP ports:
 - **Primary WebRTC URL**: `http://localhost:8889/telescope-camera/whep`
 - **Primary HLS URL**: `http://localhost:8888/telescope-camera/index.m3u8`
 - **Site WebRTC URL**: `http://localhost:8889/allsky/whep`
 - **Site HLS URL**: `http://localhost:8888/allsky/index.m3u8`
+
+If your frontend is the **Docker stack** (`https://localhost`), use the HTTPS ports (browsers require a secure context for WebRTC when the page itself is HTTPS):
+- **Primary WebRTC URL**: `https://localhost:18889/telescope-camera/whep`
+- **Primary HLS URL**: `https://localhost:18888/telescope-camera/index.m3u8`
+- **Site WebRTC URL**: `https://localhost:18889/allsky/whep`
+- **Site HLS URL**: `https://localhost:18888/allsky/index.m3u8`
 
 Add to `server/.env` for headless frame grabs:
 ```
@@ -145,7 +155,9 @@ When the API runs inside Docker, use `host.docker.internal`:
 MEDIAMTX_RTSP_URL=rtsp://host.docker.internal:8554/telescope-camera
 ```
 
-**Grafana:** `http://localhost:3000` — login `admin` / `admin`.
+**Grafana:** `http://localhost:3000` (HTTP) or `https://localhost:3443` (HTTPS) — login `admin` / `admin`.
+
+> **First-time HTTPS setup:** generate a dev cert with `bash certs/generate-dev-cert.sh` before starting the Docker stack. See `HTTPS.md` for cert trust instructions per OS.
 
 ### Option C — External streaming server
 
@@ -155,16 +167,18 @@ Deploy `streaming/` on a separate machine. Copy `.mp4` simulator files into `str
 
 ## Port Reference
 
-| Port | Service | Protocol |
-|------|---------|----------|
-| 8080 | Flask API | HTTP |
-| 5173 | Vite / Nginx frontend | HTTP |
-| 8554 | MediaMTX RTSP | TCP |
-| 8888 | MediaMTX HLS | HTTP |
-| 8889 | MediaMTX WebRTC (WHEP) | HTTP / UDP |
-| 8890 | MediaMTX SRT ingest | UDP |
-| 1935 | MediaMTX RTMP | TCP |
-| 3000 | Grafana | HTTP |
+HTTP ports are always available. HTTPS ports are exposed by the Nginx proxy containers when running the Docker stacks (requires `certs/` — see `HTTPS.md`).
+
+| HTTP Port | HTTPS Port | Service | Notes |
+|-----------|------------|---------|-------|
+| 8080 | **8443** | Flask API | HTTPS via Docker proxy |
+| 5173 | **443** | Vite / Nginx frontend | HTTPS via Docker proxy |
+| 8888 | **18888** | MediaMTX HLS | HTTPS required when frontend is HTTPS |
+| 8889 | **18889** | MediaMTX WebRTC (WHEP) | HTTPS required when frontend is HTTPS |
+| 3000 | **3443** | Grafana | HTTPS via Docker proxy |
+| 8554 | — | MediaMTX RTSP | TCP only (headless frame grabs) |
+| 8890 | — | MediaMTX SRT ingest | UDP only (FFmpeg → MediaMTX) |
+| 1935 | — | MediaMTX RTMP | TCP only |
 
 ---
 
