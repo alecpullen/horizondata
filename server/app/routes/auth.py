@@ -16,6 +16,11 @@ from app.services.rate_limiter import check_capture_limit, get_capture_remaining
 from app.services.session_codes import generate_session_code
 from app.middleware.auth import require_auth, invalidate_token
 from app.models.booking import Booking
+from app.services.token_service import (
+    generate_reset_token, verify_reset_token,
+    generate_verify_token, verify_email_token,
+)
+from app.services.email_service import send_password_reset_email, send_verification_email
 
 from flask_jwt_extended import (
     create_access_token, 
@@ -104,14 +109,21 @@ def teacher_signup():
             
         access_token = create_access_token(identity=user_id_str)
         refresh_token = create_refresh_token(identity=user_id_str)
-        
+
+        # Send verification email (silently skipped if email is disabled in settings)
+        try:
+            verify_token = generate_verify_token(new_user)
+            send_verification_email(new_user, verify_token)
+        except Exception as email_err:
+            logger.warning(f"Failed to send verification email after signup: {email_err}")
+
         return jsonify({
             'success': True,
             'user': user_dict,
             'token': access_token,
             'refresh_token': refresh_token
         }), 201
-        
+
     except Exception as e:
         logger.error(f"Unexpected error during teacher signup: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Registration failed'}), 500
@@ -160,6 +172,8 @@ def teacher_login():
                 return jsonify({'error': 'invalid_credentials', 'message': 'Invalid email or password'}), 401
             if user.account_status == "pending":
                 return jsonify({'error': 'account_pending', 'message': 'Your account is pending administrator approval'}), 403
+            if not user.email_verified:
+                return jsonify({'error': 'email_not_verified', 'message': 'Please verify your email address before logging in.'}), 403
             
             user_id_str = str(user.id)
             user_dict = user.to_dict()
@@ -274,6 +288,155 @@ def teacher_refresh():
     except Exception as e:
         logger.error(f"Error refreshing token: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Token refresh failed'}), 500
+
+
+# ============================================================================
+# Password Reset Routes
+# ============================================================================
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """
+    Trigger a password-reset email.
+
+    Always returns 200 regardless of whether the email exists to prevent
+    email enumeration.
+
+    Body: { "email": "..." }
+    """
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({'error': 'validation_error', 'message': 'Email is required'}), 400
+
+    try:
+        from app.models.user import User
+        with get_db() as db:
+            user = db.query(User).filter_by(email=email).first()
+
+        if user:
+            try:
+                token = generate_reset_token(user)
+                send_password_reset_email(user, token)
+            except Exception as e:
+                logger.warning(f"Failed to send password reset email to {email}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error during forgot-password for {email}: {e}")
+
+    return jsonify({'success': True, 'message': 'If that email exists, a reset link has been sent.'})
+
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Apply a new password using a signed reset token.
+
+    Body: { "token": "...", "new_password": "..." }
+    """
+    data = request.get_json() or {}
+    token = (data.get('token') or '').strip()
+    new_password = data.get('new_password') or ''
+
+    if not token:
+        return jsonify({'error': 'validation_error', 'message': 'token is required'}), 400
+    if not new_password or len(new_password) < 8:
+        return jsonify({'error': 'validation_error', 'message': 'Password must be at least 8 characters'}), 400
+
+    try:
+        email, ph_fragment = verify_reset_token(token)
+    except ValueError as e:
+        code = 'expired_token' if str(e) == 'expired' else 'invalid_token'
+        return jsonify({'error': code, 'message': 'This reset link is invalid or has expired.'}), 400
+
+    try:
+        from app.models.user import User
+        with get_db() as db:
+            user = db.query(User).filter_by(email=email).first()
+            if not user:
+                return jsonify({'error': 'invalid_token', 'message': 'This reset link is invalid or has expired.'}), 400
+
+            # Token is single-use: the embedded password fragment must still match
+            if user.hashed_password[-16:] != ph_fragment:
+                return jsonify({'error': 'invalid_token', 'message': 'This reset link has already been used.'}), 400
+
+            user.set_password(new_password)
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Error during reset-password: {e}")
+        return jsonify({'error': 'internal_error', 'message': 'Password reset failed'}), 500
+
+
+@auth_bp.route('/verify-email', methods=['GET'])
+def verify_email():
+    """
+    Verify an email address using the signed token from the verification email.
+
+    Query param: ?token=<signed_token>
+    """
+    token = (request.args.get('token') or '').strip()
+    if not token:
+        return jsonify({'error': 'validation_error', 'message': 'token query parameter is required'}), 400
+
+    try:
+        email = verify_email_token(token)
+    except ValueError as e:
+        code = 'expired_token' if str(e) == 'expired' else 'invalid_token'
+        return jsonify({'error': code, 'message': 'This verification link is invalid or has expired.'}), 400
+
+    try:
+        from app.models.user import User
+        with get_db() as db:
+            user = db.query(User).filter_by(email=email).first()
+            if not user:
+                return jsonify({'error': 'invalid_token', 'message': 'This verification link is invalid.'}), 400
+
+            if user.email_verified:
+                return jsonify({'error': 'already_verified', 'message': 'This email address has already been verified.'}), 400
+
+            user.email_verified = True
+
+        return jsonify({'success': True, 'message': 'Email verified successfully.'})
+
+    except Exception as e:
+        logger.error(f"Error during verify-email: {e}")
+        return jsonify({'error': 'internal_error', 'message': 'Email verification failed'}), 500
+
+
+@auth_bp.route('/resend-verification', methods=['POST'])
+def resend_verification():
+    """
+    Re-send an email verification link.
+
+    Always returns 200 to prevent email enumeration.
+    Silently skips if user is already verified or email sending is disabled.
+
+    Body: { "email": "..." }
+    """
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({'error': 'validation_error', 'message': 'Email is required'}), 400
+
+    try:
+        from app.models.user import User
+        with get_db() as db:
+            user = db.query(User).filter_by(email=email).first()
+            if user and not user.email_verified:
+                try:
+                    token = generate_verify_token(user)
+                    send_verification_email(user, token)
+                except Exception as e:
+                    logger.warning(f"Failed to resend verification email to {email}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error during resend-verification for {email}: {e}")
+
+    return jsonify({'success': True, 'message': 'If that email exists and is unverified, a new link has been sent.'})
 
 
 # ============================================================================
