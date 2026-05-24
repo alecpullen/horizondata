@@ -15,7 +15,7 @@ function VerifyEmail() {
 
     // verify mode state
     const [verifyStatus, setVerifyStatus] = useState('loading') // 'loading' | 'success' | 'error'
-    const [verifyError, setVerifyError] = useState(null) // { message, showForgotLink, showLoginLink }
+    const [verifyError, setVerifyError] = useState(null) // { message, showResendLink, showLoginLink }
 
     // waiting mode state
     const [resendCooldown, setResendCooldown] = useState(0)
@@ -36,19 +36,19 @@ function VerifyEmail() {
                 if (code === 'expired_token') {
                     setVerifyError({
                         message: 'This verification link has expired. Please request a new one.',
-                        showForgotLink: true,
+                        showResendLink: true,
                         showLoginLink: false,
                     })
                 } else if (code === 'already_verified') {
                     setVerifyError({
                         message: 'This email address has already been verified.',
-                        showForgotLink: false,
+                        showResendLink: false,
                         showLoginLink: true,
                     })
                 } else {
                     setVerifyError({
                         message: 'This verification link is invalid or has expired.',
-                        showForgotLink: true,
+                        showResendLink: true,
                         showLoginLink: false,
                     })
                 }
@@ -124,8 +124,8 @@ function VerifyEmail() {
             <AuthShell title="Verification failed" subtitle="There was a problem with your verification link." footer={null}>
                 <div className="verify-content">
                     <p className="verify-instructions">{verifyError?.message}</p>
-                    {verifyError?.showForgotLink && (
-                        <Link to="/forgot-password" className="verify-resend" style={{ textDecoration: 'none', display: 'inline-block' }}>
+                    {verifyError?.showResendLink && (
+                        <Link to="/verify-email" className="verify-resend" style={{ textDecoration: 'none', display: 'inline-block' }}>
                             Request new link
                         </Link>
                     )}

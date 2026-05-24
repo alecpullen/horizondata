@@ -8,7 +8,7 @@ import './ResetPassword.css'
 
 function ResetPassword() {
     const [searchParams] = useSearchParams()
-    const token = searchParams.get('token') // Ignored for now, used later with BetterAuth
+    const token = searchParams.get('token')
     const { showToast } = useToast()
 
     const [password, setPassword] = useState('')

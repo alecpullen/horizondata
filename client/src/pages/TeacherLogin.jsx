@@ -32,7 +32,7 @@ const TeacherLogin = () => {
         setErrorSecondary(
           <>
             Didn't receive the email?{' '}
-            <Link to="/forgot-password" className="auth-link">Resend it here</Link>
+            <Link to={`/verify-email?email=${encodeURIComponent(email)}`} className="auth-link">Resend it here</Link>
           </>
         );
       } else {
