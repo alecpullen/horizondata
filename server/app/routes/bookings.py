@@ -85,11 +85,13 @@ def get_booking(booking_id):
 
 
 @bookings_bp.route("/<uuid:booking_id>", methods=["DELETE"])
-@require_auth(roles=["teacher"])
+@require_auth(roles=["teacher", "admin"])
 def delete_booking(booking_id):
     """
     Delete/cancel a booking.
     Teachers can only delete their own bookings.
+    Admins can delete any booking.
+    Blocked if the booking has an active observation session.
     """
     try:
         with get_db() as db:
@@ -97,8 +99,18 @@ def delete_booking(booking_id):
 
             if not booking:
                 return jsonify({"error": "not_found", "message": "Booking not found"}), 404
-            if str(booking.teacher_id) != str(g.user["id"]):
+
+            is_admin = g.user.get("role") == "admin"
+            if not is_admin and str(booking.teacher_id) != str(g.user["id"]):
                 return jsonify({"error": "forbidden", "message": "You do not own this booking"}), 403
+
+            from app.models.session import ObservationSession
+            active = db.query(ObservationSession).filter(
+                ObservationSession.booking_id == booking.id,
+                ObservationSession.status == "active",
+            ).first()
+            if active:
+                return jsonify({"error": "conflict", "message": "Cannot delete a booking with an active session"}), 409
 
             if booking.headless:
                 from app.services.headless_runner import unschedule_headless_booking
@@ -107,7 +119,7 @@ def delete_booking(booking_id):
             db.delete(booking)
             db.commit()
 
-            logger.info(f"Booking {booking_id} deleted by teacher {g.user['id']}")
+            logger.info(f"Booking {booking_id} deleted by {g.user.get('role', 'unknown')} {g.user['id']}")
             return jsonify({"success": True, "message": "Booking deleted successfully"}), 200
 
     except Exception as e:
