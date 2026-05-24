@@ -166,7 +166,7 @@ function TeacherView() {
             formData.append('file', blob, `capture_${Date.now()}.png`)
             formData.append('objectName', booking?.title || 'Unknown')
             formData.append('timestamp', ts)
-            if (bookingId) formData.append('observationSessionId', bookingId)
+            if (session?.id) formData.append('observationSessionId', session.id)
 
             const { data } = await api.post('/api/captures', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },

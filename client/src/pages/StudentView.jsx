@@ -3,19 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import StreamView from '../components/StreamView'
 import AppLogo from '../components/AppLogo'
 import { useToast } from '../components/ui/ToastProvider'
+import api from '../lib/api'
 import './StudentView.css'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-
-const SESSION = {
-    object:      'Saturn',
-    description: 'The sixth planet from the Sun, famous for its stunning ring system made of ice and rock.',
-    funFact:     'Saturn\'s rings are mostly made of ice chunks ranging from tiny grains to pieces as big as a house.',
-}
-
-const STUDENT = {
-    name: 'Student A',
-}
 
 function StudentView() {
     const navigate = useNavigate()
@@ -23,22 +12,23 @@ function StudentView() {
     const bookingId = searchParams.get('bookingId')
     const { showToast } = useToast()
 
+    const studentName = JSON.parse(localStorage.getItem('user') || '{}')?.display_name || 'Student'
+
     const streamRef = useRef(null)
     const [capturing, setCapturing] = useState(false)
     const [captureCount, setCaptureCount] = useState(0)
     const [streamUrls, setStreamUrls] = useState({ webrtc: null, hls: null })
+    const [objectName, setObjectName] = useState('')
 
+    // Fetch stream settings
     useEffect(() => {
         let cancelled = false
-        fetch(`${API_BASE}/api/settings`, {
-            headers: { Accept: 'application/json' },
-        })
-            .then(res => res.json())
-            .then(data => {
+        api.get('/api/settings')
+            .then(res => {
                 if (!cancelled) {
                     setStreamUrls({
-                        webrtc: data.primary_stream_webrtc_url || null,
-                        hls: data.primary_stream_url || null,
+                        webrtc: res.data.primary_stream_webrtc_url || null,
+                        hls: res.data.primary_stream_url || null,
                     })
                 }
             })
@@ -46,21 +36,36 @@ function StudentView() {
         return () => { cancelled = true }
     }, [])
 
+    // Fetch session info (object name) + poll for session end
     useEffect(() => {
         if (!bookingId) return
-        const interval = setInterval(async () => {
+
+        let cancelled = false
+
+        async function fetchInfo() {
             try {
-                const res = await fetch(`${API_BASE}/api/sessions/${bookingId}`, {
-                    headers: { Accept: 'application/json' },
-                })
-                if (!res.ok) return
-                const data = await res.json()
-                if (data.session?.status === 'ended') {
+                const res = await api.get('/api/auth/student/session-info')
+                if (cancelled) return
+                if (res.data.booking_title) {
+                    setObjectName(res.data.booking_title)
+                }
+                if (res.data.status === 'ended') {
                     navigate('/join', { replace: true, state: { ended: true } })
                 }
-            } catch { /* ignore network errors */ }
-        }, 5000)
-        return () => clearInterval(interval)
+            } catch (err) {
+                if (cancelled) return
+                if (err.response?.status === 401) {
+                    navigate('/join', { replace: true, state: { ended: true } })
+                }
+            }
+        }
+
+        fetchInfo()
+        const interval = setInterval(fetchInfo, 5000)
+        return () => {
+            cancelled = true
+            clearInterval(interval)
+        }
     }, [bookingId, navigate])
 
     const handleCapture = useCallback(async () => {
@@ -87,25 +92,22 @@ function StudentView() {
             const ts = new Date().toISOString()
             const formData = new FormData()
             formData.append('file', blob, `capture_${Date.now()}.png`)
-            formData.append('objectName', SESSION.object)
+            formData.append('objectName', objectName || 'Unknown')
             formData.append('timestamp', ts)
             if (bookingId) formData.append('observationSessionId', bookingId)
 
-            const res = await fetch(`${API_BASE}/api/captures`, {
-                method: 'POST',
-                headers: { 'X-Session-ID': sessionId },
-                body: formData,
+            const res = await api.post('/api/captures', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                validateStatus: null,
             })
 
             if (res.status === 429) {
-                const data = await res.json()
-                showToast({ type: 'error', message: data.message || 'Too many captures. Please wait a moment.' })
+                showToast({ type: 'error', message: res.data?.message || 'Too many captures. Please wait a moment.' })
                 return
             }
 
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}))
-                showToast({ type: 'error', message: data.message || 'Capture failed. Please try again.' })
+            if (res.status < 200 || res.status >= 300) {
+                showToast({ type: 'error', message: res.data?.message || 'Capture failed. Please try again.' })
                 return
             }
 
@@ -116,7 +118,7 @@ function StudentView() {
         } finally {
             setCapturing(false)
         }
-    }, [bookingId, showToast])
+    }, [bookingId, objectName, showToast])
 
     return (
         <div className="sv-shell">
@@ -125,11 +127,11 @@ function StudentView() {
                     <AppLogo />
                 </div>
                 <div className="sv-session-info">
-                    Observing <strong>{SESSION.object}</strong>
+                    {objectName ? <>Observing <strong>{objectName}</strong></> : 'Loading session…'}
                 </div>
                 <div className="sv-topbar-right">
                     <span className="sv-capture-count">{captureCount} captures</span>
-                    <div className="sv-avatar">{STUDENT.name[0]}</div>
+                    <div className="sv-avatar">{studentName[0]?.toUpperCase()}</div>
                 </div>
             </header>
 
@@ -141,11 +143,11 @@ function StudentView() {
                     hlsUrl={streamUrls.hls}
                 />
 
-                <div className="sv-object-overlay">
-                    <div className="sv-object-name">{SESSION.object}</div>
-                    <div className="sv-object-desc">{SESSION.description}</div>
-                    <div className="sv-fun-fact">{SESSION.funFact}</div>
-                </div>
+                {objectName && (
+                    <div className="sv-object-overlay">
+                        <div className="sv-object-name">{objectName}</div>
+                    </div>
+                )}
             </div>
 
             <div className="sv-actions">

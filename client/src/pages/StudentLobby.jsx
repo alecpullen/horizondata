@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import AppLogo from '../components/AppLogo'
+import api from '../lib/api'
 import './StudentLobby.css'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 function StudentLobby() {
     const { bookingId } = useParams()
@@ -20,26 +19,24 @@ function StudentLobby() {
 
         async function poll() {
             try {
-                const response = await fetch(`${API_BASE}/api/sessions/${bookingId}`, {
-                    headers: { 'Accept': 'application/json' },
-                })
-
-                if (!response.ok) {
-                    if (!cancelled) setError('Lost connection to session. Please rejoin.')
-                    return
-                }
-
-                if (!cancelled) setError('')
-                const data = await response.json()
+                const res = await api.get('/api/auth/student/session-info')
                 if (cancelled) return
 
-                if (data.success && data.session?.status === 'active') {
+                setError('')
+                const { status } = res.data
+
+                if (status === 'active') {
                     navigate(`/live/student?bookingId=${bookingId}`, { replace: true })
-                } else if (data.session?.status === 'ended') {
+                } else if (status === 'ended') {
                     navigate('/join', { replace: true, state: { ended: true } })
                 }
             } catch (err) {
-                console.error('Student lobby poll failed:', err)
+                if (cancelled) return
+                if (err.response?.status === 401) {
+                    navigate('/join', { replace: true, state: { ended: true } })
+                } else {
+                    setError('Lost connection to session. Please rejoin.')
+                }
             }
         }
 

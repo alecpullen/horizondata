@@ -15,6 +15,7 @@ from app.services.student_session_manager import get_student_session_manager
 from app.services.rate_limiter import check_capture_limit, get_capture_remaining, check_join_limit, get_join_remaining
 from app.services.session_codes import generate_session_code
 from app.middleware.auth import require_auth, invalidate_token
+from app.models.booking import Booking
 
 from flask_jwt_extended import (
     create_access_token, 
@@ -353,6 +354,52 @@ def student_join():
     except Exception as e:
         logger.error(f"Error during student join: {e}")
         return jsonify({'error': 'internal_error', 'message': 'Failed to join session'}), 500
+
+
+@auth_bp.route('/student/session-info', methods=['GET'])
+@require_auth(roles=['student'])
+def student_session_info():
+    """
+    Get current student's session info including observation session status and booking title.
+
+    Headers:
+        X-Session-ID: <student_session_id>
+
+    Returns:
+        {
+            "success": true,
+            "status": "active" | "ended" | ...,
+            "booking_title": "Mars Observation",
+            "user": { "display_name": "Alex" }
+        }
+    """
+    observation_session_id = g.user.get('observation_session_id')
+
+    try:
+        with get_db() as db:
+            obs = db.query(ObservationSession).filter(
+                ObservationSession.id == _uuid.UUID(observation_session_id)
+            ).first()
+
+            if not obs:
+                return jsonify({'success': True, 'status': 'ended', 'booking_title': None,
+                                'user': {'display_name': g.user.get('display_name')}})
+
+            booking_title = None
+            if obs.booking_id:
+                booking = db.query(Booking).filter(Booking.id == obs.booking_id).first()
+                booking_title = booking.title if booking else None
+
+        return jsonify({
+            'success': True,
+            'status': obs.status,
+            'booking_title': booking_title,
+            'user': {'display_name': g.user.get('display_name')},
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting student session info: {e}")
+        return jsonify({'error': 'internal_error', 'message': 'Failed to get session info'}), 500
 
 
 @auth_bp.route('/student/leave', methods=['POST'])
