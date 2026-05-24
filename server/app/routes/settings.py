@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.database import get_db
 from app.models.setting import SystemSetting
-from app.middleware.auth import require_any_auth, require_auth
+from app.middleware.auth import require_any_auth, require_admin
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def get_settings():
         return jsonify({"error": "Failed to fetch settings", "message": str(e)}), 500
 
 @settings_bp.route("", methods=["PUT"])
-@require_auth(roles=['teacher', 'admin'])
+@require_admin
 def update_settings():
     """
     Update system settings.

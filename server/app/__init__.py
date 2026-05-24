@@ -2,6 +2,9 @@ from flask import Flask
 from flask_cors import CORS
 import os
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 # from .telemetry import setup_telemetry  # Temporarily disabled
 # Use a relative import to import from the same package (the 'app' folder)
 from .weather import weather_bp
@@ -25,7 +28,14 @@ def create_app():
     """
     app = Flask(__name__)
 
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-default-key-change-me")
+    secret = os.getenv("JWT_SECRET_KEY")
+    if not secret or secret == "super-secret-default-key-change-me":
+        logger.warning(
+            "JWT_SECRET_KEY is not set or using default value. "
+            "Set a strong random secret in your .env file for production."
+        )
+        secret = "super-secret-default-key-change-me"
+    app.config["JWT_SECRET_KEY"] = secret
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900  # 15 minutes
     app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 604800  # 7 days
 

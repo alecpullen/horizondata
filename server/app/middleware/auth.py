@@ -5,23 +5,14 @@ Unified authentication and authorization middleware for Flask.
 Handles both teacher (JWT token) and student (session ID) authentication.
 """
 
-import hashlib
 import logging
-import os
-import threading
 from functools import wraps
 from flask import request, g, jsonify
 from typing import Optional, List, Callable
-from cachetools import TTLCache
 
 from app.services.student_session_manager import get_student_session_manager
 
 logger = logging.getLogger(__name__)
-
-# Cache validated teacher tokens for 60 s to avoid a live HTTP call on every request.
-# Key: sha256(token) — avoids storing raw bearer tokens in memory.
-_token_cache: TTLCache = TTLCache(maxsize=512, ttl=60)
-_token_cache_lock = threading.Lock()
 
 
 def extract_bearer_token() -> Optional[str]:

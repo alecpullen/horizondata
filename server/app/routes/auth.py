@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify, g
 from datetime import datetime
 
 from app.services.student_session_manager import get_student_session_manager
-from app.services.rate_limiter import check_capture_limit, get_capture_remaining
+from app.services.rate_limiter import check_capture_limit, get_capture_remaining, check_join_limit, get_join_remaining
 from app.services.session_codes import generate_session_code
 from app.middleware.auth import require_auth, invalidate_token
 
@@ -257,16 +257,16 @@ def teacher_refresh():
     """
     try:
         user_id = get_jwt_identity()
+        old_jti = get_jwt()["jti"]
         access_token = create_access_token(identity=user_id)
+        new_refresh_token = create_refresh_token(identity=user_id)
         
-        # We don't rotate the refresh token here, just return the existing one for client compatibility
-        auth_header = request.headers.get('Authorization', '')
-        refresh_token = auth_header[7:] if auth_header.startswith('Bearer ') else None
+        invalidate_token(old_jti)
         
         return jsonify({
             'success': True,
             'token': access_token,
-            'refresh_token': refresh_token,
+            'refresh_token': new_refresh_token,
         })
     except Exception as e:
         logger.error(f"Error refreshing token: {e}")
@@ -311,6 +311,16 @@ def student_join():
         return jsonify({'error': 'validation_error', 'message': 'Display name must be 50 characters or less'}), 400
     if not session_code:
         return jsonify({'error': 'validation_error', 'message': 'Session code is required'}), 400
+
+    # Rate limit by IP — prevents brute-force guessing of session codes
+    ip = request.remote_addr or "unknown"
+    if not check_join_limit(ip):
+        remaining = get_join_remaining(ip)
+        return jsonify({
+            "error": "rate_limited",
+            "message": "Too many join attempts. Please wait before trying again.",
+            "remaining": remaining,
+        }), 429
     
     try:
         with get_db() as db:
