@@ -30,7 +30,7 @@ const TeacherSignup = () => {
     setIsLoading(true);
     try {
       await signupTeacher(email, password, name);
-      navigate('/bookings');
+      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       const code = err.response?.data?.error;
       const message = err.response?.data?.message || 'Registration failed';
