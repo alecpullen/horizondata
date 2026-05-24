@@ -42,7 +42,7 @@ function AdminBookings() {
         setLoading(true)
         setError(null)
         api.get('/api/admin/bookings')
-            .then(res => { setBookings(res.data); setLoading(false) })
+            .then(res => { setBookings(res.data.items ?? []); setLoading(false) })
             .catch(err => { setError(err.response?.status?.toString() || err.message); setLoading(false) })
     }, [])
 
@@ -58,7 +58,7 @@ function AdminBookings() {
     const handleConfirm = useCallback(async (id) => {
         setBusy(id, true)
         try {
-            await api.post(`/api/admin/bookings/${id}/confirm`)
+            await api.patch(`/api/admin/bookings/${id}`, { status: 'confirmed' })
             mutateStatus(id, 'confirmed')
             showToast({ type: 'success', message: 'Booking confirmed.' })
         } catch {
@@ -73,7 +73,7 @@ function AdminBookings() {
         }
         setBusy(id, true)
         try {
-            await api.post(`/api/admin/bookings/${id}/reject`, { reason: rejectReason.trim() })
+            await api.patch(`/api/admin/bookings/${id}`, { status: 'rejected' })
             mutateStatus(id, 'rejected')
             setRejectingId(null)
             setRejectReason('')
@@ -86,8 +86,7 @@ function AdminBookings() {
     const handleCancel = useCallback(async (id, title) => {
         setBusy(id, true)
         try {
-            const r = await fetch(`/api/admin/bookings/${id}/cancel`, { method: 'POST' })
-            if (!r.ok) throw new Error()
+            await api.patch(`/api/admin/bookings/${id}`, { status: 'cancelled' })
             mutateStatus(id, 'cancelled')
             showToast({ type: 'success', message: `"${title}" cancelled.` })
         } catch {
@@ -162,15 +161,15 @@ function AdminBookings() {
                                 return (
                                     <>
                                         <tr key={b.id} className={rejecting ? 'bk-row--rejecting' : ''}>
-                                            <td className="bk-cell-teacher">{b.teacherName}</td>
+                                            <td className="bk-cell-teacher">{b.teacher?.name}</td>
                                             <td className="bk-cell-title">{b.title}</td>
                                             <td className="bk-cell-dt">
                                                 <span className="bk-date">{formatDate(b.date)}</span>
                                                 <span className="bk-time">{b.time}</span>
                                             </td>
                                             <td className="bk-cell-targets">
-                                                {b.targets.map(t => (
-                                                    <span key={t} className="bk-target">{t}</span>
+                                                {(b.targets?.celestialObjects ?? []).map(obj => (
+                                                    <span key={obj.name} className="bk-target">{obj.name}</span>
                                                 ))}
                                             </td>
                                             <td className="bk-cell-headless">

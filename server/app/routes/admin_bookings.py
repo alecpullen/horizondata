@@ -25,6 +25,7 @@ def list_all_bookings():
                 d = b.to_dict()
                 d["id"] = str(b.id)
                 d["teacher_id"] = str(b.teacher_id)
+                d["status"] = b.status  # raw value, not the display label from to_dict
                 d["scheduled_start"] = b.scheduled_start.isoformat() if b.scheduled_start else None
                 d["scheduled_end"] = b.scheduled_end.isoformat() if b.scheduled_end else None
                 d["created_at"] = b.created_at.isoformat() if b.created_at else None

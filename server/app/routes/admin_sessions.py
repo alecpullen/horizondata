@@ -33,6 +33,7 @@ def list_all_sessions():
                 items.append({
                     "id": str(obs.id),
                     "booking_id": str(obs.booking_id) if obs.booking_id else None,
+                    "session_code": obs.session_code,
                     "teacher_name": teacher.username or "Unknown" if teacher else "Unknown",
                     "title": booking.title if booking else None,
                     "status": obs.status,

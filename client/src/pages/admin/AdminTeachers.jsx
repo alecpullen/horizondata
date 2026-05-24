@@ -22,8 +22,8 @@ function StatusBadge({ status }) {
 }
 
 function ActionButton({ teacher, onAction, busy }) {
-    const canApprove  = teacher.status === 'pending' || teacher.status === 'suspended'
-    const canSuspend  = teacher.status === 'approved'
+    const canApprove  = teacher.account_status === 'pending' || teacher.account_status === 'suspended'
+    const canSuspend  = teacher.account_status === 'approved'
 
     return (
         <div className="teacher-actions">
@@ -61,7 +61,7 @@ function AdminTeachers() {
         setLoading(true)
         setError(null)
         api.get('/api/admin/teachers')
-            .then(res => { setTeachers(res.data); setLoading(false) })
+            .then(res => { setTeachers(res.data.items ?? []); setLoading(false) })
             .catch(err => { setError(err.response?.status?.toString() || err.message); setLoading(false) })
     }, [])
 
@@ -70,12 +70,12 @@ function AdminTeachers() {
     const handleAction = useCallback(async (id, action) => {
         setBusyIds(prev => new Set(prev).add(id))
         try {
-            await api.post(`/api/admin/teachers/${id}/${action}`)
-            // Update local state so the tab counts re-compute without a full refetch
+            const newStatus = action === 'approve' ? 'approved' : 'suspended'
+            await api.patch(`/api/admin/teachers/${id}`, { status: newStatus })
             setTeachers(prev => prev.map(t =>
-                t.id === id ? { ...t, status: action === 'approve' ? 'approved' : 'suspended' } : t
+                t.id === id ? { ...t, account_status: newStatus } : t
             ))
-            const name = teachers.find(t => t.id === id)?.fullName ?? 'Teacher'
+            const name = teachers.find(t => t.id === id)?.name ?? 'Teacher'
             showToast({
                 type: 'success',
                 message: action === 'approve'
@@ -90,13 +90,13 @@ function AdminTeachers() {
     }, [teachers, showToast])
 
     const counts = TABS.reduce((acc, tab) => {
-        acc[tab] = tab === 'all' ? teachers.length : teachers.filter(t => t.status === tab).length
+        acc[tab] = tab === 'all' ? teachers.length : teachers.filter(t => t.account_status === tab).length
         return acc
     }, {})
 
     const visible = activeTab === 'all'
         ? teachers
-        : teachers.filter(t => t.status === activeTab)
+        : teachers.filter(t => t.account_status === activeTab)
 
     return (
         <div className="admin-teachers">
@@ -141,12 +141,11 @@ function AdminTeachers() {
                             {visible.map(t => (
                                 <tr key={t.id}>
                                     <td className="teacher-cell-name">
-                                        <span>{t.fullName}</span>
-                                        <span className="teacher-institution">{t.institution}</span>
+                                        <span>{t.name}</span>
                                     </td>
                                     <td className="teacher-cell-email">{t.email}</td>
-                                    <td className="teacher-cell-date">{formatDate(t.registeredAt)}</td>
-                                    <td><StatusBadge status={t.status} /></td>
+                                    <td className="teacher-cell-date">{formatDate(t.created_at)}</td>
+                                    <td><StatusBadge status={t.account_status} /></td>
                                     <td>
                                         <ActionButton
                                             teacher={t}

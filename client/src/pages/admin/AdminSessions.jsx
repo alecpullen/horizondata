@@ -53,25 +53,25 @@ function ActiveTable({ sessions, onTerminate, terminatingId, setTerminatingId, b
                 </thead>
                 <tbody>
                     {sessions.map(s => {
-                        const confirming = terminatingId === s.bookingId
+                        const confirming = terminatingId === s.id
                         return (
-                            <Fragment key={s.bookingId}>
+                            <Fragment key={s.id}>
                                 <tr className={confirming ? 'sess-row--confirming' : ''}>
                                     <td className="sess-cell-title">{s.title}</td>
-                                    <td>{s.teacherName}</td>
-                                    <td className="sess-cell-mono">{fmtTime(s.startedAt)}</td>
-                                    <td className="sess-cell-mono">{duration(s.startedAt)}</td>
+                                    <td>{s.teacher_name}</td>
+                                    <td className="sess-cell-mono">{fmtTime(s.started_at)}</td>
+                                    <td className="sess-cell-mono">{duration(s.started_at)}</td>
                                     <td className="sess-cell-center">
-                                        <span className="sess-student-count">{s.studentCount}</span>
+                                        <span className="sess-student-count">{s.student_count}</span>
                                     </td>
-                                    <td className="sess-cell-mono sess-join-code">{s.joinCode}</td>
+                                    <td className="sess-cell-mono sess-join-code">{s.session_code}</td>
                                     <td>
                                         <button
                                             className={'sess-btn sess-btn--terminate' + (confirming ? ' active' : '')}
-                                            disabled={busyId === s.bookingId}
+                                            disabled={busyId === s.id}
                                             onClick={() => confirming
                                                 ? setTerminatingId(null)
-                                                : setTerminatingId(s.bookingId)
+                                                : setTerminatingId(s.id)
                                             }
                                         >
                                             {confirming ? 'Cancel' : 'Terminate'}
@@ -84,19 +84,19 @@ function ActiveTable({ sessions, onTerminate, terminatingId, setTerminatingId, b
                                         <td colSpan={7}>
                                             <div className="sess-confirm-body">
                                                 <span className="sess-confirm-msg">
-                                                    This will immediately end the session for all {s.studentCount} connected student{s.studentCount !== 1 ? 's' : ''}. Continue?
+                                                    This will immediately end the session for all {s.student_count} connected student{s.student_count !== 1 ? 's' : ''}. Continue?
                                                 </span>
                                                 <div className="sess-confirm-actions">
                                                     <button
                                                         className="sess-btn sess-btn--terminate-confirm"
-                                                        disabled={busyId === s.bookingId}
-                                                        onClick={() => onTerminate(s.bookingId, s.title)}
+                                                        disabled={busyId === s.id}
+                                                        onClick={() => onTerminate(s.id, s.title)}
                                                     >
-                                                        {busyId === s.bookingId ? 'Terminating…' : 'Yes, terminate'}
+                                                        {busyId === s.id ? 'Terminating…' : 'Yes, terminate'}
                                                     </button>
                                                     <button
                                                         className="sess-btn sess-btn--ghost"
-                                                        disabled={busyId === s.bookingId}
+                                                        disabled={busyId === s.id}
                                                         onClick={() => setTerminatingId(null)}
                                                     >
                                                         Cancel
@@ -129,18 +129,16 @@ function PastTable({ sessions }) {
                         <th>Teacher</th>
                         <th>Date</th>
                         <th>Duration</th>
-                        <th>Captures</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {sessions.map(s => (
-                        <tr key={`${s.bookingId}-${s.startedAt}`}>
+                        <tr key={s.id}>
                             <td className="sess-cell-title">{s.title}</td>
-                            <td>{s.teacherName}</td>
-                            <td>{fmtDate(s.startedAt)}</td>
-                            <td className="sess-cell-mono">{duration(s.startedAt, s.endedAt)}</td>
-                            <td className="sess-cell-center">{s.captureCount}</td>
+                            <td>{s.teacher_name}</td>
+                            <td>{fmtDate(s.started_at)}</td>
+                            <td className="sess-cell-mono">{duration(s.started_at, s.ended_at)}</td>
                             <td><PastBadge status={s.status} /></td>
                         </tr>
                     ))}
@@ -158,38 +156,41 @@ function AdminSessions() {
     const [error, setError]             = useState(null)
     const [terminatingId, setTerminatingId] = useState(null)
     const [busyId, setBusyId]           = useState(null)
-    // Increment to force the duration columns to refresh each poll tick
-    const [tick, setTick]               = useState(0)
 
-    const fetchActive = useCallback(() => {
-        api.get('/api/admin/sessions/active')
-            .then(res => { setActive(res.data); setTick(t => t + 1); setError(null) })
-            .catch(err => setError(err.response?.status?.toString() || err.message))
+    const fetchSessions = useCallback(() => {
+        api.get('/api/admin/sessions')
+            .then(res => {
+                const all = res.data.items ?? []
+                setActive(all.filter(s => s.status === 'active'))
+                setPast(all.filter(s => s.status !== 'active'))
+                setLoadingPast(false)
+                setError(null)
+            })
+            .catch(err => {
+                setError(err.response?.status?.toString() || err.message)
+                setLoadingPast(false)
+            })
     }, [])
 
-    // Poll active sessions every 5s
+    // Poll all sessions every 5s — active table stays live, past updates too
     useEffect(() => {
-        fetchActive()
-        const id = setInterval(fetchActive, POLL_MS)
+        fetchSessions()
+        const id = setInterval(fetchSessions, POLL_MS)
         return () => clearInterval(id)
-    }, [fetchActive])
+    }, [fetchSessions])
 
-    // Fetch past sessions once
-    useEffect(() => {
-        api.get('/api/admin/sessions/past')
-            .then(res => { setPast(res.data); setLoadingPast(false) })
-            .catch(err => { setError(err.response?.status?.toString() || err.message); setLoadingPast(false) })
-    }, [])
-
-    const handleTerminate = useCallback(async (bookingId, title) => {
-        setBusyId(bookingId)
+    const handleTerminate = useCallback(async (sessionId, title) => {
+        setBusyId(sessionId)
         try {
-            await api.post(`/api/admin/sessions/${bookingId}/terminate`)
-            setActive(prev => prev.filter(s => s.bookingId !== bookingId))
+            await api.post(`/api/admin/sessions/${sessionId}/terminate`)
+            setActive(prev => prev.filter(s => s.id !== sessionId))
             setTerminatingId(null)
-            // Re-fetch past so the terminated session appears
-            api.get('/api/admin/sessions/past')
-                .then(res => setPast(res.data))
+            // Re-fetch so the terminated session appears in past
+            api.get('/api/admin/sessions')
+                .then(res => {
+                    const all = res.data.items ?? []
+                    setPast(all.filter(s => s.status !== 'active'))
+                })
                 .catch(() => {})
             showToast({ type: 'success', message: `"${title}" terminated.` })
         } catch {

@@ -125,7 +125,7 @@ function AdminDashboard() {
     useEffect(() => {
         let cancelled = false
         setLoading(true)
-        api.get('/api/admin/stats')
+        api.get('/api/admin/summary')
             .then(res => { if (!cancelled) { setData(res.data); setLoading(false) } })
             .catch(err => { if (!cancelled) { setError(err.response?.status?.toString() || err.message); setLoading(false) } })
         return () => { cancelled = true }
