@@ -9,8 +9,9 @@ Requirements addressed: 1.1, 1.2, 1.3, 3.1, 3.2
 """
 
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
+import threading
 from .time_service import TimeService
 from .weather_safety import WeatherSafetyService
 
@@ -28,22 +29,48 @@ class SafetyManager:
     safety evaluations to determine overall telescope operational status.
     """
     
+    _override = None
+    _override_lock = threading.Lock()
+    
     def __init__(self):
         self.time_service = TimeService()
         self.weather_service = WeatherSafetyService()
     
+    def set_override(self, state: str, duration_minutes: int) -> None:
+        with self._override_lock:
+            self._override = {
+                "state": state,
+                "expires_at": datetime.now() + timedelta(minutes=duration_minutes),
+                "set_at": datetime.now(),
+            }
+    
+    def clear_override(self) -> None:
+        with self._override_lock:
+            self._override = None
+    
+    def get_override(self) -> Optional[Dict]:
+        with self._override_lock:
+            if self._override is None:
+                return None
+            if datetime.now() >= self._override["expires_at"]:
+                self._override = None
+                return None
+            return dict(self._override)
+    
     def get_current_status(self) -> Dict:
-        """
-        Get the current safety status combining time and weather evaluations.
-        
-        Returns:
-            Dict containing:
-            - status: SafetyStatus enum value
-            - reason: String explanation of the status
-            - next_available: Optional datetime when system will next be available
-            - current_time: Current Melbourne time
-            - viewing_window: Current viewing window information
-        """
+        override = self.get_override()
+        if override:
+            status_map = {"OPEN": SafetyStatus.ACTIVE.value, "CLOSED": SafetyStatus.CLOSED.value}
+            return {
+                "status": status_map.get(override["state"], SafetyStatus.CLOSED.value),
+                "reason": f"Manual override set by administrator — system is {override['state']}",
+                "next_available": None,
+                "current_time": self.time_service.get_melbourne_time().isoformat(),
+                "viewing_window": self._get_current_viewing_window_info(),
+                "manual_override": True,
+                "override_expires_at": override["expires_at"].isoformat(),
+            }
+
         current_time = self.time_service.get_melbourne_time()
         
         # Check if we're in a valid viewing window (time-based safety)
