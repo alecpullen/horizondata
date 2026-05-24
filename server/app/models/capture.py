@@ -43,4 +43,5 @@ class Capture(Base):
             "capturedByTeacherId": self.captured_by_teacher_id,
             "capturedByStudentSessionId": self.captured_by_student_session_id,
             "timestamp": self.captured_at.isoformat() if self.captured_at else None,
+            "fileSizeBytes": self.file_size_bytes,
         }

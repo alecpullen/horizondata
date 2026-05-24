@@ -46,6 +46,8 @@ def validate_teacher() -> Optional[dict]:
             user = db.query(User).filter_by(id=int(user_id) if isinstance(user_id, str) else user_id).first()
             if not user or user.is_active is False:
                 return None
+            if user.account_status != "approved":
+                return None
             
             # Determine role directly from user model
             role = user.role if user.role else "teacher"

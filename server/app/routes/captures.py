@@ -111,6 +111,13 @@ def upload_capture():
     ts = request.form.get("timestamp")
     observation_session_id = request.form.get("observationSessionId")
 
+    # Validate observation_session_id early to avoid saving file on bad input
+    if observation_session_id:
+        try:
+            uuid.UUID(observation_session_id)
+        except ValueError:
+            return jsonify({"message": "Invalid observationSessionId format"}), 400
+
     # timestamp
     if ts:
         try:
@@ -244,40 +251,45 @@ def list_captures():
     
     Optional query param: ?sessionId=<id> to filter by session
     """
-    items = []
-    user_type = g.user_type
-    teacher_id = g.user.get('id') if user_type == 'teacher' else None
-    
-    filter_session_id = request.args.get("sessionId")
-    filter_booking_id = request.args.get("bookingId")
+    try:
+        items = []
+        user_type = g.user_type
+        teacher_id = g.user.get('id') if user_type == 'teacher' else None
+        
+        filter_session_id = request.args.get("sessionId")
+        filter_booking_id = request.args.get("bookingId")
 
-    with get_db() as db:
-        query = db.query(Capture)
+        with get_db() as db:
+            query = db.query(Capture)
 
-        if user_type == 'teacher':
-            query = query.filter(Capture.captured_by_teacher_id == str(teacher_id))
-        elif user_type == 'student':
-            query = query.filter(Capture.captured_by_student_session_id == g.session_id)
+            if user_type == 'teacher':
+                query = query.filter(Capture.captured_by_teacher_id == str(teacher_id))
+            elif user_type == 'student':
+                query = query.filter(Capture.captured_by_student_session_id == g.session_id)
 
-        if filter_session_id:
-            query = query.filter(Capture.observation_session_id == filter_session_id)
-        elif filter_booking_id:
-            from app.models.session import ObservationSession
-            session_ids = [
-                str(s.id) for s in db.query(ObservationSession.id)
-                .filter(ObservationSession.booking_id == filter_booking_id)
-                .all()
-            ]
-            if not session_ids:
-                return jsonify({"items": []})
-            query = query.filter(Capture.observation_session_id.in_(session_ids))
+            if filter_session_id:
+                query = query.filter(Capture.observation_session_id == filter_session_id)
+            elif filter_booking_id:
+                from app.models.session import ObservationSession
+                session_ids = [
+                    str(s.id) for s in db.query(ObservationSession.id)
+                    .filter(ObservationSession.booking_id == filter_booking_id)
+                    .all()
+                ]
+                if not session_ids:
+                    return jsonify({"items": []})
+                query = query.filter(Capture.observation_session_id.in_(session_ids))
 
-        captures = query.order_by(Capture.captured_at.desc()).all()
+            captures = query.order_by(Capture.captured_at.desc()).all()
 
-        for capture in captures:
-            items.append(capture.to_dict())
+            for capture in captures:
+                items.append(capture.to_dict())
 
-    return jsonify({"items": items})
+        return jsonify({"items": items})
+
+    except Exception as e:
+        current_app.logger.error(f"Error listing captures: {e}")
+        return jsonify({"error": "internal_error", "message": "Failed to list captures"}), 500
 
 def _get_capture_or_abort(cap_id: str):
     """Look up a capture by ID and enforce student ownership."""

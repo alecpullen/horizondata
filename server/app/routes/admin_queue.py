@@ -60,9 +60,6 @@ def abort_headless_job(booking_id):
             if not booking.headless:
                 return jsonify({"error": "validation_error", "message": "Booking is not a headless job"}), 400
 
-            from app.services.headless_runner import unschedule_headless_booking
-            unschedule_headless_booking(str(booking.id))
-
             obs = (
                 db.query(ObservationSession)
                 .filter(ObservationSession.booking_id == booking.id)
@@ -72,13 +69,16 @@ def abort_headless_job(booking_id):
                 obs.status = "terminated"
                 obs.ended_at = datetime.now(timezone.utc)
 
-            try:
-                from app.services.alpaca_client import alpaca_client
-                alpaca_client.park()
-            except Exception:
-                logger.warning(f"Could not park telescope during abort of booking {booking_id}")
-
             db.commit()
+
+        from app.services.headless_runner import unschedule_headless_booking
+        unschedule_headless_booking(str(booking.id))
+
+        try:
+            from app.services.alpaca_client import alpaca_client
+            alpaca_client.park()
+        except Exception:
+            logger.warning(f"Could not park telescope during abort of booking {booking_id}")
 
         logger.info(f"Headless job {booking_id} aborted by admin {g.user['id']}")
         return jsonify({"success": True, "message": "Headless job aborted"})

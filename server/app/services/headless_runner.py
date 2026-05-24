@@ -255,6 +255,7 @@ def _create_headless_session(db, booking) -> ObservationSession:
             ObservationSession.booking_id == booking.id,
             ObservationSession.status == "active",
         )
+        .with_for_update()
         .first()
     )
     if obs:
@@ -267,6 +268,7 @@ def _create_headless_session(db, booking) -> ObservationSession:
             ObservationSession.status == "active",
             ObservationSession.booking_id != booking.id,
         )
+        .with_for_update()
         .first()
     )
     if existing:

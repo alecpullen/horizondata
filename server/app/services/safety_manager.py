@@ -9,7 +9,7 @@ Requirements addressed: 1.1, 1.2, 1.3, 3.1, 3.2
 """
 
 from enum import Enum
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
 import threading
 from .time_service import TimeService
@@ -38,24 +38,24 @@ class SafetyManager:
     
     def set_override(self, state: str, duration_minutes: int) -> None:
         with self._override_lock:
-            self._override = {
+            SafetyManager._override = {
                 "state": state,
-                "expires_at": datetime.now() + timedelta(minutes=duration_minutes),
-                "set_at": datetime.now(),
+                "expires_at": datetime.now(timezone.utc) + timedelta(minutes=duration_minutes),
+                "set_at": datetime.now(timezone.utc),
             }
     
     def clear_override(self) -> None:
         with self._override_lock:
-            self._override = None
+            SafetyManager._override = None
     
     def get_override(self) -> Optional[Dict]:
         with self._override_lock:
-            if self._override is None:
+            if SafetyManager._override is None:
                 return None
-            if datetime.now() >= self._override["expires_at"]:
-                self._override = None
+            if datetime.now(timezone.utc) >= SafetyManager._override["expires_at"]:
+                SafetyManager._override = None
                 return None
-            return dict(self._override)
+            return dict(SafetyManager._override)
     
     def get_current_status(self) -> Dict:
         override = self.get_override()

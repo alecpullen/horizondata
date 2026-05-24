@@ -19,7 +19,16 @@ function PendingApproval() {
             return
         }
 
+        let attempts = 0
+        const MAX_RETRIES = 30
+
         const interval = setInterval(async () => {
+            attempts++
+            if (attempts > MAX_RETRIES) {
+                clearInterval(interval)
+                return
+            }
+
             try {
                 const res = await api.get('/api/auth/teacher/me')
                 const status = res.data?.user?.account_status

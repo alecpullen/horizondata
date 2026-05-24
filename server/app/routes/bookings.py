@@ -112,12 +112,12 @@ def delete_booking(booking_id):
             if active:
                 return jsonify({"error": "conflict", "message": "Cannot delete a booking with an active session"}), 409
 
+            db.delete(booking)
+            db.commit()
+
             if booking.headless:
                 from app.services.headless_runner import unschedule_headless_booking
                 unschedule_headless_booking(str(booking.id))
-
-            db.delete(booking)
-            db.commit()
 
             logger.info(f"Booking {booking_id} deleted by {g.user.get('role', 'unknown')} {g.user['id']}")
             return jsonify({"success": True, "message": "Booking deleted successfully"}), 200

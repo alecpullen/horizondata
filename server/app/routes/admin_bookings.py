@@ -14,6 +14,9 @@ admin_bookings_bp = Blueprint("admin_bookings", __name__, url_prefix="/api/admin
 @require_auth(roles=["admin"])
 def list_all_bookings():
     status_filter = request.args.get("status")
+    _ALLOWED_FILTERS = {"confirmed", "pending", "completed", "awaiting", "cancelled", "rejected"}
+    if status_filter and status_filter not in _ALLOWED_FILTERS:
+        return jsonify({"error": "validation_error", "message": f"Invalid status filter. Allowed: {', '.join(sorted(_ALLOWED_FILTERS))}"}), 400
     try:
         with get_db() as db:
             query = db.query(Booking).order_by(Booking.scheduled_start.desc())
@@ -68,12 +71,12 @@ def update_booking_status(booking_id):
                 if active:
                     return jsonify({"error": "conflict", "message": "Cannot cancel a booking with an active session"}), 409
 
+            booking.status = new_status
+            db.commit()
+
             if new_status == "cancelled" and booking.headless:
                 from app.services.headless_runner import unschedule_headless_booking
                 unschedule_headless_booking(str(booking.id))
-
-            booking.status = new_status
-            db.commit()
 
             logger.info(f"Booking {booking_id} status updated to {new_status} by admin {g.user['id']}")
             return jsonify({"success": True, "id": str(booking.id), "status": booking.status})

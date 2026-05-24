@@ -41,6 +41,7 @@ def _get_or_create_session(db, booking):
             ObservationSession.booking_id == booking.id,
             ObservationSession.status == "active",
         )
+        .with_for_update()
         .first()
     )
     if obs:
@@ -54,6 +55,7 @@ def _get_or_create_session(db, booking):
             ObservationSession.status == "active",
             ObservationSession.booking_id != booking.id,
         )
+        .with_for_update()
         .first()
     )
     if existing:
