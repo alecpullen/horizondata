@@ -43,7 +43,7 @@ def validate_teacher() -> Optional[dict]:
         from app.models.user import User
         
         with get_db() as db:
-            user = db.query(User).filter_by(id=user_id).first()
+            user = db.query(User).filter_by(id=int(user_id) if isinstance(user_id, str) else user_id).first()
             if not user or user.is_active is False:
                 return None
             
@@ -63,7 +63,7 @@ def validate_teacher() -> Optional[dict]:
         logger.warning(f"JWT validation failed: {e}")
         return None
     except Exception as e:
-        logger.error(f"Error validating teacher token: {e}")
+        logger.error(f"Error validating teacher token: {type(e).__name__}: {e}")
         return None
 
 

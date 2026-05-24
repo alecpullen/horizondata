@@ -34,7 +34,7 @@ function AdminQueue() {
 
     const fetchQueue = useCallback(() => {
         api.get('/api/admin/queue')
-            .then(res => { setJobs(res.data); setLoading(false); setError(null) })
+            .then(res => { setJobs(res.data.items ?? []); setLoading(false); setError(null) })
             .catch(err => { setError(err.response?.status?.toString() || err.message); setLoading(false) })
     }, [])
 
@@ -48,7 +48,7 @@ function AdminQueue() {
         setBusyId(jobId)
         try {
             await api.post(`/api/admin/queue/${jobId}/abort`)
-            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'aborted' } : j))
+            setJobs(prev => prev.map(j => j.booking_id === jobId ? { ...j, status: 'aborted' } : j))
             setConfirmingId(null)
             showToast({ type: 'success', message: `"${title}" aborted.` })
         } catch {
@@ -96,26 +96,26 @@ function AdminQueue() {
                         </thead>
                         <tbody>
                             {jobs.map(job => {
-                                const confirming = confirmingId === job.id
+                                const confirming = confirmingId === job.booking_id
                                 const canAbort   = job.status === 'pending' || job.status === 'running'
                                 return (
-                                    <Fragment key={job.id}>
+                                    <Fragment key={job.booking_id}>
                                         <tr className={confirming ? 'queue-row--confirming' : ''}>
                                             <td className="queue-cell-title">{job.title}</td>
-                                            <td>{job.teacherName}</td>
-                                            <td className="queue-cell-mono">{fmtScheduled(job.scheduledAt)}</td>
+                                            <td>{job.teacher_name}</td>
+                                            <td className="queue-cell-mono">{fmtScheduled(job.scheduled_start)}</td>
                                             <td className="queue-cell-targets">
-                                                {job.targetsCompleted} of {job.targetsTotal} done
+                                                {job.completed} of {job.total} done
                                             </td>
                                             <td><StatusBadge status={job.status} /></td>
                                             <td>
                                                 {canAbort && (
                                                     <button
                                                         className={'queue-btn queue-btn--abort' + (confirming ? ' active' : '')}
-                                                        disabled={busyId === job.id}
+                                                        disabled={busyId === job.booking_id}
                                                         onClick={() => confirming
                                                             ? setConfirmingId(null)
-                                                            : setConfirmingId(job.id)
+                                                            : setConfirmingId(job.booking_id)
                                                         }
                                                     >
                                                         {confirming ? 'Cancel' : 'Abort'}
@@ -134,14 +134,14 @@ function AdminQueue() {
                                                         <div className="queue-confirm-actions">
                                                             <button
                                                                 className="queue-btn queue-btn--abort-confirm"
-                                                                disabled={busyId === job.id}
-                                                                onClick={() => handleAbort(job.id, job.title)}
+                                                                disabled={busyId === job.booking_id}
+                                                                onClick={() => handleAbort(job.booking_id, job.title)}
                                                             >
-                                                                {busyId === job.id ? 'Aborting…' : 'Yes, abort'}
+                                                                {busyId === job.booking_id ? 'Aborting…' : 'Yes, abort'}
                                                             </button>
                                                             <button
                                                                 className="queue-btn queue-btn--ghost"
-                                                                disabled={busyId === job.id}
+                                                                disabled={busyId === job.booking_id}
                                                                 onClick={() => setConfirmingId(null)}
                                                             >
                                                                 Cancel
