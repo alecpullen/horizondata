@@ -16,6 +16,7 @@ function ResetPassword() {
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [isSuccess, setIsSuccess] = useState(false)
+    const [errorState, setErrorState] = useState(null)
     const [touched, setTouched] = useState({ password: false, confirmPassword: false })
 
     const passwordValidation = validatePassword(password)
@@ -33,15 +34,57 @@ function ResetPassword() {
         setIsLoading(true)
 
         try {
-            await api.post('/api/auth/teacher/reset-password', { token, password })
+            await api.post('/api/auth/reset-password', { token, new_password: password })
             setIsSuccess(true)
             showToast({ type: 'success', message: 'Password reset successfully!' })
         } catch (err) {
-            const message = err.response?.data?.message || 'Password reset failed. Please try again.'
-            showToast({ type: 'error', message })
+            const code = err.response?.data?.error
+            if (code === 'expired_token') {
+                setErrorState({
+                    message: 'This reset link has expired. Please request a new one.',
+                    showForgotLink: true,
+                })
+            } else if (code === 'invalid_token') {
+                setErrorState({
+                    message: 'This reset link is invalid or has already been used.',
+                    showForgotLink: true,
+                })
+            } else {
+                showToast({ type: 'error', message: err.response?.data?.message || 'Password reset failed. Please try again.' })
+            }
         } finally {
             setIsLoading(false)
         }
+    }
+
+    if (!token) {
+        return (
+            <AuthShell title="Invalid link" subtitle="This reset link is not valid" footer={null}>
+                <div className="reset-success">
+                    <p className="reset-success__text">
+                        This reset link is invalid. Please request a new one.
+                    </p>
+                    <Link to="/forgot-password" className="reset-success__button">
+                        Request new link
+                    </Link>
+                </div>
+            </AuthShell>
+        )
+    }
+
+    if (errorState) {
+        return (
+            <AuthShell title="Reset failed" subtitle={errorState.message} footer={null}>
+                <div className="reset-success">
+                    <p className="reset-success__text">{errorState.message}</p>
+                    {errorState.showForgotLink && (
+                        <Link to="/forgot-password" className="reset-success__button">
+                            Request new link
+                        </Link>
+                    )}
+                </div>
+            </AuthShell>
+        )
     }
 
     // Success state
@@ -84,13 +127,6 @@ function ResetPassword() {
             subtitle="Enter a new password for your account"
             footer={footer}
         >
-            {/* Show token info (for demo purposes) */}
-            {token && (
-                <div className="reset-token">
-                    <code>Token: {token.substring(0, 20)}...</code>
-                </div>
-            )}
-
             <form className="reset-form" onSubmit={handleSubmit}>
                 {/* New Password */}
                 <div className="reset-field">
