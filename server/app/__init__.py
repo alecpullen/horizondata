@@ -22,6 +22,7 @@ from .routes.sessions import sessions_bp
 from .routes.admin_teachers import admin_teachers_bp
 from .routes.admin_summary import admin_summary_bp
 from .routes.admin_bookings import admin_bookings_bp
+from .routes.admin_sessions import admin_sessions_bp
 from .routes.settings import settings_bp
 
 def create_app():
@@ -95,6 +96,7 @@ def create_app():
     app.register_blueprint(admin_teachers_bp)
     app.register_blueprint(admin_summary_bp)
     app.register_blueprint(admin_bookings_bp)
+    app.register_blueprint(admin_sessions_bp)
     app.register_blueprint(settings_bp)
 
     if os.getenv("HEADLESS_SCHEDULER_ENABLED", "true").lower() != "false":
