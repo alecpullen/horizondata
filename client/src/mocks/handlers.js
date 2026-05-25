@@ -763,7 +763,7 @@ export const handlers = [
         const formattedDate = `${day}/${month}/${year}`
 
         // Handle multiple targets
-        const targets = newBooking.targets || []
+        const targets = newBooking.targets?.celestialObjects || newBooking.targets || []
         const targetNames = targets.map(t => t.name).join(', ')
         const targetCount = targets.length
 

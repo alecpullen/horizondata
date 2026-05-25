@@ -284,7 +284,9 @@ function NewBooking() {
         setIsSubmitting(true)
         try {
             await api.post('/api/bookings', {
-                targets: selectedTargets.map(t => ({ id: t.id, name: t.name })),
+                targets: {
+                    celestialObjects: selectedTargets.map(t => ({ id: t.id, name: t.name }))
+                },
                 targetCount: selectedTargets.length,
                 date: sessionDate,
                 startTime,
