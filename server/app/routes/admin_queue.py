@@ -25,20 +25,28 @@ def list_all_queue_status():
                 .order_by(Booking.scheduled_start.desc())
                 .all()
             )
+            booking_ids = [b.id for b in bookings]
+            obs_map = {
+                o.booking_id: o
+                for o in db.query(ObservationSession)
+                .filter(ObservationSession.booking_id.in_(booking_ids))
+                .all()
+            }
+            int_teacher_ids = {int(b.teacher_id) for b in bookings if b.teacher_id and b.teacher_id.isdigit()}
+            ext_teacher_ids = {b.teacher_id for b in bookings if b.teacher_id and not b.teacher_id.isdigit()}
+            teachers = {}
+            if int_teacher_ids:
+                for u in db.query(User).filter(User.id.in_(int_teacher_ids)).all():
+                    teachers[str(u.id)] = u
+            if ext_teacher_ids:
+                for u in db.query(User).filter(User.external_id.in_(ext_teacher_ids)).all():
+                    teachers[u.external_id] = u
+
             items = []
             for booking in bookings:
-                obs = (
-                    db.query(ObservationSession)
-                    .filter(ObservationSession.booking_id == booking.id)
-                    .first()
-                )
+                obs = obs_map.get(booking.id)
                 qs = _compute_queue_status(booking, obs, db)
-                teacher = None
-                if booking.teacher_id:
-                    if booking.teacher_id.isdigit():
-                        teacher = db.query(User).filter(User.id == int(booking.teacher_id)).first()
-                    else:
-                        teacher = db.query(User).filter(User.external_id == booking.teacher_id).first()
+                teacher = teachers.get(booking.teacher_id)
                 items.append({
                     "booking_id": str(booking.id),
                     "title": booking.title,

@@ -23,22 +23,26 @@ def list_all_bookings():
             if status_filter:
                 query = query.filter(Booking.status == status_filter)
             bookings = query.all()
+            int_teacher_ids = {int(b.teacher_id) for b in bookings if b.teacher_id and b.teacher_id.isdigit()}
+            ext_teacher_ids = {b.teacher_id for b in bookings if b.teacher_id and not b.teacher_id.isdigit()}
+            teachers = {}
+            if int_teacher_ids:
+                for u in db.query(User).filter(User.id.in_(int_teacher_ids)).all():
+                    teachers[str(u.id)] = u
+            if ext_teacher_ids:
+                for u in db.query(User).filter(User.external_id.in_(ext_teacher_ids)).all():
+                    teachers[u.external_id] = u
+
             items = []
             for b in bookings:
                 d = b.to_dict()
                 d["id"] = str(b.id)
                 d["teacher_id"] = str(b.teacher_id)
-                d["status"] = b.status  # raw value, not the display label from to_dict
+                d["status"] = b.status
                 d["scheduled_start"] = b.scheduled_start.isoformat() if b.scheduled_start else None
                 d["scheduled_end"] = b.scheduled_end.isoformat() if b.scheduled_end else None
                 d["created_at"] = b.created_at.isoformat() if b.created_at else None
-                from app.models.user import User
-                teacher = None
-                if b.teacher_id:
-                    if b.teacher_id.isdigit():
-                        teacher = db.query(User).filter(User.id == int(b.teacher_id)).first()
-                    else:
-                        teacher = db.query(User).filter(User.external_id == b.teacher_id).first()
+                teacher = teachers.get(b.teacher_id)
                 d["teacher"] = {
                     "name": teacher.username or "Unknown" if teacher else "Unknown",
                     "email": teacher.email if teacher else None,

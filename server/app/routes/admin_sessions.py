@@ -24,16 +24,27 @@ def list_all_sessions():
                 .order_by(ObservationSession.created_at.desc())
                 .all()
             )
+            int_teacher_ids = {int(o.teacher_id) for o in rows if o.teacher_id and o.teacher_id.isdigit()}
+            ext_teacher_ids = {o.teacher_id for o in rows if o.teacher_id and not o.teacher_id.isdigit()}
+            teachers = {}
+            if int_teacher_ids:
+                for u in db.query(User).filter(User.id.in_(int_teacher_ids)).all():
+                    teachers[str(u.id)] = u
+            if ext_teacher_ids:
+                for u in db.query(User).filter(User.external_id.in_(ext_teacher_ids)).all():
+                    teachers[u.external_id] = u
+
+            booking_ids = [o.booking_id for o in rows if o.booking_id]
+            bookings = {
+                b.id: b
+                for b in db.query(Booking).filter(Booking.id.in_(booking_ids)).all()
+            } if booking_ids else {}
+
             manager = get_student_session_manager()
             items = []
             for obs in rows:
-                teacher = None
-                if obs.teacher_id:
-                    if obs.teacher_id.isdigit():
-                        teacher = db.query(User).filter(User.id == int(obs.teacher_id)).first()
-                    else:
-                        teacher = db.query(User).filter(User.external_id == obs.teacher_id).first()
-                booking = db.query(Booking).filter(Booking.id == obs.booking_id).first() if obs.booking_id else None
+                teacher = teachers.get(obs.teacher_id)
+                booking = bookings.get(obs.booking_id)
                 participants = manager.list_participants(str(obs.id))
                 items.append({
                     "id": str(obs.id),
