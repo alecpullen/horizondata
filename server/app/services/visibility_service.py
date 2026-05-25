@@ -43,6 +43,9 @@ MIN_ELEVATION = 20.0
 
 # Comprehensive object database with enhanced metadata
 ENHANCED_OBJECT_DATABASE = [
+    # Moon
+    {"name": "Moon", "type": "Moon", "magnitude": -12.6, "constellation": "Variable"},
+    
     # Planets
     {"name": "Mercury", "type": "Planet", "magnitude_range": (-2.5, 5.7), "constellation": "Variable"},
     {"name": "Venus", "type": "Planet", "magnitude_range": (-4.9, -3.8), "constellation": "Variable"},
@@ -191,8 +194,8 @@ class VisibilityService:
         """
         try:
             # Get object coordinates
-            if obj_data["type"] == "Planet":
-                # Use solar system ephemeris for planets
+            if obj_data["type"] in ["Planet", "Moon"]:
+                # Use solar system ephemeris for planets and the moon
                 with solar_system_ephemeris.set('builtin'):
                     target_coords = get_body(obj_data["name"].lower(), astro_time, self.location)
             else:
@@ -305,6 +308,8 @@ class VisibilityService:
         
         if obj_type == "Planet":
             return f"{name} is a planet in our solar system"
+        elif obj_type == "Moon":
+            return f"{name} is the Earth's natural satellite"
         elif obj_type == "Star":
             return f"{name} is a bright star"
         elif obj_type == "Star System":
@@ -749,7 +754,7 @@ class VisibilityService:
         astro_mid = Time(mid_time)
 
         try:
-            if obj_data["type"] == "Planet":
+            if obj_data["type"] in ["Planet", "Moon"]:
                 with solar_system_ephemeris.set('builtin'):
                     target_coords = get_body(obj_data["name"].lower(), astro_mid, self.location)
             else:

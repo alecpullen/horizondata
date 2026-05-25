@@ -93,7 +93,7 @@ class TestVisibilityService(unittest.TestCase):
                 self.assertIn(field, obj, f"Object {obj.get('name', 'Unknown')} missing field: {field}")
             
             # Check object types are valid
-            valid_types = ['Planet', 'Star', 'Star System', 'Emission Nebula', 'Dark Nebula', 
+            valid_types = ['Planet', 'Moon', 'Star', 'Star System', 'Emission Nebula', 'Dark Nebula', 
                           'Planetary Nebula', 'Spiral Galaxy', 'Irregular Galaxy', 'Elliptical Galaxy',
                           'Globular Cluster', 'Open Cluster']
             self.assertIn(obj['type'], valid_types, f"Invalid type for {obj['name']}: {obj['type']}")
