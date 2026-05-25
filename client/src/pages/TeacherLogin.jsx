@@ -20,7 +20,7 @@ const TeacherLogin = () => {
     setErrorSecondary(null);
     setIsLoading(true);
     try {
-      const result = await loginTeacher(email, password);
+      const result = await loginTeacher(email, password, rememberMe);
       if (result.user?.role === 'admin') {
         navigate('/admin');
       } else {

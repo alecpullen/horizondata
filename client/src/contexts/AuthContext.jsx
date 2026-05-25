@@ -1,6 +1,24 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api, { rawApi } from '../lib/api';
 
+const useRememberStorage = (() => {
+  const storages = [localStorage, sessionStorage];
+  return {
+    getItem: (key) => {
+      for (const s of storages) {
+        const v = s.getItem(key);
+        if (v != null) return v;
+      }
+      return null;
+    },
+    setItem: (key, value, remember) => {
+      storages.forEach(s => s.removeItem(key));
+      (remember ? localStorage : sessionStorage).setItem(key, value);
+    },
+    removeItem: (key) => storages.forEach(s => s.removeItem(key)),
+  };
+})();
+
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -19,24 +37,25 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Load auth state from localStorage on mount
+  // Load auth state from storage on mount
   useEffect(() => {
     const loadAuthState = () => {
-      const storedUserType = localStorage.getItem('userType');
-      const storedToken = localStorage.getItem('token');
-      const storedSessionId = localStorage.getItem('sessionId');
-      const storedUser = localStorage.getItem('user');
+      const storedUserType = useRememberStorage.getItem('userType');
+      const storedToken = useRememberStorage.getItem('token');
+      const storedSessionId = useRememberStorage.getItem('sessionId');
+      const storedUser = useRememberStorage.getItem('user');
 
       let parsedUser = null;
       try {
         parsedUser = storedUser ? JSON.parse(storedUser) : null;
       } catch (e) {
         console.error('[AuthContext] Error parsing stored user JSON:', e);
-        localStorage.removeItem('user');
-        localStorage.removeItem('userType');
-        localStorage.removeItem('token');
-        localStorage.removeItem('sessionId');
-        localStorage.removeItem('refreshToken');
+        useRememberStorage.removeItem('user');
+        useRememberStorage.removeItem('userType');
+        useRememberStorage.removeItem('token');
+        useRememberStorage.removeItem('sessionId');
+        useRememberStorage.removeItem('refreshToken');
+        useRememberStorage.removeItem('__rememberMe');
       }
 
       if (storedUserType === 'teacher' && storedToken && parsedUser) {
@@ -84,11 +103,12 @@ export const AuthProvider = ({ children }) => {
       fullName: user.name || '',
     }
 
-    // Store auth state
-    localStorage.setItem('userType', 'teacher');
-    localStorage.setItem('token', token);
-    localStorage.setItem('refreshToken', refresh_token);
-    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    // Store auth state (always remember on signup)
+    useRememberStorage.setItem('userType', 'teacher', true);
+    useRememberStorage.setItem('token', token, true);
+    useRememberStorage.setItem('refreshToken', refresh_token, true);
+    useRememberStorage.setItem('user', JSON.stringify(normalizedUser), true);
+    useRememberStorage.setItem('__rememberMe', 'true', true);
 
     setUserType('teacher');
     setToken(token);
@@ -99,7 +119,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Teacher login
-  const loginTeacher = useCallback(async (email, password) => {
+  const loginTeacher = useCallback(async (email, password, rememberMe = false) => {
     try {
       const response = await api.post('/api/auth/teacher/login', {
         email,
@@ -113,10 +133,11 @@ export const AuthProvider = ({ children }) => {
         fullName: user.name || '',
       }
 
-      localStorage.setItem('userType', 'teacher');
-      localStorage.setItem('token', token);
-      localStorage.setItem('refreshToken', refresh_token);
-      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      useRememberStorage.setItem('userType', 'teacher', rememberMe);
+      useRememberStorage.setItem('token', token, rememberMe);
+      useRememberStorage.setItem('refreshToken', refresh_token, rememberMe);
+      useRememberStorage.setItem('user', JSON.stringify(normalizedUser), rememberMe);
+      useRememberStorage.setItem('__rememberMe', String(rememberMe), rememberMe);
 
       setUserType('teacher');
       setToken(token);
@@ -141,11 +162,12 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error);
     }
 
-    // Clear auth state
-    localStorage.removeItem('userType');
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    // Clear auth state from both storages
+    useRememberStorage.removeItem('userType');
+    useRememberStorage.removeItem('token');
+    useRememberStorage.removeItem('refreshToken');
+    useRememberStorage.removeItem('user');
+    useRememberStorage.removeItem('__rememberMe');
 
     setUserType(null);
     setToken(null);
@@ -190,10 +212,11 @@ export const AuthProvider = ({ children }) => {
       console.error('Leave error:', error);
     }
 
-    // Clear auth state
-    localStorage.removeItem('userType');
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('user');
+    // Clear auth state from both storages
+    useRememberStorage.removeItem('userType');
+    useRememberStorage.removeItem('sessionId');
+    useRememberStorage.removeItem('user');
+    useRememberStorage.removeItem('__rememberMe');
 
     setUserType(null);
     setSessionId(null);
@@ -203,7 +226,7 @@ export const AuthProvider = ({ children }) => {
 
   // Refresh token (for teachers)
   const refreshToken = useCallback(async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = useRememberStorage.getItem('refreshToken');
     if (!refreshToken) return null;
 
     try {
@@ -213,8 +236,10 @@ export const AuthProvider = ({ children }) => {
 
       const { token, refresh_token } = response.data;
 
-      localStorage.setItem('token', token);
-      localStorage.setItem('refreshToken', refresh_token);
+      // Store in same storage as original tokens (check rememberMe flag)
+      const remember = localStorage.getItem('__rememberMe') === 'true';
+      useRememberStorage.setItem('token', token, remember);
+      useRememberStorage.setItem('refreshToken', refresh_token, remember);
       setToken(token);
 
       return response.data;
@@ -235,13 +260,13 @@ export const AuthProvider = ({ children }) => {
         ...user,
         fullName: user.name || '',
       }
-      setUser(normalizedUser);
-      localStorage.setItem('user', JSON.stringify(normalizedUser));
+        setUser(normalizedUser);
+      useRememberStorage.setItem('user', JSON.stringify(normalizedUser), useRememberStorage.getItem('__rememberMe') === 'true');
       return response.data;
     } else if (userType === 'student') {
       const response = await api.get('/api/auth/student/me');
       setUser(response.data.user);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      useRememberStorage.setItem('user', JSON.stringify(response.data.user), true);
       return response.data;
     }
   }, [userType]);
