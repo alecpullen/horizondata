@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 const TeacherLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [errorSecondary, setErrorSecondary] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -92,6 +93,15 @@ const TeacherLogin = () => {
             </Link>
           </div>
         </div>
+        <label className="auth-remember">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            disabled={isLoading}
+          />
+          Remember me
+        </label>
         <button className="auth-submit" type="submit" disabled={isLoading}>
           {isLoading ? 'Signing in…' : 'Sign In'}
         </button>
