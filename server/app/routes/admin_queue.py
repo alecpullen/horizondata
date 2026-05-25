@@ -33,7 +33,7 @@ def list_all_queue_status():
                     .first()
                 )
                 qs = _compute_queue_status(booking, obs, db)
-                teacher = db.query(User).filter(User.id == booking.teacher_id).first() if booking.teacher_id else None
+                teacher = db.query(User).filter(User.external_id == booking.teacher_id).first() if booking.teacher_id else None
                 items.append({
                     "booking_id": str(booking.id),
                     "title": booking.title,

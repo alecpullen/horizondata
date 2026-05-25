@@ -33,7 +33,7 @@ def list_all_bookings():
                 d["scheduled_end"] = b.scheduled_end.isoformat() if b.scheduled_end else None
                 d["created_at"] = b.created_at.isoformat() if b.created_at else None
                 from app.models.user import User
-                teacher = db.query(User).filter(User.id == b.teacher_id).first()
+                teacher = db.query(User).filter(User.external_id == b.teacher_id).first()
                 d["teacher"] = {
                     "name": teacher.username or "Unknown" if teacher else "Unknown",
                     "email": teacher.email if teacher else None,
