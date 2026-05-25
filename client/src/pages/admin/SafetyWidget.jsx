@@ -41,9 +41,8 @@ function SafetyWidget() {
 
     const fetchStatus = useCallback((quiet = false) => {
         if (!quiet) setLoading(true)
-        fetch('/api/admin/safety/status')
-            .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
-            .then(d => { setData(d); setLoading(false) })
+        api.get('/api/admin/safety/status')
+            .then(res => { setData(res.data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -83,14 +82,8 @@ function SafetyWidget() {
         }
         setBusy(true)
         try {
-            const r = await fetch('/api/admin/safety/override', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ state, durationMins: mins }),
-            })
-            if (!r.ok) throw new Error()
-            const d = await r.json()
-            setData(d)
+            const res = await api.post('/api/admin/safety/override', { state, durationMins: mins })
+            setData(res.data)
             showToast({ type: 'success', message: `Safety forced ${state.toLowerCase()} for ${mins < 60 ? `${mins} min` : `${mins / 60}h`}.` })
         } catch {
             showToast({ type: 'error', message: 'Override failed.' })
@@ -100,10 +93,8 @@ function SafetyWidget() {
     const handleClear = useCallback(async () => {
         setBusy(true)
         try {
-            const r = await fetch('/api/admin/safety/override', { method: 'DELETE' })
-            if (!r.ok) throw new Error()
-            const d = await r.json()
-            setData(d)
+            const res = await api.delete('/api/admin/safety/override')
+            setData(res.data)
             showToast({ type: 'success', message: 'Override cleared — reverting to automatic.' })
         } catch {
             showToast({ type: 'error', message: 'Could not clear override.' })

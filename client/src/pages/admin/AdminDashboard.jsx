@@ -18,17 +18,21 @@ function PendingAccountsCard({ data, loading }) {
                     <span className="dash-card-value">{loading ? '…' : count}</span>
                 </div>
                 <span className="dash-card-context">
-                    {empty ? 'All clear' : 'Require review'}
+                    {loading ? 'Loading…' : (empty ? 'All clear' : 'Require review')}
                 </span>
             </div>
             <span className="dash-card-sub">
-                {detail
-                    ? `Oldest request: ${detail.oldest_days}d ago`
-                    : 'No pending approvals'}
+                {loading
+                    ? 'Loading requests…'
+                    : (detail
+                        ? `Oldest request: ${detail.oldest_days}d ago`
+                        : 'No pending approvals')}
             </span>
             <div className="dash-card-divider" />
             <div className="dash-card-footer">
-                {detail ? (
+                {loading ? (
+                    <span className="dash-card-footer-meta">Loading details…</span>
+                ) : detail ? (
                     <>
                         <span className="dash-card-footer-primary">{detail.oldest_name}</span>
                         <span className="dash-card-footer-meta">{detail.oldest_institution}</span>
@@ -55,17 +59,21 @@ function PendingBookingsCard({ data, loading }) {
                     <span className="dash-card-value">{loading ? '…' : count}</span>
                 </div>
                 <span className="dash-card-context">
-                    {empty ? 'All confirmed' : 'Awaiting confirmation'}
+                    {loading ? 'Loading…' : (empty ? 'All confirmed' : 'Awaiting confirmation')}
                 </span>
             </div>
             <span className="dash-card-sub">
-                {detail
-                    ? `Next: ${detail.next_title}`
-                    : 'No pending bookings'}
+                {loading
+                    ? 'Loading bookings…'
+                    : (detail
+                        ? `Next: ${detail.next_title}`
+                        : 'No pending bookings')}
             </span>
             <div className="dash-card-divider" />
             <div className="dash-card-footer">
-                {detail ? (
+                {loading ? (
+                    <span className="dash-card-footer-meta">Loading details…</span>
+                ) : detail ? (
                     <>
                         <span className="dash-card-footer-primary">{detail.next_date}</span>
                         <span className="dash-card-footer-meta">{detail.next_teacher}</span>
@@ -92,19 +100,23 @@ function ActiveSessionsCard({ data, loading }) {
                     <span className="dash-card-value">{loading ? '…' : count}</span>
                 </div>
                 <span className="dash-card-context">
-                    {empty ? 'None running' : 'Currently live'}
+                    {loading ? 'Loading…' : (empty ? 'None running' : 'Currently live')}
                 </span>
             </div>
             <span className="dash-card-sub">
-                {detail
-                    ? (detail.total_students > 0
-                        ? `${detail.total_students} student${detail.total_students !== 1 ? 's' : ''} connected`
-                        : 'No students joined yet')
-                    : 'No active sessions'}
+                {loading
+                    ? 'Loading sessions…'
+                    : (detail
+                        ? (detail.total_students > 0
+                            ? `${detail.total_students} student${detail.total_students !== 1 ? 's' : ''} connected`
+                            : 'No students joined yet')
+                        : 'No active sessions')}
             </span>
             <div className="dash-card-divider" />
             <div className="dash-card-footer">
-                {detail?.sample_title ? (
+                {loading ? (
+                    <span className="dash-card-footer-meta">Loading details…</span>
+                ) : detail?.sample_title ? (
                     <>
                         <span className="dash-card-footer-primary">{detail.sample_title}</span>
                         <span className="dash-card-footer-meta">{detail.sample_teacher}</span>
