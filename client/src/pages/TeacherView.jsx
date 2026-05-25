@@ -114,7 +114,10 @@ function TeacherView() {
                     siteHls: res.data.site_camera_url || null,
                 })
             })
-            .catch(err => console.error('Failed to load stream settings:', err))
+            .catch(err => {
+                console.error('Failed to load stream settings:', err)
+                showToast({ type: 'error', message: 'Could not load stream configuration.' })
+            })
     }, [])
 
     // Fetch booking data

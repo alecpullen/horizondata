@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { split } from '../utils/session'
 import AppLogo from '../components/AppLogo'
+import { useToast } from '../components/ui/ToastProvider'
 import api from '../lib/api'
 import './SessionLobby.css'
 
@@ -11,6 +12,7 @@ const APP_URL = import.meta.env.VITE_APP_URL
 function SessionLobby() {
     const { bookingId } = useParams()
     const navigate = useNavigate()
+    const { showToast } = useToast()
     const [students, setStudents] = useState([])
     const [booking, setBooking] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -50,11 +52,9 @@ function SessionLobby() {
                 }
 
                 // Fetch or create session to get join code
-                console.log('[Lobby] Fetching session for bookingId:', bookingId)
                 try {
                     const sessionRes = await api.get(`/api/sessions/${bookingId}`)
                     const sessionData = sessionRes.data
-                    console.log('[Lobby] Session data:', sessionData)
                     if (sessionData.success && sessionData.session) {
                         setJoinCode(sessionData.session.joinCode)
                     }
@@ -77,10 +77,8 @@ function SessionLobby() {
 
         async function fetchParticipants() {
             try {
-                console.log('[Lobby] Fetching participants for bookingId:', bookingId)
                 const res = await api.get(`/api/sessions/${bookingId}/participants`)
                 const data = res.data
-                console.log('[Lobby] Participants data:', data)
                 if (data.success && data.participants) {
                     setStudents(data.participants)
                 }
@@ -100,10 +98,11 @@ function SessionLobby() {
     const handleBeginSession = async () => {
         try {
             await api.post(`/api/sessions/${bookingId}/start`)
+            navigate('/live/teacher', { state: { bookingId } })
         } catch (err) {
             console.error('Error starting session:', err)
+            showToast({ type: 'error', message: 'Failed to start session. Please try again.' })
         }
-        navigate('/live/teacher', { state: { bookingId } })
     }
 
     const digits = split(joinCode)

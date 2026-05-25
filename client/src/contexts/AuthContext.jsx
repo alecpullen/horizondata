@@ -46,13 +46,11 @@ export const AuthProvider = ({ children }) => {
           fullName: parsedUser.fullName || parsedUser.name || '',
         };
 
-        console.log('[AuthContext] loadAuthState setting teacher:', normalizedUser)
         setUserType('teacher');
         setToken(storedToken);
         setUser(normalizedUser);
         setIsAuthenticated(true);
       } else if (storedUserType === 'student' && storedSessionId && parsedUser) {
-        console.log('[AuthContext] loadAuthState setting student:', parsedUser)
         setUserType('student');
         setSessionId(storedSessionId);
         setUser(parsedUser);
@@ -119,8 +117,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('refreshToken', refresh_token);
       localStorage.setItem('user', JSON.stringify(normalizedUser));
-
-      console.log('[AuthContext] loginTeacher success:', normalizedUser);
 
       setUserType('teacher');
       setToken(token);

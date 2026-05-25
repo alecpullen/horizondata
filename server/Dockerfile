@@ -9,6 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FLASK_APP=run.py \
     FLASK_ENV=production \
+    FLASK_DEBUG=False \
     PORT=8080
 
 # Install system dependencies

@@ -32,7 +32,11 @@ function StudentView() {
                     })
                 }
             })
-            .catch(() => {})
+            .catch(() => {
+                if (!cancelled) {
+                    showToast({ type: 'error', message: 'Could not load stream configuration.' })
+                }
+            })
         return () => { cancelled = true }
     }, [])
 

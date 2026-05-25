@@ -117,14 +117,18 @@ class Booking(Base):
             "statusColor": self.status,
             "headless": self.headless,
             "targets": self.targets,
+            "captureCount": 0,
         }
-        
-        # Calculate real capture count from DATABASE
+
         if db is not None:
             try:
                 from app.models.capture import Capture
-                capture_count = db.query(Capture).filter(
-                    Capture.captured_by_teacher_id == str(self.teacher_id)
+                from app.models.session import ObservationSession
+                capture_count = db.query(Capture).join(
+                    ObservationSession,
+                    Capture.observation_session_id == ObservationSession.id
+                ).filter(
+                    ObservationSession.booking_id == self.id
                 ).count()
                 result["captureCount"] = capture_count
             except Exception as e:
