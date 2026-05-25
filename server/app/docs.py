@@ -27,8 +27,7 @@ REDOC_HTML_TEMPLATE = """
     <div id="redoc"></div>
     <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
     <script>
-        var spec = {{ spec_json | safe }};
-        Redoc.init(spec, {
+        Redoc.init('/openapi.yaml', {
             scrollYOffset: 0,
             hideDownloadButton: true,
             hideHostname: false,
@@ -79,13 +78,9 @@ def api_docs():
     if spec is None:
         return {"error": "OpenAPI specification not found"}, 404
     
-    import json
-    spec_json = json.dumps(spec)
-    
     return render_template_string(
         REDOC_HTML_TEMPLATE,
-        title=spec.get('info', {}).get('title', 'API Documentation'),
-        spec_json=spec_json
+        title=spec.get('info', {}).get('title', 'API Documentation')
     )
 
 @docs_bp.route('/openapi.yaml')

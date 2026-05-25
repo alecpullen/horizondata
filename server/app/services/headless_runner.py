@@ -344,6 +344,16 @@ def _save_capture(
         json.dump(meta, fh, indent=2)
 
     file_size = os.path.getsize(img_path) if os.path.exists(img_path) else None
+    
+    # Get image dimensions using PIL
+    image_width, image_height = None, None
+    try:
+        from PIL import Image
+        with Image.open(img_path) as img:
+            image_width, image_height = img.size
+    except Exception as e:
+        logger.warning("Could not read image dimensions from %s in headless job: %s", img_path, e)
+
     db.add(Capture(
         id=cap_uuid,
         captured_by_teacher_id=str(booking.teacher_id),
@@ -355,6 +365,8 @@ def _save_capture(
         coordinates=meta["coordinates"],
         captured_at=dt,
         file_size_bytes=file_size,
+        image_width=image_width,
+        image_height=image_height,
     ))
     db.flush()
 

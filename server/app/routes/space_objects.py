@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.services.alpaca_client import AlpacaClient, AlpacaError, AlpacaConnectionError
 from app.services.safety_manager import SafetyManager
+from app.middleware.auth import require_teacher
+
 import os
 import logging
 from datetime import datetime
@@ -292,6 +294,7 @@ def get_space_objects():
 
 
 @space_objects_bp.route('/telescope/select', methods=['POST'])
+@require_teacher
 def select_space_object():
     """Command telescope to move to selected space object"""
     try:
@@ -359,6 +362,15 @@ def select_space_object():
             logger.error(f"Error preparing telescope: {e}")
             return create_error_response('internal_error', 'Failed to prepare telescope for slewing', 500)
         
+        # Re-check safety status immediately before starting slew
+        safety_status = safety_manager.get_current_status()
+        if safety_status['status'] != 'ACTIVE':
+            return create_error_response(
+                'safety_lock', 
+                f'Telescope operations are locked: {safety_status["reason"]}', 
+                423  # Locked status code
+            )
+
         # Start slewing to target
         try:
             alpaca_client.slew_to_coordinates(ra_decimal, dec_decimal)

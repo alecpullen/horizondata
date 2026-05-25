@@ -27,28 +27,41 @@ export const AuthProvider = ({ children }) => {
       const storedSessionId = localStorage.getItem('sessionId');
       const storedUser = localStorage.getItem('user');
 
-      console.log('[AuthContext] loadAuthState initial:', { storedUserType, storedToken, storedUser })
+      let parsedUser = null;
+      try {
+        parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      } catch (e) {
+        console.error('[AuthContext] Error parsing stored user JSON:', e);
+        localStorage.removeItem('user');
+        localStorage.removeItem('userType');
+        localStorage.removeItem('token');
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('refreshToken');
+      }
 
-      if (storedUserType === 'teacher' && storedToken) {
-        const parsedUser = storedUser ? JSON.parse(storedUser) : null
+      if (storedUserType === 'teacher' && storedToken && parsedUser) {
         // Normalize user data to include both 'name' and 'fullName'
-        const normalizedUser = parsedUser ? {
+        const normalizedUser = {
           ...parsedUser,
           fullName: parsedUser.fullName || parsedUser.name || '',
-        } : null
+        };
 
         console.log('[AuthContext] loadAuthState setting teacher:', normalizedUser)
         setUserType('teacher');
         setToken(storedToken);
         setUser(normalizedUser);
         setIsAuthenticated(true);
-      } else if (storedUserType === 'student' && storedSessionId) {
-        const parsedUser = storedUser ? JSON.parse(storedUser) : null
+      } else if (storedUserType === 'student' && storedSessionId && parsedUser) {
         console.log('[AuthContext] loadAuthState setting student:', parsedUser)
         setUserType('student');
         setSessionId(storedSessionId);
         setUser(parsedUser);
         setIsAuthenticated(true);
+      } else {
+        // Clear state if something is corrupt or missing
+        setUserType(null);
+        setUser(null);
+        setIsAuthenticated(false);
       }
 
       setIsLoading(false);

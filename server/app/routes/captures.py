@@ -148,6 +148,15 @@ def upload_capture():
     # save image
     f.save(img_path)
 
+    # Get image dimensions using PIL
+    image_width, image_height = None, None
+    try:
+        from PIL import Image
+        with Image.open(img_path) as img:
+            image_width, image_height = img.size
+    except Exception as e:
+        current_app.logger.warning(f"Could not read image dimensions from {img_path}: {e}")
+
     # Determine who captured this
     captured_by_teacher = g.user_type == 'teacher'
     teacher_id = g.user.get('id') if captured_by_teacher else None
@@ -203,6 +212,8 @@ def upload_capture():
                 coordinates=meta["coordinates"],
                 captured_at=dt,
                 file_size_bytes=file_size,
+                image_width=image_width,
+                image_height=image_height,
             ))
     except Exception as e:
         current_app.logger.error(f"Failed to persist capture to DB: {e}")

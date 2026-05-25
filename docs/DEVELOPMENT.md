@@ -8,7 +8,7 @@ This guide covers running the Horizon Data stack locally for development.
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Python | 3.13+ | Server runtime |
+| Python | 3.11 | Server runtime |
 | Node.js | 18+ | Client build |
 | Docker + Compose | any recent | Video streams only (optional for most work) |
 
@@ -84,24 +84,20 @@ Open `http://localhost:5173`.
 
 ## MSW (Mock API) vs Live API
 
-The client includes a Mock Service Worker layer that intercepts API calls. Whether it is active is controlled by a `localStorage` flag — it is **off by default**, meaning the client talks to the real Flask server at `http://localhost:8080`.
+The client includes a Mock Service Worker layer that intercepts API calls. The mock state is synchronized with the backend.
 
 | Mode | When to use |
 |------|-------------|
 | **Live** (default) | Normal dev — Flask server must be running |
 | **Mocked** | Frontend-only work when you don't need a real backend |
 
-**To toggle in the browser:**
+**To toggle mocking:**
+Mock services are toggled globally in the **System Settings** panel under **Developer Mode** inside the Admin Dashboard.
+1. Log in as an Administrator (`admin` credentials).
+2. Navigate to **System Settings**.
+3. Toggle the **Mock API Services** and/or **Mock Telescope Hardware** settings and click save.
+4. The client will automatically sync the MSW settings on page reload.
 
-```js
-// In DevTools console — enable mocks
-localStorage.setItem('msw-enabled', 'true')
-location.reload()
-
-// Disable mocks (default)
-localStorage.setItem('msw-enabled', 'false')
-location.reload()
-```
 
 Mock credentials when MSW is enabled:
 

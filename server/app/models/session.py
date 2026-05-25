@@ -18,7 +18,7 @@ class ObservationSession(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     ended_at = Column(DateTime(timezone=True), nullable=True)
 
-    booking = relationship("Booking", back_populates="sessions")
+    booking = relationship("Booking", back_populates="session")
     captures = relationship("Capture", back_populates="session")
 
     def to_dict(self):

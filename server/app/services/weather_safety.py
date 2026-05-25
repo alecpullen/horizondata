@@ -157,28 +157,15 @@ class WeatherSafetyService:
                 return weather_data
             
         except requests.exceptions.Timeout:
-            logger.warning("ThingSpeak API timeout - using fallback weather data")
+            logger.warning("ThingSpeak API timeout - weather data unavailable")
         except requests.exceptions.RequestException as e:
             logger.warning(f"Error fetching weather data from ThingSpeak: {e}")
         except Exception as e:
             logger.warning(f"Unexpected error parsing weather data: {e}")
         
-        # Return fallback data if API fails
-        return self._get_fallback_weather_data()
-    
-    def _get_fallback_weather_data(self) -> Dict:
-        """
-        Provide fallback weather data when API is unavailable.
-        Uses conservative values that would typically be safe for telescope operations.
-        """
-        return {
-            'timestamp': datetime.now().isoformat(),
-            'temperature': 15.0,    # Mild temperature
-            'humidity': 60.0,       # Moderate humidity
-            'pressure': 1013.25,    # Standard atmospheric pressure
-            'dew_point': 8.0,       # Safe dew point difference
-            'wind_speed': 5.0       # Light wind
-        }
+        # Return None if API fails (unconservative / unsafe)
+        return None
+
     
     def _safe_float(self, value) -> Optional[float]:
         """

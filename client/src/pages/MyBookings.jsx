@@ -53,7 +53,7 @@ function getTimeUntilStart(sessionDate, sessionTime) {
 function BookingCard({ booking, isPast, onManage }) {
     const navigate = useNavigate()
     const handleStartSession = () => {
-        window.location.href = `/lobby/${booking.id}`
+        navigate(`/lobby/${booking.id}`)
     }
 
     const handleManage = () => {
@@ -146,6 +146,7 @@ function BookingCard({ booking, isPast, onManage }) {
 }
 
 function MyBookings() {
+    const navigate = useNavigate()
     const [activeTab, setActiveTab] = useState('upcoming')
     const [bookings, setBookings] = useState({ upcoming: [], past: [], pending: [] })
     const [loading, setLoading] = useState(true)
@@ -205,7 +206,7 @@ function MyBookings() {
                         <h1 className="bookings-title">My Bookings</h1>
                         <button
                             className="bookings-new-btn"
-                            onClick={() => window.location.href = '/bookings/new'}
+                            onClick={() => navigate('/bookings/new')}
                         >
                             <span>+</span>
                             New Booking
@@ -277,7 +278,7 @@ function MyBookings() {
                                 {activeTab !== 'past' && (
                                     <button
                                         className="bookings-empty__btn"
-                                        onClick={() => window.location.href = '/bookings/new'}
+                                        onClick={() => navigate('/bookings/new')}
                                     >
                                         Create New Booking
                                     </button>
