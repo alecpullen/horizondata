@@ -9,6 +9,36 @@ logger = logging.getLogger(__name__)
 admin_safety_bp = Blueprint("admin_safety", __name__, url_prefix="/api/admin/safety")
 
 
+def _admin_safety_status():
+    """Build safety status dict in the format the admin widget expects."""
+    mgr = SafetyManager()
+    override = mgr.get_override()
+    current = mgr.get_current_status()
+
+    if override:
+        display_status = "FORCE_OPEN" if override["state"] == "OPEN" else "FORCE_CLOSED"
+        return {
+            "status": display_status,
+            "override": {"expiresAt": override["expires_at"].isoformat()},
+            "source": "manual",
+        }
+    return {
+        "status": current["status"],
+        "override": None,
+        "source": "automatic",
+    }
+
+
+@admin_safety_bp.route("/status", methods=["GET"])
+@require_auth(roles=["admin"])
+def get_admin_safety_status():
+    try:
+        return jsonify(_admin_safety_status()), 200
+    except Exception as e:
+        logger.error(f"Error fetching admin safety status: {e}")
+        return jsonify({"error": "internal_error", "message": "Failed to get safety status"}), 500
+
+
 @admin_safety_bp.route("/override", methods=["POST"])
 @require_auth(roles=["admin"])
 def set_safety_override():
@@ -17,7 +47,7 @@ def set_safety_override():
         return jsonify({"error": "invalid_request", "message": "Request body required"}), 400
 
     state = data.get("state")
-    duration_minutes = data.get("duration_minutes")
+    duration_minutes = data.get("duration_minutes") or data.get("durationMins")
 
     if state not in ("OPEN", "CLOSED"):
         return jsonify({"error": "validation_error", "message": "state must be 'OPEN' or 'CLOSED'"}), 400
@@ -25,13 +55,9 @@ def set_safety_override():
         return jsonify({"error": "validation_error", "message": "duration_minutes must be between 1 and 1440"}), 400
 
     SafetyManager().set_override(state, int(duration_minutes))
-    override = SafetyManager().get_override()
 
     logger.info(f"Safety override set to {state} for {duration_minutes}min by admin {g.user['id']}")
-    return jsonify({"success": True, "override": {
-        "state": state,
-        "expires_at": override["expires_at"].isoformat(),
-    }}), 200
+    return jsonify(_admin_safety_status()), 200
 
 
 @admin_safety_bp.route("/override", methods=["DELETE"])
@@ -39,4 +65,4 @@ def set_safety_override():
 def clear_safety_override():
     SafetyManager().clear_override()
     logger.info(f"Safety override cleared by admin {g.user['id']}")
-    return jsonify({"success": True, "message": "Override cleared"}), 200
+    return jsonify(_admin_safety_status()), 200
