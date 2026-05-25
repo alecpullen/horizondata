@@ -19,13 +19,15 @@ def create_admin(email, password, name):
             print(f"User {email} already exists. Promoting to admin...")
             user.role = "admin"
             user.set_password(password)
+            user.email_verified = True
         else:
             print(f"Creating new admin user {email}...")
             user = User(
                 email=email,
                 username=name,
                 account_status="approved",
-                role="admin"
+                role="admin",
+                email_verified=True
             )
             user.set_password(password)
             db.add(user)

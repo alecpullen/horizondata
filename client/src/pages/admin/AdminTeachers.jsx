@@ -45,6 +45,15 @@ function ActionButton({ teacher, onAction, busy }) {
                     Suspend
                 </button>
             )}
+            {!teacher.email_verified && (
+                <button
+                    className="teacher-btn teacher-btn--verify"
+                    disabled={busy}
+                    onClick={() => onAction(teacher.id, 'verify-email')}
+                >
+                    Verify Email
+                </button>
+            )}
         </div>
     )
 }
@@ -70,18 +79,26 @@ function AdminTeachers() {
     const handleAction = useCallback(async (id, action) => {
         setBusyIds(prev => new Set(prev).add(id))
         try {
-            const newStatus = action === 'approve' ? 'approved' : 'suspended'
-            await api.patch(`/api/admin/teachers/${id}`, { status: newStatus })
-            setTeachers(prev => prev.map(t =>
-                t.id === id ? { ...t, account_status: newStatus } : t
-            ))
             const name = teachers.find(t => t.id === id)?.name ?? 'Teacher'
-            showToast({
-                type: 'success',
-                message: action === 'approve'
-                    ? `${name} approved — they can now log in.`
-                    : `${name} suspended.`,
-            })
+            if (action === 'verify-email') {
+                const res = await api.patch(`/api/admin/teachers/${id}`, { email_verified: true })
+                setTeachers(prev => prev.map(t =>
+                    t.id === id ? { ...t, email_verified: res.data.email_verified } : t
+                ))
+                showToast({ type: 'success', message: `${name}'s email marked as verified.` })
+            } else {
+                const newStatus = action === 'approve' ? 'approved' : 'suspended'
+                await api.patch(`/api/admin/teachers/${id}`, { status: newStatus })
+                setTeachers(prev => prev.map(t =>
+                    t.id === id ? { ...t, account_status: newStatus } : t
+                ))
+                showToast({
+                    type: 'success',
+                    message: action === 'approve'
+                        ? `${name} approved — they can now log in.`
+                        : `${name} suspended.`,
+                })
+            }
         } catch {
             showToast({ type: 'error', message: 'Action failed. Please try again.' })
         } finally {
@@ -134,6 +151,7 @@ function AdminTeachers() {
                                 <th>Email</th>
                                 <th>Registered</th>
                                 <th>Status</th>
+                                <th>Email</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -146,6 +164,11 @@ function AdminTeachers() {
                                     <td className="teacher-cell-email">{t.email}</td>
                                     <td className="teacher-cell-date">{formatDate(t.created_at)}</td>
                                     <td><StatusBadge status={t.account_status} /></td>
+                                    <td>
+                                        <span className={`teacher-badge teacher-badge--${t.email_verified ? 'verified' : 'unverified'}`}>
+                                            {t.email_verified ? 'Verified' : 'Unverified'}
+                                        </span>
+                                    </td>
                                     <td>
                                         <ActionButton
                                             teacher={t}

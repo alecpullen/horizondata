@@ -174,6 +174,18 @@
 }
 .teacher-badge--suspended::before { background: var(--red); }
 
+.teacher-badge--verified {
+    background: color-mix(in srgb, var(--teal) 12%, transparent);
+    color: var(--teal);
+}
+.teacher-badge--verified::before { background: var(--teal); }
+
+.teacher-badge--unverified {
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    color: var(--gold);
+}
+.teacher-badge--unverified::before { background: var(--gold); }
+
 /* ── Action buttons ── */
 .teacher-actions {
     display: flex;
@@ -213,6 +225,16 @@
 
 .teacher-btn--suspend:hover:not(:disabled) {
     background: color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+.teacher-btn--verify {
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
+    color: var(--gold);
+    border-color: color-mix(in srgb, var(--gold) 25%, transparent);
+}
+
+.teacher-btn--verify:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gold) 20%, transparent);
 }
 
 /* ── Empty / error state ── */

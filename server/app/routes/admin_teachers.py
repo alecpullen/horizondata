@@ -55,6 +55,7 @@ def list_teachers():
                     "name": user.username or user.institution or "Unknown",
                     "email": user.email,
                     "account_status": user.account_status,
+                    "email_verified": user.email_verified,
                     "created_at": user.created_at.isoformat() if user.created_at else None,
                 }
                 for user in users
@@ -85,28 +86,39 @@ def update_teacher_status(teacher_id):
     data = request.get_json()
     if not data:
         return jsonify({"error": "invalid_request", "message": "Request body required"}), 400
-    
+
     new_status = data.get("status")
-    if new_status not in ["approved", "suspended", "pending"]:
+    new_email_verified = data.get("email_verified")
+
+    if new_status is None and new_email_verified is None:
+        return jsonify({"error": "validation_error", "message": "Provide 'status' or 'email_verified'"}), 400
+    if new_status is not None and new_status not in ["approved", "suspended", "pending"]:
         return jsonify({"error": "validation_error", "message": "status must be 'approved', 'suspended', or 'pending'"}), 400
-    
+    if new_email_verified is not None and not isinstance(new_email_verified, bool):
+        return jsonify({"error": "validation_error", "message": "email_verified must be a boolean"}), 400
+
     try:
         with get_db() as db:
             user = db.query(User).filter(User.id == teacher_id).first()
-            
+
             if not user:
                 return jsonify({"error": "not_found", "message": "Teacher not found"}), 404
-            
-            user.account_status = new_status
+
+            if new_status is not None:
+                user.account_status = new_status
+                logger.info(f"Teacher {teacher_id} status updated to {new_status} by admin {g.user['id']}")
+            if new_email_verified is not None:
+                user.email_verified = new_email_verified
+                logger.info(f"Teacher {teacher_id} email_verified set to {new_email_verified} by admin {g.user['id']}")
+
             db.commit()
-            
-            logger.info(f"Teacher {teacher_id} status updated to {new_status} by admin {g.user['id']}")
-            
+
             return jsonify({
                 "id": user.id,
-                "name": user.institution or "Unknown",
+                "name": user.username or user.institution or "Unknown",
                 "email": user.email,
                 "account_status": user.account_status,
+                "email_verified": user.email_verified,
                 "created_at": user.created_at.isoformat() if user.created_at else None,
             })
     
