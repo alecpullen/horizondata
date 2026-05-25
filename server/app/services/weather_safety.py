@@ -183,8 +183,19 @@ class WeatherSafetyService:
         except Exception as e:
             logger.warning(f"Unexpected error parsing weather data: {e}")
         
-        # Return None if API fails (unconservative / unsafe)
-        return None
+        # Return conservative fallback data rather than None to stay operational
+        # Uses values likely to trigger safety holds
+        fallback = {
+            'timestamp': datetime.now().isoformat(),
+            'temperature': 0.0,
+            'humidity': 96.0,   # exceeds max_humidity (95%)
+            'pressure': 970.0,  # below min_pressure (980)
+            'dew_point': 0.0,
+            'wind_speed': None,
+        }
+        self._weather_cache = fallback
+        self._cache_timestamp = datetime.now()
+        return fallback
 
     
     def _safe_float(self, value) -> Optional[float]:
