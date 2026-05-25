@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
 import threading
 from .time_service import TimeService
-from .weather_safety import WeatherSafetyService
+from .weather_safety import WeatherSafetyService, get_weather_service
 
 
 class SafetyStatus(Enum):
@@ -34,7 +34,7 @@ class SafetyManager:
     
     def __init__(self):
         self.time_service = TimeService()
-        self.weather_service = WeatherSafetyService()
+        self.weather_service = get_weather_service()
     
     def set_override(self, state: str, duration_minutes: int) -> None:
         with self._override_lock:
@@ -247,10 +247,8 @@ class SafetyManager:
         if not is_viewing_window:
             time_status['next_available'] = self.get_next_viewing_window().isoformat()
         
-        # Get weather-based safety
-        weather_safe = self.check_weather_safety()
+        # Get weather-based safety (get_weather_status_details already calls evaluate_current_conditions)
         weather_status = self.weather_service.get_weather_status_details()
-        weather_status['safe'] = weather_safe
         
         # Determine overall status
         overall_status = self.get_current_status()

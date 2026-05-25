@@ -38,6 +38,8 @@ class WeatherSafetyService:
 
     @property
     def THINGSPEAK_CHANNEL_ID(self) -> str:
+        if self._cached_channel_id is not None:
+            return self._cached_channel_id
         try:
             from flask import has_app_context
             if has_app_context():
@@ -46,13 +48,20 @@ class WeatherSafetyService:
                 with get_db() as db:
                     setting = db.query(SystemSetting).filter_by(key="thingspeak_channel_id").first()
                     if setting and setting.value:
-                        return setting.value
+                        self._cached_channel_id = setting.value
+                        return self._cached_channel_id
         except Exception as e:
             logger.warning(f"Failed to fetch thingspeak_channel_id from DB settings: {e}")
-        return os.getenv('THINGSPEAK_CHANNEL_ID', '270748')
+        self._cached_channel_id = os.getenv('THINGSPEAK_CHANNEL_ID', '270748')
+        return self._cached_channel_id
 
     @property
     def safety_thresholds(self) -> Dict:
+        now = datetime.now()
+        if self._cached_thresholds is not None and self._thresholds_cache_time is not None:
+            if now - self._thresholds_cache_time < self._thresholds_cache_duration:
+                return self._cached_thresholds
+
         thresholds = self._safety_thresholds.copy()
         try:
             from flask import has_app_context
@@ -73,11 +82,16 @@ class WeatherSafetyService:
                                 pass
         except Exception as e:
             logger.warning(f"Failed to fetch safety thresholds from DB settings: {e}")
+
+        self._cached_thresholds = thresholds
+        self._thresholds_cache_time = now
         return thresholds
 
     @safety_thresholds.setter
     def safety_thresholds(self, value):
         self._safety_thresholds = value
+        self._cached_thresholds = None
+        self._thresholds_cache_time = None
 
     def __init__(self, custom_thresholds: Optional[Dict] = None):
         """
@@ -90,10 +104,14 @@ class WeatherSafetyService:
         if custom_thresholds:
             self._safety_thresholds.update(custom_thresholds)
         
-        # Cache for weather data to avoid excessive API calls
+        # Caches for weather data and DB lookups
         self._weather_cache = None
         self._cache_timestamp = None
         self._cache_duration = timedelta(minutes=5)  # Cache for 5 minutes
+        self._cached_channel_id = None
+        self._cached_thresholds = None
+        self._thresholds_cache_time = None
+        self._thresholds_cache_duration = timedelta(seconds=60)  # Re-check DB every 60s
     
     def get_safety_thresholds(self) -> Dict:
         """
@@ -112,6 +130,8 @@ class WeatherSafetyService:
             new_thresholds: Dict containing threshold updates
         """
         self._safety_thresholds.update(new_thresholds)
+        self._cached_thresholds = None
+        self._thresholds_cache_time = None
         logger.info(f"Updated safety thresholds: {new_thresholds}")
     
     def _get_weather_data(self) -> Optional[Dict]:
@@ -322,3 +342,13 @@ class WeatherSafetyService:
             'overall_safe': self.evaluate_current_conditions(),
             'conditions': safety_details
         }
+
+
+# Module-level singleton — shared instance so weather cache persists across requests
+_weather_service_instance = None
+
+def get_weather_service() -> "WeatherSafetyService":
+    global _weather_service_instance
+    if _weather_service_instance is None:
+        _weather_service_instance = WeatherSafetyService()
+    return _weather_service_instance
