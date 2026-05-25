@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, g
 from app.middleware.auth import require_auth
 from app.services.database import get_db
 from app.models.booking import Booking
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
