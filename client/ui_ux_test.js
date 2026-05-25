@@ -134,32 +134,32 @@ async function runTest() {
 
     console.log('Navigating to Admin Teachers...');
     await page.goto(`${BASE_URL}/admin/teachers`);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(6000);
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '10_admin_teachers.png') });
 
     console.log('Navigating to Admin Bookings...');
     await page.goto(`${BASE_URL}/admin/bookings`);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(6000);
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '11_admin_bookings.png') });
 
     console.log('Navigating to Admin Sessions...');
     await page.goto(`${BASE_URL}/admin/sessions`);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(6000);
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '12_admin_sessions.png') });
 
     console.log('Navigating to Admin Safety...');
     await page.goto(`${BASE_URL}/admin/safety`);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(6000);
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '13_admin_safety.png') });
 
     console.log('Navigating to Admin Queue...');
     await page.goto(`${BASE_URL}/admin/queue`);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(6000);
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '14_admin_queue.png') });
 
     console.log('Navigating to Admin Settings...');
     await page.goto(`${BASE_URL}/admin/settings`);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(6000);
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '15_admin_settings.png') });
 
     // Logout admin

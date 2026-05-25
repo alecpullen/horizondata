@@ -27,7 +27,12 @@ def list_all_sessions():
             manager = get_student_session_manager()
             items = []
             for obs in rows:
-                teacher = db.query(User).filter(User.id == int(obs.teacher_id)).first() if obs.teacher_id else None
+                teacher = None
+                if obs.teacher_id:
+                    if obs.teacher_id.isdigit():
+                        teacher = db.query(User).filter(User.id == int(obs.teacher_id)).first()
+                    else:
+                        teacher = db.query(User).filter(User.external_id == obs.teacher_id).first()
                 booking = db.query(Booking).filter(Booking.id == obs.booking_id).first() if obs.booking_id else None
                 participants = manager.list_participants(str(obs.id))
                 items.append({
