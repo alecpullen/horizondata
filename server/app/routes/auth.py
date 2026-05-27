@@ -358,6 +358,8 @@ def reset_password():
                 return jsonify({'error': 'invalid_token', 'message': 'This reset link is invalid or has expired.'}), 400
 
             # Token is single-use: the embedded password fragment must still match
+            if not user.hashed_password or len(user.hashed_password) < 16:
+                return jsonify({'error': 'invalid_token', 'message': 'This reset link is invalid or has expired.'}), 400
             if user.hashed_password[-16:] != ph_fragment:
                 return jsonify({'error': 'invalid_token', 'message': 'This reset link has already been used.'}), 400
 

@@ -1,6 +1,6 @@
 from sqlalchemy import and_, or_, desc, text
-from server.app.models.user import User
-from server.app.services.database import SessionLocal
+from app.models.user import User
+from app.services.database import SessionLocal
 
 def create_user(email: str, username: str, password_hash: str):
     with SessionLocal() as db:

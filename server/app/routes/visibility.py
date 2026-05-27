@@ -3,6 +3,7 @@
 
 from flask import Blueprint, request, jsonify
 from app.services.visibility_service import get_visibility_service
+from app.middleware.auth import require_admin
 from datetime import datetime, timezone, timedelta
 import logging
 import numpy as np
@@ -87,13 +88,13 @@ def get_visible_objects():
         else:
             visible_objects = visibility_service.get_visible_objects(observation_time, min_elevation)
         
-        # Apply type filter
+        # Apply type and constellation filters as post-process on the already-fetched
+        # visible_objects list, so both can be combined correctly.
         if object_type:
-            visible_objects = visibility_service.get_objects_by_type(object_type, observation_time)
+            visible_objects = [o for o in visible_objects if o.get('type') == object_type]
         
-        # Apply constellation filter
         if constellation:
-            visible_objects = visibility_service.get_objects_in_constellation(constellation, observation_time)
+            visible_objects = [o for o in visible_objects if o.get('constellation') == constellation]
         
         # Apply additional elevation filter if specified
         if min_elevation is not None:
@@ -236,6 +237,7 @@ def get_visibility_stats():
 
 
 @visibility_bp.route('/cache/clear', methods=['POST'])
+@require_admin
 def clear_visibility_cache():
     """Clear the visibility cache (admin function)"""
     try:
@@ -250,6 +252,7 @@ def clear_visibility_cache():
 
 
 @visibility_bp.route('/update', methods=['POST'])
+@require_admin
 def force_visibility_update():
     """Force an immediate visibility update (admin function)"""
     try:

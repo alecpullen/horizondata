@@ -1,9 +1,10 @@
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DBAPIError
+from sqlalchemy.exc import SQLAlchemyError, DBAPIError
 
 class DatabaseError(Exception):
     pass
 
-class IntegrityError(DatabaseError):
+class DBIntegrityError(DatabaseError):
+    """Raised when a database integrity constraint is violated."""
     pass
 
 class DatabaseConnectionError(DatabaseError):

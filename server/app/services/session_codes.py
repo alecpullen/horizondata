@@ -7,7 +7,8 @@ def generate_session_code() -> str:
     from app.services.database import get_db
     from app.models.session import ObservationSession
 
-    while True:
+    MAX_ATTEMPTS = 20
+    for _ in range(MAX_ATTEMPTS):
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         with get_db() as db:
             exists = db.query(ObservationSession).filter(
@@ -16,3 +17,4 @@ def generate_session_code() -> str:
             ).first()
             if not exists:
                 return code
+    raise RuntimeError("Failed to generate a unique session code after maximum attempts")
