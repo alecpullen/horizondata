@@ -150,6 +150,13 @@ export const AuthProvider = ({ children }) => {
       if (errorCode === 'account_pending') {
         return { success: false, error: 'account_pending' }
       }
+      if (errorCode === 'email_not_verified') {
+        return { success: false, error: 'email_not_verified' }
+      }
+      if (err.response?.status === 401) {
+        return { success: false, error: 'invalid_credentials' }
+      }
+      // Network errors, 5xx, etc. still throw so Login.jsx catch handles them
       throw err
     }
   }, []);

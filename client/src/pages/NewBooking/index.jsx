@@ -49,6 +49,8 @@ function NewBooking() {
 
     // Session duration in minutes (calculated from time selection)
     const [sessionDuration, setSessionDuration] = useState(30)
+    const [timeRangeError, setTimeRangeError] = useState('')
+    const [timeRangeWarning, setTimeRangeWarning] = useState('')
 
     // Step 3: Session details
     const [sessionTitle, setSessionTitle] = useState('')
@@ -87,6 +89,27 @@ function NewBooking() {
             setSelectedTargets(prev => prev.slice(0, maxTargets))
         }
     }, [maxTargets, selectedTargets.length])
+
+    // Inline validation for the time range fields
+    useEffect(() => {
+        if (!startTime || !endTime) {
+            setTimeRangeError('')
+            setTimeRangeWarning('')
+            return
+        }
+        if (startTime === endTime) {
+            setTimeRangeError('Start and end time cannot be the same.')
+            setTimeRangeWarning('')
+            return
+        }
+        if (endTime < startTime) {
+            setTimeRangeError('')
+            setTimeRangeWarning(`Ends at ${endTime} the following day (midnight-crossing session).`)
+            return
+        }
+        setTimeRangeError('')
+        setTimeRangeWarning('')
+    }, [startTime, endTime])
 
     async function fetchTargets() {
         fetchAbortRef.current?.abort()
@@ -255,9 +278,9 @@ function NewBooking() {
     const canProceed = useMemo(() => {
         switch (currentStep) {
             case 1:
-                // Only require that all three fields are filled in.
-                // The submission path handles midnight-crossing sessions correctly.
-                return !!(sessionDate && startTime && endTime)
+                // Block identical times — zero duration makes maxTargets=0 and deadlocks step 2.
+                // Midnight-crossing (endTime < startTime) is allowed; the server handles it.
+                return !!(sessionDate && startTime && endTime && startTime !== endTime)
             case 2:
                 // Must have at least one target, and not exceed max
                 return selectedTargets.length > 0 && selectedTargets.length <= maxTargets
@@ -355,6 +378,8 @@ function NewBooking() {
                                 onDurationChange={setSessionDuration}
                                 isHeadless={isHeadless}
                                 setIsHeadless={setIsHeadless}
+                                timeRangeError={timeRangeError}
+                                timeRangeWarning={timeRangeWarning}
                             />
                         )}
 

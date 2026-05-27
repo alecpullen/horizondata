@@ -194,8 +194,17 @@ def upload_capture():
         "capturedByStudentName": student_display_name,  # NEW: Student's display name
         "observationSessionId": observation_session_id
     }
-    with open(meta_path, "w", encoding="utf-8") as fh:
-        json.dump(meta, fh, indent=2)
+    try:
+        with open(meta_path, "w", encoding="utf-8") as fh:
+            json.dump(meta, fh, indent=2)
+    except OSError as e:
+        current_app.logger.error(f"Failed to write capture metadata to {meta_path}: {e}")
+        # Clean up the image file so we don't leave orphaned files on disk
+        try:
+            os.remove(img_path)
+        except OSError:
+            pass
+        return jsonify({"message": "Failed to save capture record"}), 500
 
     # persist to DB
     try:

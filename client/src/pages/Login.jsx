@@ -10,7 +10,7 @@ import './Login.css'
 
 function Login() {
     const { showToast } = useToast()
-    const { loginTeacher: authLogin, isAuthenticated, isLoading: isAuthLoading } = useAuth()
+    const { loginTeacher: authLogin, isAuthenticated, isLoading: isAuthLoading, user } = useAuth()
     const { redirect, redirectTo, getRedirectUrl } = useRedirectAfterAuth()
     const navigate = useNavigate()
 
@@ -72,25 +72,10 @@ function Login() {
                     type: 'info',
                     message: 'Welcome back!'
                 })
-                
-                // User object is not directly available in this effect's dependencies,
-                // but we can retrieve it from localStorage or the auth context if we add it.
-                // It's cleaner to just get it from localStorage since that's what hydrated the context.
-                const storedUser = localStorage.getItem('user');
-                let role = 'teacher';
-                if (storedUser) {
-                    try {
-                        const parsedUser = JSON.parse(storedUser);
-                        role = parsedUser.role || 'teacher';
-                    } catch (e) {
-                        // ignore
-                    }
-                }
 
-                if (role === 'admin') {
+                if (user?.role === 'admin') {
                     navigate('/admin')
                 } else {
-                    // Redirect to saved URL or default
                     navigate(getRedirectUrl())
                 }
                 return
@@ -100,7 +85,7 @@ function Login() {
         }
 
         checkExistingSession()
-    }, [isAuthLoading, isAuthenticated, showToast, getRedirectUrl, navigate])
+    }, [isAuthLoading, isAuthenticated, user, showToast, getRedirectUrl, navigate])
 
     // Auto-focus email field when form is shown
     useEffect(() => {
@@ -183,10 +168,18 @@ function Login() {
                     navigate('/pending-approval', { replace: true })
                     return
                 }
-                const errorType = result.error?.toLowerCase().includes('password')
-                    ? 'INVALID_CREDENTIALS'
-                    : 'UNKNOWN'
-                setBannerError(errorType)
+                if (result.error === 'email_not_verified') {
+                    setBannerError('EMAIL_NOT_VERIFIED')
+                    setIsLoading(false)
+                    return
+                }
+                if (result.error === 'invalid_credentials') {
+                    setBannerError('INVALID_CREDENTIALS')
+                    showToast({ type: 'error', message: 'Invalid email or password.' })
+                    setIsLoading(false)
+                    return
+                }
+                setBannerError('UNKNOWN')
                 showToast({
                     type: 'error',
                     message: result.error || 'Login failed'
@@ -273,12 +266,12 @@ function Login() {
                             </p>
                         )}
                         {bannerError === 'EMAIL_NOT_VERIFIED' && (
-                            <button
+                            <Link
+                                to={`/verify-email?email=${encodeURIComponent(email)}`}
                                 className="login-banner__action"
-                                onClick={() => showToast({ type: 'info', message: 'Email resend is not available in this build.' })}
                             >
                                 Resend verification email
-                            </button>
+                            </Link>
                         )}
                         {bannerError === 'NETWORK_ERROR' && (
                             <button

@@ -126,7 +126,7 @@ function StudentView() {
         } finally {
             setCapturing(false)
         }
-    }, [bookingId, objectName, showToast])
+    }, [user, objectName, showToast])
 
     return (
         <div className="sv-shell">

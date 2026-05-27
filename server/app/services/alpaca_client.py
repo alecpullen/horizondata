@@ -36,10 +36,13 @@ class AlpacaClient:
                         setting = db.query(SystemSetting).filter_by(key="alpaca_base").first()
                         if setting and setting.value:
                             self._cached_base_url = setting.value.rstrip('/')
-                            self._cache_expires_at = now + 60
-                            return self._cached_base_url
+                # Bump expiry regardless of whether a DB row was found, so we
+                # don't query the DB on every call when the key is absent.
+                self._cache_expires_at = now + 60
             except Exception as e:
                 logger.warning(f"Failed to fetch alpaca_base from DB settings: {e}")
+                # On error, still bump expiry to avoid hammering the DB.
+                self._cache_expires_at = now + 60
         if self._cached_base_url:
             return self._cached_base_url
         return self._base_url
