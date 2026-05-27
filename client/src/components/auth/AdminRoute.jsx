@@ -17,7 +17,7 @@ function AdminRoute({ children }) {
 
     if (!isAuthenticated) {
         console.log('[AdminRoute] Redirecting to /login - not authenticated')
-        sessionStorage.setItem('authRedirectUrl', location.pathname + location.search)
+        sessionStorage.setItem('redirectAfterAuth', location.pathname + location.search)
         return <Navigate to="/login" replace />
     }
 

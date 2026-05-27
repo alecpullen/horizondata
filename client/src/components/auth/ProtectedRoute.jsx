@@ -24,7 +24,7 @@ function ProtectedRoute({ children }) {
     // Redirect to login if not authenticated, saving the intended URL
     if (!isAuthenticated) {
         // Save the current location so we can redirect back after login
-        sessionStorage.setItem('authRedirectUrl', location.pathname + location.search)
+        sessionStorage.setItem('redirectAfterAuth', location.pathname + location.search)
         return <Navigate to="/login" replace />
     }
 

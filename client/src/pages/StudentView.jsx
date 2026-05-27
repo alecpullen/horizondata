@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import StreamView from '../components/StreamView'
 import AppLogo from '../components/AppLogo'
 import { useToast } from '../components/ui/ToastProvider'
+import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 import './StudentView.css'
 
@@ -11,8 +12,9 @@ function StudentView() {
     const [searchParams] = useSearchParams()
     const bookingId = searchParams.get('bookingId')
     const { showToast } = useToast()
+    const { user } = useAuth()
 
-    const studentName = JSON.parse(localStorage.getItem('user') || '{}')?.display_name || 'Student'
+    const studentName = user?.display_name || JSON.parse(localStorage.getItem('user') || '{}')?.display_name || 'Student'
 
     const streamRef = useRef(null)
     const [capturing, setCapturing] = useState(false)
@@ -98,7 +100,9 @@ function StudentView() {
             formData.append('file', blob, `capture_${Date.now()}.png`)
             formData.append('objectName', objectName || 'Unknown')
             formData.append('timestamp', ts)
-            if (bookingId) formData.append('observationSessionId', bookingId)
+            // Use the observation session ID from the auth context, not the booking ID
+            const obsSessionId = user?.observation_session_id
+            if (obsSessionId) formData.append('observationSessionId', obsSessionId)
 
             const res = await api.post('/api/captures', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
