@@ -2,9 +2,12 @@
 # This file contains all routes related to fetching weather data.
 
 import os
+import logging
 from flask import Blueprint, jsonify
 import requests
 from app.middleware.auth import require_any_auth
+
+logger = logging.getLogger(__name__)
 
 # 1. Create a Blueprint instance.
 # The first argument is the blueprint's name.
@@ -43,7 +46,7 @@ def get_weather_feeds():
         data = response.json()
         return jsonify(data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching feed data from ThingSpeak: {e}")
+        logger.error(f"Error fetching feed data from ThingSpeak: {e}")
         return jsonify({"error": "Failed to fetch feed data from ThingSpeak API"}), 503
 
 # This route will now be accessible at /weather/temperature
@@ -57,7 +60,7 @@ def get_temperature_data():
         data = response.json()
         return jsonify(data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching temperature data from ThingSpeak: {e}")
+        logger.error(f"Error fetching temperature data from ThingSpeak: {e}")
         return jsonify({"error": "Failed to fetch temperature data from ThingSpeak API"}), 503
 
 # This route will now be accessible at /weather/humidity
@@ -71,7 +74,7 @@ def get_humidity_data():
         data = response.json()
         return jsonify(data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching humidity data from ThingSpeak: {e}")
+        logger.error(f"Error fetching humidity data from ThingSpeak: {e}")
         return jsonify({"error": "Failed to fetch humidity data from ThingSpeak API"}), 503
 
 # This route will now be accessible at /weather/pressure
@@ -85,7 +88,7 @@ def get_pressure_data():
         data = response.json()
         return jsonify(data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching pressure data from ThingSpeak: {e}")
+        logger.error(f"Error fetching pressure data from ThingSpeak: {e}")
         return jsonify({"error": "Failed to fetch pressure data from ThingSpeak API"}), 503
 
 # This route will now be accessible at /weather/dew_point
@@ -99,7 +102,7 @@ def get_dew_point_data():
         data = response.json()
         return jsonify(data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching dew_point data from ThingSpeak: {e}")
+        logger.error(f"Error fetching dew_point data from ThingSpeak: {e}")
         return jsonify({"error": "Failed to fetch dew_point data from ThingSpeak API"}), 503
     
 @weather_bp.route('/trends', methods=['GET'])
@@ -112,5 +115,5 @@ def get_weather_trends():
         data = response.json()
         return jsonify(data)
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching trend data from ThingSpeak: {e}")
+        logger.error(f"Error fetching trend data from ThingSpeak: {e}")
         return jsonify({"error": "Failed to fetch trend data from ThingSpeak API"}), 503

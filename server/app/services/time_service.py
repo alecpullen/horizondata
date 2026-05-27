@@ -11,7 +11,7 @@ Requirements addressed: 1.1, 1.4
 import pytz
 import logging
 import math
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from typing import Tuple
 
 # OpenTelemetry imports for monitoring and observability
@@ -73,7 +73,7 @@ class TimeService:
         """
         with tracer.start_as_current_span("get_melbourne_time") as span:
             try:
-                utc_now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+                utc_now = datetime.now(timezone.utc)
                 melbourne_time = utc_now.astimezone(self.MELBOURNE_TZ)
                 
                 # Add telemetry attributes
@@ -382,15 +382,8 @@ class TimeService:
                 
                 # Calculate time until next window change
                 if is_active:
-                    # Time until window ends
-                    if window_start.date() == window_end.date():
-                        time_until_change = (window_end - check_time).total_seconds()
-                    else:
-                        # Handle midnight spanning
-                        if check_time >= window_start:
-                            time_until_change = (window_end - check_time).total_seconds()
-                        else:
-                            time_until_change = (window_end - check_time).total_seconds()
+                    # Time until window ends (handles both same-day and midnight-spanning)
+                    time_until_change = (window_end - check_time).total_seconds()
                 else:
                     # Time until window starts
                     if check_time < window_start:

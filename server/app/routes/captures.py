@@ -122,7 +122,7 @@ def upload_capture():
     if ts:
         try:
             dt = datetime.fromisoformat(ts.replace("Z","+00:00"))
-        except:
+        except (ValueError, TypeError):
             dt = datetime.now(timezone.utc)
     else:
         dt = datetime.now(timezone.utc)
@@ -217,6 +217,14 @@ def upload_capture():
             ))
     except Exception as e:
         current_app.logger.error(f"Failed to persist capture to DB: {e}")
+        # Clean up the saved image and metadata to avoid orphaned files
+        for path in (img_path, meta_path):
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except OSError:
+                pass
+        return jsonify({"message": "Failed to save capture record"}), 500
 
     return jsonify({
         "success": True,
