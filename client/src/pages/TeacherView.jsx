@@ -263,7 +263,7 @@ function TeacherView() {
                             {participants.map(student => (
                                 <li key={student.id} className="tv-student-item">
                                     <div className="student-avatar">
-                                        {student.name[0]}
+                                        {student.name?.[0] ?? '?'}
                                     </div>
                                     <span className="student-name">{student.name}</span>
                                 </li>

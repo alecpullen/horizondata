@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useToast } from '../../components/ui/ToastProvider'
 import api from '../../lib/api'
 import './AdminBookings.css'
@@ -73,7 +73,7 @@ function AdminBookings() {
         }
         setBusy(id, true)
         try {
-            await api.patch(`/api/admin/bookings/${id}`, { status: 'rejected' })
+            await api.patch(`/api/admin/bookings/${id}`, { status: 'rejected', reason: rejectReason })
             mutateStatus(id, 'rejected')
             setRejectingId(null)
             setRejectReason('')
@@ -159,8 +159,8 @@ function AdminBookings() {
                                 const rejecting = rejectingId === b.id
 
                                 return (
-                                    <>
-                                        <tr key={b.id} className={rejecting ? 'bk-row--rejecting' : ''}>
+                                    <Fragment key={b.id}>
+                                        <tr className={rejecting ? 'bk-row--rejecting' : ''}>
                                             <td className="bk-cell-teacher">{b.teacher?.name}</td>
                                             <td className="bk-cell-title">{b.title}</td>
                                             <td className="bk-cell-dt">
@@ -239,7 +239,7 @@ function AdminBookings() {
                                                 </td>
                                             </tr>
                                         )}
-                                    </>
+                                    </Fragment>
                                 )
                             })}
                         </tbody>

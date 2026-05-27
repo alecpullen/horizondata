@@ -57,8 +57,8 @@ function AdminShell() {
         : (user?.email?.[0] ?? '?').toUpperCase()
     const userRole = user?.role || ''
 
-    function handleLogout() {
-        logoutTeacher()
+    async function handleLogout() {
+        await logoutTeacher()
         navigate('/login', { replace: true })
     }
 

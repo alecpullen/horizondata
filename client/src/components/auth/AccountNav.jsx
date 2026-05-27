@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './AccountNav.css'
 
 const accountLinks = [
@@ -10,13 +11,13 @@ function AccountNav({ activePath }) {
         <nav className="account-nav">
             <div className="account-nav__container">
                 {accountLinks.map(link => (
-                    <a
+                    <Link
                         key={link.path}
-                        href={link.path}
+                        to={link.path}
                         className={`account-nav__link ${activePath === link.path ? 'account-nav__link--active' : ''}`}
                     >
                         {link.label}
-                    </a>
+                    </Link>
                 ))}
             </div>
         </nav>

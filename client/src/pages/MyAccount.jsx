@@ -446,7 +446,10 @@ function MyAccount() {
                                         Permanently delete your account and all associated data. This action cannot be undone.
                                     </p>
                                 </div>
-                                <button className="account-btn account-btn--danger">
+                                <button
+                                    className="account-btn account-btn--danger"
+                                    onClick={() => showToast({ type: 'info', message: 'Account deletion is not available in this build.' })}
+                                >
                                     Delete Account
                                 </button>
                             </div>

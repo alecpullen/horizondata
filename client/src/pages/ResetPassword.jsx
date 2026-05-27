@@ -134,7 +134,7 @@ function ResetPassword() {
                         <input
                             id="password"
                             type={showPassword ? 'text' : 'password'}
-                            className={`reset-input ${passwordValidation.errors && touched.password ? 'reset-input--error' : ''}`}
+                            className={`reset-input ${!passwordValidation.isValid && touched.password ? 'reset-input--error' : ''}`}
                             placeholder="Enter new password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}

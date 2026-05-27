@@ -57,7 +57,7 @@ export function useHlsStream(hlsUrl, videoRef) {
             video.removeEventListener('error', onError)
             video.src = ''
         }
-    }, [hlsUrl, videoRef])
+    }, [hlsUrl])
 
     // If HLS is not supported at all, surface failure immediately via derived state.
     const effectiveStatus = HLS_SUPPORT === 'none' && hlsUrl ? 'failed' : status
