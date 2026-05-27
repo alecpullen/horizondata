@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 import os
+import secrets
 import time
 import logging
 
@@ -35,11 +36,12 @@ def create_app():
 
     secret = os.getenv("JWT_SECRET_KEY")
     if not secret or secret == "super-secret-default-key-change-me":
+        secret = secrets.token_hex(32)
         logger.warning(
-            "JWT_SECRET_KEY is not set or using default value. "
-            "Set a strong random secret in your .env file for production."
+            "JWT_SECRET_KEY is not set or is using the insecure default. "
+            "An ephemeral random key has been generated — tokens WILL be invalidated "
+            "on every server restart. Set a persistent JWT_SECRET_KEY in your .env file."
         )
-        secret = "super-secret-default-key-change-me"
     app.config["JWT_SECRET_KEY"] = secret
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900  # 15 minutes
     app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 604800  # 7 days

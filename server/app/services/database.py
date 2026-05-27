@@ -3,7 +3,8 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+_env_db_url = os.getenv("DATABASE_URL")
+DATABASE_URL = _env_db_url
 
 if not DATABASE_URL:
     host = os.getenv("DB_HOST", "localhost")
@@ -13,6 +14,12 @@ if not DATABASE_URL:
     password = os.getenv("DB_PASSWORD", "postgres")
     DATABASE_URL = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{name}"
 
+# Default to "require" when DATABASE_URL was explicitly set (e.g. Neon/cloud),
+# "prefer" when assembled from individual DB_* vars (local development).
+_ssl_default = "require" if _env_db_url else "prefer"
+_ssl_mode = os.getenv("DATABASE_SSL_MODE", _ssl_default)
+connect_args = {"sslmode": _ssl_mode} if _ssl_mode else {}
+
 engine = create_engine(
     DATABASE_URL,
     pool_size=int(os.getenv("DATABASE_POOL_SIZE", 10)),
@@ -20,7 +27,7 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_recycle=int(os.getenv("DATABASE_POOL_RECYCLE", 3600)),
     pool_timeout=30,
-    connect_args={"sslmode": "require"},
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
