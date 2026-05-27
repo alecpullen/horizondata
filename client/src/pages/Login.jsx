@@ -30,7 +30,7 @@ function Login() {
     const [isLoading, setIsLoading] = useState(false)
     const [bannerError, setBannerError] = useState('')
     const [rateLimitEnd, setRateLimitEnd] = useState(null)
-    const [now, setNow] = useState(Date.now)
+    const [now, setNow] = useState(Date.now())
 
     // Success animation state
     const [showSuccess, setShowSuccess] = useState(false)
@@ -176,7 +176,7 @@ function Login() {
         setIsLoading(true)
 
         try {
-            const result = await authLogin(email, password)
+            const result = await authLogin(email, password, rememberMe)
 
             if (!result.success) {
                 if (result.error === 'account_pending') {
@@ -199,7 +199,7 @@ function Login() {
             setShowSuccess(true)
             showToast({
                 type: 'success',
-                message: `Welcome back, ${result.user.fullName}!`
+                message: `Welcome back, ${result.user.name || result.user.fullName}!`
             })
 
             // Redirect after success animation
@@ -247,7 +247,7 @@ function Login() {
     const footer = (
         <>
             Don't have an account?{' '}
-            <Link to="/register" className="auth-link">
+            <Link to="/signup" className="auth-link">
                 Create one
             </Link>
         </>
@@ -273,7 +273,10 @@ function Login() {
                             </p>
                         )}
                         {bannerError === 'EMAIL_NOT_VERIFIED' && (
-                            <button className="login-banner__action">
+                            <button
+                                className="login-banner__action"
+                                onClick={() => showToast({ type: 'info', message: 'Email resend is not available in this build.' })}
+                            >
                                 Resend verification email
                             </button>
                         )}

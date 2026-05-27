@@ -7,7 +7,7 @@ import { useToast } from '../components/ui/ToastProvider'
 import api from '../lib/api'
 import './SessionLobby.css'
 
-const APP_URL = import.meta.env.VITE_APP_URL
+const APP_URL = import.meta.env.VITE_APP_URL || window.location.origin
 
 function SessionLobby() {
     const { bookingId } = useParams()
@@ -148,7 +148,7 @@ function SessionLobby() {
 
                     <div className="lobby-qr">
                         <div className="lobby-qr-box">
-                            <QRCodeSVG value={`${APP_URL}/join`} size={160} />
+                            <QRCodeSVG value={`${APP_URL}/join${joinCode ? `?code=${joinCode}` : ''}`} size={160} />
                         </div>
                         <div className="lobby-qr-label">Scan to join</div>
                     </div>
@@ -165,9 +165,9 @@ function SessionLobby() {
                     <ul className="lobby-roster">
                         {students.map(student => (
                             <li key={student.id} className="lobby-roster-item">
-                                <div className="lobby-student-avatar">
-                                    {student.name[0]}
-                                </div>
+                                 <div className="lobby-student-avatar">
+                                     {student.name?.[0] ?? '?'}
+                                 </div>
                                 <span className="lobby-student-name">{student.name}</span>
                                 <span className="lobby-joined-tick">✔️</span>
                             </li>

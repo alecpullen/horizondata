@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import './SessionTimeoutModal.css'
 
-function SessionTimeoutModal({ isOpen, timeLeft, onExtend, onLogout }) {
+function SessionTimeoutModal({ isOpen, timeLeft, onExtend, onLogout, totalTime = 120 }) {
     const [displayTime, setDisplayTime] = useState(timeLeft)
 
     // Update display time when prop changes
@@ -24,7 +24,7 @@ function SessionTimeoutModal({ isOpen, timeLeft, onExtend, onLogout }) {
         }, 1000)
 
         return () => clearInterval(timer)
-    }, [isOpen, displayTime])
+    }, [isOpen])
 
     if (!isOpen) return null
 
@@ -34,7 +34,6 @@ function SessionTimeoutModal({ isOpen, timeLeft, onExtend, onLogout }) {
     const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`
 
     // Calculate progress for visual indicator
-    const totalTime = 120 // 2 minutes warning
     const progress = (displayTime / totalTime) * 100
 
     return (

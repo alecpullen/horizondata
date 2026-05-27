@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ToastProvider from './components/ui/ToastProvider'
 import SessionTimeoutModal from './components/auth/SessionTimeoutModal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import TeacherLogin from './pages/TeacherLogin'
+import Login from './pages/Login'
 import TeacherSignup from './pages/TeacherSignup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
@@ -36,11 +36,17 @@ import { useToast } from './components/ui/ToastProvider'
 
 // Component to handle session timeout for authenticated users
 function SessionTimeoutWrapper({ children }) {
-    const { isAuthenticated, logoutTeacher, refreshToken } = useAuth()
+    const { isAuthenticated, userType, logoutTeacher, refreshToken } = useAuth()
     const { showToast } = useToast()
 
+    // Only run session timeout for teacher sessions — students have no refresh token
+    // and should be timed out by the backend, not the frontend.
+    const isTeacherSession = isAuthenticated && userType === 'teacher'
+
+    const warningTime = 120 // 2 minutes warning
+
     const { showWarning, timeLeft, extendSession: handleExtend, logout: handleLogout } = useSessionTimeout({
-        isAuthenticated,
+        isAuthenticated: isTeacherSession,
         onExtend: async () => {
             const result = await refreshToken()
             if (result) {
@@ -56,7 +62,7 @@ function SessionTimeoutWrapper({ children }) {
             showToast({ type: 'info', message: 'Session expired. Please sign in again.' })
             window.location.href = '/login'
         },
-        warningTime: 120, // 2 minutes warning
+        warningTime,
         sessionDuration: 60 * 60 // 1 hour for demo
     })
 
@@ -66,6 +72,7 @@ function SessionTimeoutWrapper({ children }) {
             <SessionTimeoutModal
                 isOpen={showWarning}
                 timeLeft={timeLeft}
+                totalTime={warningTime}
                 onExtend={handleExtend}
                 onLogout={handleLogout}
             />
@@ -80,7 +87,7 @@ function AppRoutes() {
                 {/* Public routes */}
                 <Route path="/"                 element={<PublicView />}        />
                 <Route path="/live/public"       element={<PublicView />}        />
-                <Route path="/login"           element={<TeacherLogin />}      />
+                <Route path="/login"           element={<Login />}             />
                 <Route path="/signup"          element={<TeacherSignup />}     />
                 <Route path="/forgot-password" element={<ForgotPassword />}    />
                 <Route path="/reset-password"  element={<ResetPassword />}     />

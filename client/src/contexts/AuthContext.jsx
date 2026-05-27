@@ -226,12 +226,12 @@ export const AuthProvider = ({ children }) => {
 
   // Refresh token (for teachers)
   const refreshToken = useCallback(async () => {
-    const refreshToken = useRememberStorage.getItem('refreshToken');
-    if (!refreshToken) return null;
+    const storedRefreshToken = useRememberStorage.getItem('refreshToken');
+    if (!storedRefreshToken) return null;
 
     try {
       const response = await rawApi.post('/api/auth/teacher/refresh', {}, {
-        headers: { Authorization: `Bearer ${refreshToken}` },
+        headers: { Authorization: `Bearer ${storedRefreshToken}` },
       });
 
       const { token, refresh_token } = response.data;

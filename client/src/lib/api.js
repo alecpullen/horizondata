@@ -15,12 +15,17 @@ const rawApi = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Helper: read from localStorage first, fall back to sessionStorage
+function getStoredItem(key) {
+  return localStorage.getItem(key) ?? sessionStorage.getItem(key);
+}
+
 // Request interceptor to add auth headers
 api.interceptors.request.use(
   (config) => {
-    const userType = localStorage.getItem('userType');
-    const token = localStorage.getItem('token');
-    const sessionId = localStorage.getItem('sessionId');
+    const userType = getStoredItem('userType');
+    const token = getStoredItem('token');
+    const sessionId = getStoredItem('sessionId');
 
     if (userType === 'teacher' && token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -38,11 +43,11 @@ api.interceptors.request.use(
 let refreshPromise = null;
 
 function clearAuthAndRedirect() {
-  localStorage.removeItem('userType');
-  localStorage.removeItem('token');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('sessionId');
-  localStorage.removeItem('user');
+  const keys = ['userType', 'token', 'refreshToken', 'sessionId', 'user', '__rememberMe'];
+  keys.forEach(k => {
+    localStorage.removeItem(k);
+    sessionStorage.removeItem(k);
+  });
   window.location.href = '/login';
 }
 
@@ -67,8 +72,8 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const storedRefreshToken = localStorage.getItem('refreshToken');
-    const userType = localStorage.getItem('userType');
+    const storedRefreshToken = getStoredItem('refreshToken');
+    const userType = getStoredItem('userType');
 
     // Students have no refresh token — clear and redirect immediately.
     // Also guard against corrupted localStorage values (e.g. the string
@@ -92,8 +97,11 @@ api.interceptors.response.use(
         })
         .then((res) => {
           const { token, refresh_token } = res.data;
-          localStorage.setItem('token', token);
-          localStorage.setItem('refreshToken', refresh_token);
+          // Store refreshed tokens in the same storage as the originals
+          const remember = localStorage.getItem('__rememberMe') === 'true';
+          const store = remember ? localStorage : sessionStorage;
+          store.setItem('token', token);
+          store.setItem('refreshToken', refresh_token);
           return token;
         })
         .catch(() => {

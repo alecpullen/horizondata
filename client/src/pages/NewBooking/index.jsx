@@ -255,7 +255,9 @@ function NewBooking() {
     const canProceed = useMemo(() => {
         switch (currentStep) {
             case 1:
-                return sessionDate && startTime && endTime && startTime < endTime
+                // Only require that all three fields are filled in.
+                // The submission path handles midnight-crossing sessions correctly.
+                return !!(sessionDate && startTime && endTime)
             case 2:
                 // Must have at least one target, and not exceed max
                 return selectedTargets.length > 0 && selectedTargets.length <= maxTargets
