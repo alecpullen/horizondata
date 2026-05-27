@@ -1,0 +1,4 @@
+# Development and testing dependencies
+# Install with: pip install -r requirements-dev.txt
+
+selenium==4.28.1

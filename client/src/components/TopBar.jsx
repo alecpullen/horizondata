@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import AppLogo from './AppLogo'
 import { useAuth } from '../contexts/AuthContext'
 import './TopBar.css'
@@ -92,31 +93,31 @@ function TopBar({ activePath }) {
                             </svg>
                         </button>
 
-                        {liveViewOpen && (
-                            <div className="dropdown-menu">
-                                {adminLiveViewLinks.map(link => (
-                                    <a
-                                        key={link.path}
-                                        href={link.path}
-                                        className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
-                                        onClick={() => setLiveViewOpen(false)}
-                                    >
-                                        {link.label}
-                                    </a>
-                                ))}
-                            </div>
-                        )}
+                            {liveViewOpen && (
+                                <div className="dropdown-menu">
+                                    {adminLiveViewLinks.map(link => (
+                                        <Link
+                                            key={link.path}
+                                            to={link.path}
+                                            className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
+                                            onClick={() => setLiveViewOpen(false)}
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
                     </div>
                 )}
 
                 {navLinks.map(link => (
-                    <a
+                    <Link
                         key={link.path}
-                        href={link.path}
+                        to={link.path}
                         className={`nav-link ${activePath === link.path ? 'active' : ''}`}
                     >
                         {link.label}
-                    </a>
+                    </Link>
                 ))}
 
                 {/* Account Dropdown */}
@@ -140,20 +141,20 @@ function TopBar({ activePath }) {
                         </svg>
                     </button>
 
-                    {accountOpen && (
-                        <div className="dropdown-menu">
-                            {accountLinks.map(link => (
-                                <a
-                                    key={link.path}
-                                    href={link.path}
-                                    className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
-                                    onClick={() => setAccountOpen(false)}
-                                >
-                                    {link.label}
-                                </a>
-                            ))}
-                        </div>
-                    )}
+                            {accountOpen && (
+                                <div className="dropdown-menu">
+                                    {accountLinks.map(link => (
+                                        <Link
+                                            key={link.path}
+                                            to={link.path}
+                                            className={`dropdown-item ${activePath === link.path ? 'dropdown-item--active' : ''}`}
+                                            onClick={() => setAccountOpen(false)}
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
                 </div>
             </nav>
 
@@ -184,8 +185,8 @@ function TopBar({ activePath }) {
                                 </div>
                             </div>
                             <div className="avatar-menu-divider" />
-                            <a
-                                href="/account"
+                            <Link
+                                to="/account"
                                 className="avatar-menu-item"
                                 onClick={() => setAvatarOpen(false)}
                             >
@@ -194,9 +195,9 @@ function TopBar({ activePath }) {
                                     <circle cx="12" cy="7" r="4" />
                                 </svg>
                                 My Account
-                            </a>
-                            <a
-                                href="/bookings"
+                            </Link>
+                            <Link
+                                to="/bookings"
                                 className="avatar-menu-item"
                                 onClick={() => setAvatarOpen(false)}
                             >
@@ -207,12 +208,12 @@ function TopBar({ activePath }) {
                                     <line x1="3" y1="10" x2="21" y2="10" />
                                 </svg>
                                 My Bookings
-                            </a>
+                            </Link>
                             {isAdmin && (
                                 <>
                                     <div className="avatar-menu-divider" />
-                                    <a
-                                        href="/admin"
+                                    <Link
+                                        to="/admin"
                                         className="avatar-menu-item"
                                         onClick={() => setAvatarOpen(false)}
                                     >
@@ -220,7 +221,7 @@ function TopBar({ activePath }) {
                                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                         </svg>
                                         Admin Panel
-                                    </a>
+                                    </Link>
                                 </>
                             )}
                             <div className="avatar-menu-divider" />

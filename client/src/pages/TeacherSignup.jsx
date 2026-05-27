@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthShell from '../components/auth/AuthShell';
 import { useAuth } from '../contexts/AuthContext';
+import { validatePassword } from '../utils/validation';
 
 const TeacherSignup = () => {
   const [name, setName] = useState('');
@@ -22,8 +23,14 @@ const TeacherSignup = () => {
       setError('Passwords do not match');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    const pwdValidation = validatePassword(password);
+    if (!pwdValidation.isValid) {
+      const hints = [];
+      if (pwdValidation.errors?.minLength) hints.push('at least 8 characters');
+      if (pwdValidation.errors?.upper) hints.push('an uppercase letter');
+      if (pwdValidation.errors?.lower) hints.push('a lowercase letter');
+      if (pwdValidation.errors?.number) hints.push('a number');
+      setError(`Password must contain: ${hints.join(', ')}`);
       return;
     }
 

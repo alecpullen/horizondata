@@ -19,20 +19,29 @@ class AlpacaClient:
         self._base_url = base_url.rstrip('/')
         self.client_id = client_id
         self._transaction_id = 0
-        
+        self._cached_base_url = None  # cached DB-sourced URL
+        self._cache_expires_at = 0    # epoch seconds
+
     @property
     def base_url(self) -> str:
-        try:
-            from flask import has_app_context
-            if has_app_context():
-                from app.services.database import get_db
-                from app.models.setting import SystemSetting
-                with get_db() as db:
-                    setting = db.query(SystemSetting).filter_by(key="alpaca_base").first()
-                    if setting and setting.value:
-                        return setting.value.rstrip('/')
-        except Exception as e:
-            logger.warning(f"Failed to fetch alpaca_base from DB settings: {e}")
+        # Refresh the cached value at most once per 60 seconds
+        now = time.time()
+        if self._cached_base_url is None or now >= self._cache_expires_at:
+            try:
+                from flask import has_app_context
+                if has_app_context():
+                    from app.services.database import get_db
+                    from app.models.setting import SystemSetting
+                    with get_db() as db:
+                        setting = db.query(SystemSetting).filter_by(key="alpaca_base").first()
+                        if setting and setting.value:
+                            self._cached_base_url = setting.value.rstrip('/')
+                            self._cache_expires_at = now + 60
+                            return self._cached_base_url
+            except Exception as e:
+                logger.warning(f"Failed to fetch alpaca_base from DB settings: {e}")
+        if self._cached_base_url:
+            return self._cached_base_url
         return self._base_url
         
     def _get_next_transaction_id(self) -> int:

@@ -5,7 +5,7 @@ Provides access to telemetry data for the frontend dashboard.
 
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from opentelemetry import trace, metrics
 from opentelemetry.sdk.trace import TracerProvider
@@ -27,7 +27,7 @@ class LogHandler(logging.Handler):
     def emit(self, record):
         try:
             log_entry = {
-                'timestamp': datetime.fromtimestamp(record.created).isoformat(),
+                'timestamp': datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
                 'level': record.levelname,
                 'logger': record.name,
                 'message': record.getMessage(),
