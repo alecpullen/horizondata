@@ -1,6 +1,6 @@
 import logging
 import uuid as _uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, g, request
 
@@ -17,6 +17,61 @@ from sqlalchemy.exc import IntegrityError
 logger = logging.getLogger(__name__)
 
 sessions_bp = Blueprint("sessions", __name__, url_prefix="/api/sessions")
+
+
+# Teachers may go live a little ahead of the scheduled start (e.g. to settle
+# in while students trickle into the lobby) but not arbitrarily early.
+SESSION_EARLY_GRACE = timedelta(minutes=15)
+
+
+def _humanize_duration(seconds):
+    """Render a positive duration as a short human string: '39h', '2h 15m', '45m'."""
+    total = max(int(seconds), 0)
+    if total < 60:
+        return "less than a minute"
+    minutes = total // 60
+    hours, mins = divmod(minutes, 60)
+    if hours and mins:
+        return f"{hours}h {mins}m"
+    if hours:
+        return f"{hours}h"
+    return f"{mins}m"
+
+
+def _check_booking_window(booking):
+    """Return an error response tuple if it's not yet (or no longer) valid to
+    start this booking's session, else None.
+    """
+    now = datetime.now(timezone.utc)
+    start = booking.scheduled_start
+    end = booking.scheduled_end
+    # The column is timezone-aware, but be defensive about naive values.
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+
+    if now < start - SESSION_EARLY_GRACE:
+        seconds_until_start = int((start - now).total_seconds())
+        return (
+            jsonify({
+                "error": "window_not_open",
+                "message": f"Session not available yet — starts in {_humanize_duration(seconds_until_start)}.",
+                "seconds_until_start": seconds_until_start,
+            }),
+            409,
+        )
+
+    if now > end:
+        return (
+            jsonify({
+                "error": "window_closed",
+                "message": "This booking window has ended.",
+            }),
+            409,
+        )
+
+    return None
 
 
 def _load_booking_owned(db, booking_id):
@@ -196,6 +251,9 @@ def start_session(booking_id):
             booking, err = _load_booking_owned(db, booking_id)
             if err:
                 return err
+            window_err = _check_booking_window(booking)
+            if window_err:
+                return window_err
             obs = _get_or_create_session(db, booking)
             obs.status = "active"  # idempotent
 

@@ -491,29 +491,34 @@ def student_join():
         }), 429
     
     try:
+        # Read everything we need while the session is still open — the ORM
+        # instance is expired/detached once get_db() commits and closes, so
+        # accessing obs_session.id afterwards would raise (the cause of a 500).
         with get_db() as db:
             obs_session = db.query(ObservationSession).filter(
                 ObservationSession.session_code == session_code,
                 ObservationSession.status == "active",
             ).first()
 
-        if not obs_session:
-            return jsonify({
-                'error': 'session_not_found',
-                'message': 'Session not found or has ended. Please check the session code.'
-            }), 404
+            if not obs_session:
+                return jsonify({
+                    'error': 'session_not_found',
+                    'message': 'Session not found or has ended. Please check the session code.'
+                }), 404
+
+            observation_session_id = str(obs_session.id)
 
         manager = get_student_session_manager()
         student_session_id = manager.create_session(
             display_name=display_name,
-            observation_session_id=str(obs_session.id),
+            observation_session_id=observation_session_id,
         )
-        
+
         return jsonify({
             'success': True,
             'session_id': student_session_id,
             'display_name': display_name,
-            'observation_session_id': str(obs_session.id)
+            'observation_session_id': observation_session_id
         }), 201
         
     except Exception as e:

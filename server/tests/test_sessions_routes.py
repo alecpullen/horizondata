@@ -3,6 +3,7 @@ import sys
 import uuid
 import unittest
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -227,6 +228,83 @@ class TestSessionsRoutes(unittest.TestCase):
             )
 
         self.assertEqual(resp.status_code, 404)
+
+
+class TestStartSessionWindow(unittest.TestCase):
+    """Bug 11 / Bug 9: starting a session must be gated to the booking
+    window and must return a clear, structured reason when refused so the
+    teacher is never silently dropped onto the live view."""
+
+    def setUp(self):
+        self.app = create_app()
+        self.app.config["TESTING"] = True
+        self.client = self.app.test_client()
+
+    def _headers(self):
+        return {"Authorization": "Bearer fake-token"}
+
+    def _booking(self, start, end):
+        b = MagicMock()
+        b.id = BOOKING_ID
+        b.teacher_id = TEACHER_ID
+        b.scheduled_start = start
+        b.scheduled_end = end
+        return b
+
+    def test_start_rejected_before_window(self):
+        now = datetime.now(timezone.utc)
+        booking = self._booking(now + timedelta(hours=39), now + timedelta(hours=40))
+        db = _make_db(booking=booking)
+
+        with patch("app.middleware.auth.validate_teacher", return_value=TEACHER_USER), \
+             patch("app.routes.sessions.get_db", lambda: _make_get_db(db)):
+            resp = self.client.post(
+                f"/api/sessions/{BOOKING_ID}/start",
+                headers=self._headers(),
+            )
+
+        self.assertEqual(resp.status_code, 409)
+        data = resp.get_json()
+        self.assertEqual(data["error"], "window_not_open")
+        self.assertTrue(data["message"].startswith("Session not available yet"))
+        # ~39h out, allowing for test execution time
+        self.assertGreater(data["seconds_until_start"], 38 * 3600)
+        self.assertLessEqual(data["seconds_until_start"], 39 * 3600)
+
+    def test_start_rejected_after_window(self):
+        now = datetime.now(timezone.utc)
+        booking = self._booking(now - timedelta(hours=3), now - timedelta(hours=1))
+        db = _make_db(booking=booking)
+
+        with patch("app.middleware.auth.validate_teacher", return_value=TEACHER_USER), \
+             patch("app.routes.sessions.get_db", lambda: _make_get_db(db)):
+            resp = self.client.post(
+                f"/api/sessions/{BOOKING_ID}/start",
+                headers=self._headers(),
+            )
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.get_json()["error"], "window_closed")
+
+    def test_start_succeeds_within_window(self):
+        now = datetime.now(timezone.utc)
+        booking = self._booking(now - timedelta(minutes=5), now + timedelta(hours=1))
+        db = _make_db(booking=booking)
+
+        mock_obs = MagicMock()
+        mock_obs.id = SESSION_ID
+        mock_obs.status = "active"
+
+        with patch("app.middleware.auth.validate_teacher", return_value=TEACHER_USER), \
+             patch("app.routes.sessions.get_db", lambda: _make_get_db(db)), \
+             patch("app.routes.sessions._get_or_create_session", return_value=mock_obs):
+            resp = self.client.post(
+                f"/api/sessions/{BOOKING_ID}/start",
+                headers=self._headers(),
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.get_json()["success"])
 
 
 if __name__ == "__main__":

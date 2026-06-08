@@ -17,6 +17,7 @@ function SessionLobby() {
     const [booking, setBooking] = useState(null)
     const [loading, setLoading] = useState(true)
     const [joinCode, setJoinCode] = useState('')
+    const [starting, setStarting] = useState(false)
 
 
 
@@ -96,12 +97,26 @@ function SessionLobby() {
     }, [bookingId])
 
     const handleBeginSession = async () => {
+        if (starting) return
+        setStarting(true)
         try {
-            await api.post(`/api/sessions/${bookingId}/start`)
-            navigate('/live/teacher', { state: { bookingId } })
+            const res = await api.post(`/api/sessions/${bookingId}/start`)
+            // Only go live once the backend confirms the session is active —
+            // never navigate optimistically, or the teacher believes they're
+            // live when no session was registered.
+            if (res.data?.success) {
+                navigate('/live/teacher', { state: { bookingId } })
+            } else {
+                showToast({ type: 'error', message: res.data?.message || 'Could not start the session. Please try again.' })
+            }
         } catch (err) {
             console.error('Error starting session:', err)
-            showToast({ type: 'error', message: 'Failed to start session. Please try again.' })
+            // Surface the backend's reason (e.g. "Session not available yet —
+            // starts in 39h" or "This booking window has ended.").
+            const message = err.response?.data?.message || 'Failed to start session. Please try again.'
+            showToast({ type: 'error', message })
+        } finally {
+            setStarting(false)
         }
     }
 
@@ -194,9 +209,9 @@ function SessionLobby() {
                 <button
                     className="lobby-begin-btn"
                     onClick={handleBeginSession}
-                    disabled={loading}
+                    disabled={loading || starting}
                 >
-                    Begin Session
+                    {starting ? 'Starting…' : 'Begin Session'}
                 </button>
             </div>
         </div>
