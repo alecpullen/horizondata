@@ -25,16 +25,18 @@ function fmtTime(iso) {
 function ConditionRow({ label, value, fmt, ok }) {
     // value can be a raw number/boolean (from mocks), or an object like { value, safe, threshold } (from real backend)
     const actualValue = (value && typeof value === 'object' && 'value' in value) ? value.value : value
-    const isSafe = (value && typeof value === 'object' && 'safe' in value) 
-        ? value.safe 
+    const isSafe = (value && typeof value === 'object' && 'safe' in value)
+        ? value.safe
         : (ok ? ok(actualValue) : null)
 
-    const display = actualValue == null ? '—' : fmt(actualValue)
+    // A missing value means the sensor isn't reporting — make that explicit
+    // rather than showing an ambiguous dash.
+    const offline = actualValue == null
     return (
         <tr className="safety-cond-row">
             <td className="safety-cond-label">{label}</td>
-            <td className={`safety-cond-value${isSafe === false ? ' safety-cond-value--warn' : ''}`}>
-                {display}
+            <td className={`safety-cond-value${!offline && isSafe === false ? ' safety-cond-value--warn' : ''}${offline ? ' safety-cond-value--offline' : ''}`}>
+                {offline ? 'Sensor offline' : fmt(actualValue)}
             </td>
         </tr>
     )

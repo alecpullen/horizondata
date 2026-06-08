@@ -114,6 +114,14 @@
     color: var(--red);
 }
 
+/* Sensor not reporting — muted, smaller, non-mono so it reads as a state */
+.safety-cond-value--offline {
+    color: var(--t3);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-style: italic;
+}
+
 /* ── Threshold form styling (mirrored from AdminSettings.css) ── */
 .safety-thresholds-form {
     display: flex;

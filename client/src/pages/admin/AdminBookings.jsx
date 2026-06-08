@@ -21,8 +21,14 @@ function StatusBadge({ status }) {
     return <span className={`bk-badge bk-badge--${meta.mod}`}>{meta.label}</span>
 }
 
-function formatDate(iso) {
-    return new Date(iso).toLocaleDateString('en-AU', {
+// The API sends `date` as a Melbourne-local "DD/MM/YYYY" string. Passing that
+// straight to `new Date()` makes JS parse it as MM/DD/YYYY (US format), so
+// 10/06/2026 (10 June) becomes 6 October. Parse the components explicitly.
+function formatDate(dmy) {
+    if (!dmy) return ''
+    const [day, month, year] = dmy.split('/').map(Number)
+    if (!day || !month || !year) return dmy
+    return new Date(year, month - 1, day).toLocaleDateString('en-AU', {
         day: 'numeric', month: 'short', year: 'numeric',
     })
 }

@@ -214,8 +214,8 @@
 }
 
 .sched-legend-swatch--available {
-    background: var(--surf);
-    border-color: var(--border);
+    background: color-mix(in srgb, var(--green) 13%, var(--surf));
+    border-color: color-mix(in srgb, var(--green) 32%, var(--border));
 }
 .sched-legend-swatch--mine {
     background: color-mix(in srgb, var(--teal) 20%, var(--surf));

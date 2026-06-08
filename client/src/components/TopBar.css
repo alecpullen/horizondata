@@ -252,6 +252,31 @@
     background: var(--tdim);
 }
 
+/* Button variant (e.g. Log Out) needs button resets to match anchor items */
+button.dropdown-item {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 4px;
+}
+
+.dropdown-item--danger {
+    color: var(--red);
+}
+
+.dropdown-item--danger:hover {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--red);
+}
+
 /* MSW Toggle Switch */
 .msw-toggle {
     display: flex;

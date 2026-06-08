@@ -728,8 +728,11 @@
     height: 32px;
     min-height: 32px;
     border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surf);
+    /* Default (available) slots get a clear green tint so bookable times are
+       visually distinct from booked (red), selected (teal) and past (dim)
+       slots — on the dark theme a plain surface fill was indistinguishable. */
+    border: 1px solid color-mix(in srgb, var(--green) 32%, var(--border));
+    background: color-mix(in srgb, var(--green) 13%, var(--surf));
     cursor: pointer;
     transition: all 0.15s ease;
     display: flex;

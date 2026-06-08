@@ -67,6 +67,14 @@ function Login() {
                 return
             }
 
+            // Skip when the user just authenticated via the login form — that
+            // path shows its own "Welcome back, <name>!" toast and handles the
+            // redirect. Without this guard, isAuthenticated flipping true also
+            // fires this generic "Welcome back!" toast (duplicate toasts).
+            if (showSuccess) {
+                return
+            }
+
             if (isAuthenticated) {
                 showToast({
                     type: 'info',
@@ -85,7 +93,7 @@ function Login() {
         }
 
         checkExistingSession()
-    }, [isAuthLoading, isAuthenticated, user, showToast, getRedirectUrl, navigate])
+    }, [isAuthLoading, isAuthenticated, user, showToast, getRedirectUrl, navigate, showSuccess])
 
     // Auto-focus email field when form is shown
     useEffect(() => {

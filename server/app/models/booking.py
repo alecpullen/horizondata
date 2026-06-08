@@ -1,9 +1,27 @@
 import uuid
+import pytz
 from sqlalchemy import Column, String, DateTime, Text, JSON, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.services.database import Base
+
+# Bookings are stored in UTC (DateTime(timezone=True)). Display times must be
+# converted to Melbourne local time so teachers/admins see the time they booked.
+MELBOURNE_TZ = pytz.timezone("Australia/Melbourne")
+
+
+def _to_melbourne(dt):
+    """Convert a stored datetime to Melbourne local time.
+
+    Naive datetimes are assumed to be UTC (defensive — the DB column is
+    timezone-aware, but older rows or some drivers may return naive values).
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = pytz.utc.localize(dt)
+    return dt.astimezone(MELBOURNE_TZ)
 
 _STATUS_LABELS = {
     "confirmed": "Confirmed",
@@ -107,12 +125,14 @@ class Booking(Base):
         Args:
             db: Optional database session. If provided, will query captures table.
         """
+        start_local = _to_melbourne(self.scheduled_start)
+        end_local = _to_melbourne(self.scheduled_end)
         result = {
             "id": str(self.id),
             "title": self.title,
             "description": self.description or "",
-            "date": self.scheduled_start.strftime("%d/%m/%Y"),
-            "time": f"{self.scheduled_start.strftime('%H:%M')} - {self.scheduled_end.strftime('%H:%M')}",
+            "date": start_local.strftime("%d/%m/%Y"),
+            "time": f"{start_local.strftime('%H:%M')} - {end_local.strftime('%H:%M')}",
             "status": _STATUS_LABELS.get(self.status, self.status.title()),
             "statusColor": self.status,
             "headless": self.headless,

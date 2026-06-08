@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import AppLogo from './AppLogo'
 import { useAuth } from '../contexts/AuthContext'
 import './TopBar.css'
@@ -22,6 +22,7 @@ const accountLinks = [
 
 function TopBar({ activePath }) {
     const { user, logoutTeacher, leaveAsStudent, isTeacher } = useAuth()
+    const navigate = useNavigate()
     const [accountOpen, setAccountOpen] = useState(false)
     const [liveViewOpen, setLiveViewOpen] = useState(false)
     const [avatarOpen, setAvatarOpen] = useState(false)
@@ -62,7 +63,9 @@ function TopBar({ activePath }) {
         } else {
             await leaveAsStudent()
         }
-        window.location.href = '/login'
+        // Use client-side navigation instead of window.location.href: a full
+        // page reload causes a ~1-2s blank screen before the login page paints.
+        navigate('/login', { replace: true })
     }
 
     return (
@@ -153,6 +156,13 @@ function TopBar({ activePath }) {
                                             {link.label}
                                         </Link>
                                     ))}
+                                    <div className="dropdown-divider" />
+                                    <button
+                                        className="dropdown-item dropdown-item--danger"
+                                        onClick={() => { setAccountOpen(false); handleLogout() }}
+                                    >
+                                        Log Out
+                                    </button>
                                 </div>
                             )}
                 </div>

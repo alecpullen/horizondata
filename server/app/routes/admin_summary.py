@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 from flask import Blueprint, jsonify
 
 from app.middleware.auth import require_auth
@@ -24,12 +23,12 @@ def get_admin_summary():
                 .filter(User.account_status == "pending")
                 .count()
             )
+            # "Pending Bookings" on the dashboard means bookings awaiting admin
+            # confirmation — must match the AdminBookings "Pending" tab
+            # (status == "pending"), not confirmed/future bookings.
             pending_bookings = (
                 db.query(Booking)
-                .filter(
-                    Booking.status == "confirmed",
-                    Booking.scheduled_start > datetime.now(timezone.utc),
-                )
+                .filter(Booking.status == "pending")
                 .count()
             )
             active_sessions = (
