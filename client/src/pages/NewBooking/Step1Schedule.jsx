@@ -35,6 +35,13 @@ const TIME_SLOTS = generateTimeSlots()
 
 const SESSION_DURATION = 30 // minutes
 
+// Format a Date as YYYY-MM-DD using its LOCAL components.
+// Using toISOString() here would convert to UTC and roll the date back a day
+// for any timezone east of UTC (e.g. Melbourne UTC+10/+11), shifting bookings
+// onto the wrong (often past) day.
+const ymd = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 function Step1Schedule({
     sessionDate,
     setSessionDate,
@@ -95,8 +102,8 @@ function Step1Schedule({
             weekEnd.setDate(weekEnd.getDate() + 6)
 
             const params = new URLSearchParams({
-                startDate: currentWeekStart.toISOString().split('T')[0],
-                endDate: weekEnd.toISOString().split('T')[0]
+                startDate: ymd(currentWeekStart),
+                endDate: ymd(weekEnd)
             })
 
             const response = await api.get(`/api/bookings/availability?${params}`)
@@ -123,7 +130,7 @@ function Step1Schedule({
 
         const cellDate = new Date(currentWeekStart)
         cellDate.setDate(currentWeekStart.getDate() + dayIndex)
-        const dateStr = cellDate.toISOString().split('T')[0]
+        const dateStr = ymd(cellDate)
 
         return availableSlots.some(
             available => available.date === dateStr && available.startTime === slot.time
@@ -134,7 +141,7 @@ function Step1Schedule({
     const handleCellClick = (dayIndex, slot) => {
         const selectedDate = new Date(currentWeekStart)
         selectedDate.setDate(currentWeekStart.getDate() + dayIndex)
-        const dateStr = selectedDate.toISOString().split('T')[0]
+        const dateStr = ymd(selectedDate)
         const calculatedEndTime = calculateEndTime(slot.time)
         setSessionDate(dateStr)
         setStartTime(slot.time)
@@ -161,7 +168,7 @@ function Step1Schedule({
         if (!sessionDate || !startTime) return false
         const cellDate = new Date(currentWeekStart)
         cellDate.setDate(currentWeekStart.getDate() + dayIndex)
-        const dateStr = cellDate.toISOString().split('T')[0]
+        const dateStr = ymd(cellDate)
         return dateStr === sessionDate && slot.time === startTime
     }
 

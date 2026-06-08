@@ -168,6 +168,12 @@ def create_booking():
             {"error": "validation_error", "message": f"Maximum session duration is {MAX_SESSION_MINUTES} minutes"}
         ), 400
 
+    # Reject bookings in the past (defense-in-depth against client date bugs)
+    if scheduled_end <= datetime.now(MELBOURNE_TZ):
+        return jsonify(
+            {"error": "validation_error", "message": "Booking must be in the future"}
+        ), 400
+
     # Nighttime viewing-window gate
     ts = TimeService()
     booking_date = scheduled_start.date()
@@ -231,7 +237,7 @@ def create_booking():
                 description=(data.get("description") or "").strip() or None,
                 scheduled_start=scheduled_start,
                 scheduled_end=scheduled_end,
-                status="confirmed",
+                status="pending",
                 targets=data.get("targets"),
                 headless=data.get("headless", False),
             )

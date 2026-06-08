@@ -93,7 +93,7 @@ class Booking(Base):
     description = Column(Text, nullable=True)
     scheduled_start = Column(DateTime(timezone=True), nullable=False, index=True)
     scheduled_end = Column(DateTime(timezone=True), nullable=False)
-    status = Column(String(20), nullable=False, default="confirmed")
+    status = Column(String(20), nullable=False, default="pending")
     targets = Column(JSON, nullable=True)
     headless = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
