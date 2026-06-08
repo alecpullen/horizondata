@@ -28,7 +28,7 @@ Copy the environment file and fill in your credentials:
 
 ```bash
 cp .env.example .env
-# Edit .env — at minimum set DB_* and CORS_ORIGINS
+# Edit .env - at minimum set DB_* and CORS_ORIGINS
 ```
 
 ### 2. Client (React + Vite)
@@ -44,7 +44,7 @@ npm install
 
 Both servers must be running for the app to work. Open two terminals.
 
-### Terminal 1 — Flask API (port 8080)
+### Terminal 1 - Flask API (port 8080)
 
 **Important:** always run Python through the venv. The system Python does not have the project packages.
 
@@ -69,7 +69,7 @@ The API is ready when you see:
 * Debug mode: on
 ```
 
-### Terminal 2 — Vite client (port 5173)
+### Terminal 2 - Vite client (port 5173)
 
 ```bash
 cd client/
@@ -78,7 +78,7 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-> **Using Docker instead?** See Option B below. The Docker stack serves the frontend over HTTPS at `https://localhost` — run `bash certs/generate-dev-cert.sh` once first, then trust the cert in your browser (see `HTTPS.md`).
+> **Using Docker instead?** See Option B below. The Docker stack serves the frontend over HTTPS at `https://localhost`, so run `bash certs/generate-dev-cert.sh` once first, then trust the cert in your browser (see `HTTPS.md`).
 
 ---
 
@@ -88,7 +88,7 @@ The client includes a Mock Service Worker layer that intercepts API calls. The m
 
 | Mode | When to use |
 |------|-------------|
-| **Live** (default) | Normal dev — Flask server must be running |
+| **Live** (default) | Normal dev, meaning the Flask server must be running |
 | **Mocked** | Frontend-only work when you don't need a real backend |
 
 **To toggle mocking:**
@@ -108,11 +108,11 @@ Mock credentials when MSW is enabled:
 
 ---
 
-## Full Functionality — Video Streams (Docker)
+## Full Functionality - Video Streams (Docker)
 
 The streaming stack (MediaMTX relay + FFmpeg simulators) is a separate Docker Compose project in `streaming/`. It runs independently of the Flask API and frontend.
 
-### Option A — Streaming only (typical for dev)
+### Option A - Streaming only (typical for dev)
 
 ```bash
 cd streaming/
@@ -138,7 +138,7 @@ Add to `server/.env` for headless frame grabs:
 MEDIAMTX_RTSP_URL=rtsp://localhost:8554/telescope-camera
 ```
 
-### Option B — Full containerised stack
+### Option B - Full containerised stack
 
 Run both Docker Compose projects:
 ```bash
@@ -151,11 +151,11 @@ When the API runs inside Docker, use `host.docker.internal`:
 MEDIAMTX_RTSP_URL=rtsp://host.docker.internal:8554/telescope-camera
 ```
 
-**Grafana:** `http://localhost:3000` (HTTP) or `https://localhost:3443` (HTTPS) — login `admin` / `admin`.
+**Grafana:** `http://localhost:3000` (HTTP) or `https://localhost:3443` (HTTPS), with login `admin` / `admin`.
 
 > **First-time HTTPS setup:** generate a dev cert with `bash certs/generate-dev-cert.sh` before starting the Docker stack. See `HTTPS.md` for cert trust instructions per OS.
 
-### Option C — External streaming server
+### Option C - External streaming server
 
 Deploy `streaming/` on a separate machine. Copy `.mp4` simulator files into `streaming/` on that server, update the volume paths in `streaming/docker-compose.yml` to `./example1-video.mp4`, then run `docker compose up -d`. Configure all four stream URLs in the admin UI with that server's IP.
 
@@ -163,18 +163,18 @@ Deploy `streaming/` on a separate machine. Copy `.mp4` simulator files into `str
 
 ## Port Reference
 
-HTTP ports are always available. HTTPS ports are exposed by the Nginx proxy containers when running the Docker stacks (requires `certs/` — see `HTTPS.md`).
+HTTP ports are always available. HTTPS ports are exposed by the Nginx proxy containers when running the Docker stacks (requires `certs/`, see `HTTPS.md`).
 
 | HTTP Port | HTTPS Port | Service | Notes |
 |-----------|------------|---------|-------|
 | 8080 | **8443** | Flask API | HTTPS via Docker proxy |
-| 5173 | **443** | Vite / Nginx frontend | HTTPS via Docker proxy |
+| 5173 | **443** | Vite / Nginx frontend | Exposed on host for both Vite dev server and production Docker frontend proxy/container HTTP port |
 | 8888 | **18888** | MediaMTX HLS | HTTPS required when frontend is HTTPS |
 | 8889 | **18889** | MediaMTX WebRTC (WHEP) | HTTPS required when frontend is HTTPS |
 | 3000 | **3443** | Grafana | HTTPS via Docker proxy |
-| 8554 | — | MediaMTX RTSP | TCP only (headless frame grabs) |
-| 8890 | — | MediaMTX SRT ingest | UDP only (FFmpeg → MediaMTX) |
-| 1935 | — | MediaMTX RTMP | TCP only |
+| 8554 | - | MediaMTX RTSP | TCP only (headless frame grabs) |
+| 8890 | - | MediaMTX SRT ingest | UDP only (FFmpeg → MediaMTX) |
+| 1935 | - | MediaMTX RTMP | TCP only |
 
 ---
 
@@ -188,13 +188,27 @@ All variables are loaded from `server/.env`. Key ones:
 | `PORT` | `8080` | Flask port |
 | `FLASK_DEBUG` | `True` | Hot-reload |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated allowed origins |
-| `DB_HOST` | — | Neon PostgreSQL host |
-| `DB_NAME` | — | Database name |
-| `DB_USER` | — | Database user |
-| `DB_PASSWORD` | — | Database password |
-| `ALPACA_BASE` | — | ASCOM Alpaca telescope endpoint |
+| `DB_HOST` | - | Neon PostgreSQL host |
+| `DB_NAME` | - | Database name |
+| `DB_USER` | - | Database user |
+| `DB_PASSWORD` | - | Database password |
+| `ALPACA_BASE` | - | ASCOM Alpaca telescope endpoint |
 | `THINGSPEAK_CHANNEL_ID` | `270748` | ThingSpeak weather channel |
 | `CAPTURES_DIR` | `./captures` | Where snapshot images are written |
+| `CLIENT_ID` | `"1"` | ASCOM Alpaca client ID for telescope commands |
+| `THINGSPEAK_API_BASE_URL` | `"https://api.thingspeak.com"` | Weather API base URL |
+| `DATABASE_SSL_MODE` | `"require"` when `DATABASE_URL` is set, `"prefer"` otherwise | Postgres SSL mode |
+| `DATABASE_POOL_SIZE` | `10` | SQLAlchemy connection pool size |
+| `DATABASE_MAX_OVERFLOW` | `20` | SQLAlchemy max overflow connections |
+| `DATABASE_POOL_RECYCLE` | `3600` | SQLAlchemy connection recycle time in seconds |
+| `HEADLESS_SCHEDULER_ENABLED` | `"true"` | APScheduler background runner switch |
+| `FRAME_GRAB_TIMEOUT` | `15` | FFmpeg frame grab timeout in seconds |
+| `HEADLESS_SETTLE_SECONDS` | `5` | Settling delay in seconds post-slew before capture |
+| `HEADLESS_SLEW_TIMEOUT` | `120` | Max slew wait time in seconds |
+| `ASCOM_BASE_URL` | `"http://host.docker.internal:32323"` | Fallback ASCOM telescope base URL |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `"http://otel-lgtm:4317"` | OpenTelemetry collector endpoint |
+| `OTEL_SERVICE_NAME` | `"telescope-backend"` | OpenTelemetry service name |
+| `OTEL_ENVIRONMENT` | `"development"` | OpenTelemetry environment tag |
 
 ---
 
@@ -210,11 +224,11 @@ Another Flask process is still running. Find and kill it:
 lsof -ti :8080 | xargs kill
 ```
 
-**`Port 5173 is in use` — Vite picks a higher port**
-A previous Vite process is still running. Kill it the same way (`lsof -ti :5173 | xargs kill`) or just use the port Vite chose — it prints the actual URL on startup.
+**`Port 5173 is in use` - Vite picks a higher port**
+A previous Vite process is still running. Kill it the same way (`lsof -ti :5173 | xargs kill`) or just use the port Vite chose, which is printed as the actual URL on startup.
 
 **Video streams not loading**
-The streaming stack is not running. Start it with `docker compose up` from `streaming/`. Then set the stream URLs in the admin UI (see "Full Functionality — Video Streams" above).
+The streaming stack is not running. Start it with `docker compose up` from `streaming/`. Then set the stream URLs in the admin UI (see "Full Functionality - Video Streams" above).
 
 **CORS errors in the browser**
 The client origin is not in `CORS_ORIGINS` in `server/.env`. Add it (e.g. `http://localhost:5174`) and restart Flask.

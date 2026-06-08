@@ -1,6 +1,11 @@
-.kilo/
+scripts/
 docs/
+.kilo/
 .antigravitycli/
+.superpowers/
+# Ignore docs directory except the presentation build output
+docs/*
+!docs/presentation/
 GEMINI.md
 jira_tasks.csv
 # ── Python / Back end ──────────────────────
