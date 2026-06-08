@@ -3,7 +3,7 @@ import sys
 import uuid
 import unittest
 from contextlib import contextmanager
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, time as dtime
 from unittest.mock import MagicMock, patch
 
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -162,6 +162,70 @@ class TestBookingsRoutes(unittest.TestCase):
                 headers=self._headers(),
             )
         self.assertEqual(resp.status_code, 400)
+
+    @staticmethod
+    def _fake_viewing_window(d):
+        """Deterministic window: 18:00 on d → 06:30 on d+1 (Melbourne local)."""
+        return (
+            datetime.combine(d, dtime(18, 0)),
+            datetime.combine(d + timedelta(days=1), dtime(6, 30)),
+        )
+
+    def test_create_booking_allows_early_morning_from_previous_night(self):
+        """Regression: a 04:30 booking belongs to the window that opened the
+        previous evening, not the window that starts on its own calendar date.
+        Previously this was rejected as outside the nighttime viewing window."""
+        booking_day = (datetime.now(timezone.utc) + timedelta(days=7)).date()
+
+        mock_ts = MagicMock()
+        mock_ts.get_viewing_window.side_effect = self._fake_viewing_window
+
+        db = MagicMock()
+        db.query.return_value.filter.return_value.first.return_value = None  # no overlap
+
+        with patch("app.middleware.auth.validate_teacher", return_value=TEACHER_USER), \
+             patch("app.routes.bookings.TimeService", return_value=mock_ts), \
+             patch("app.routes.bookings.get_db", lambda: _make_get_db(db)):
+            resp = self.client.post(
+                "/api/bookings",
+                json={
+                    "title": "Early morning session",
+                    "date": booking_day.isoformat(),
+                    "startTime": "04:30",
+                    "endTime": "05:00",
+                },
+                headers=self._headers(),
+            )
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertTrue(resp.get_json()["success"])
+
+    def test_create_booking_rejects_daytime_slot(self):
+        """A genuine daytime slot still fails the nighttime viewing-window gate."""
+        booking_day = (datetime.now(timezone.utc) + timedelta(days=7)).date()
+
+        mock_ts = MagicMock()
+        mock_ts.get_viewing_window.side_effect = self._fake_viewing_window
+
+        db = MagicMock()
+        db.query.return_value.filter.return_value.first.return_value = None
+
+        with patch("app.middleware.auth.validate_teacher", return_value=TEACHER_USER), \
+             patch("app.routes.bookings.TimeService", return_value=mock_ts), \
+             patch("app.routes.bookings.get_db", lambda: _make_get_db(db)):
+            resp = self.client.post(
+                "/api/bookings",
+                json={
+                    "title": "Midday session",
+                    "date": booking_day.isoformat(),
+                    "startTime": "12:00",
+                    "endTime": "12:30",
+                },
+                headers=self._headers(),
+            )
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("nighttime viewing window", resp.get_json()["message"])
 
 
 if __name__ == "__main__":

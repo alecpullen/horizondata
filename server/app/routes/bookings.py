@@ -19,6 +19,25 @@ MIN_SESSION_MINUTES = 5
 MAX_SESSION_MINUTES = 60
 
 
+def _to_melbourne(dt):
+    """Return dt as a Melbourne-local timezone-aware datetime."""
+    if dt.tzinfo is None:
+        return MELBOURNE_TZ.localize(dt)
+    return dt.astimezone(MELBOURNE_TZ)
+
+
+def _viewing_window_melbourne(ts, window_date):
+    """Return (window_start, window_end) for the night that *starts* on
+    window_date, as Melbourne-local datetimes."""
+    window_start, window_end = ts.get_viewing_window(window_date)
+    return _to_melbourne(window_start), _to_melbourne(window_end)
+
+
+def _fits_window(scheduled_start, scheduled_end, window_start, window_end):
+    """True if the booking overlaps the [window_start, window_end] interval."""
+    return not (scheduled_end <= window_start or scheduled_start >= window_end)
+
+
 def _bucket(booking, now_melbourne):
     """
     Categorise a booking into past/upcoming/pending buckets.
@@ -174,27 +193,29 @@ def create_booking():
             {"error": "validation_error", "message": "Booking must be in the future"}
         ), 400
 
-    # Nighttime viewing-window gate
+    # Nighttime viewing-window gate.
+    #
+    # A viewing window spans two calendar dates (sunset on day N → sunrise on
+    # day N+1), so an early-morning booking belongs to the window that *started*
+    # the previous evening. Check both candidate nights — the one starting on
+    # the booking's date (evening slots) and the one starting the day before
+    # (early-morning slots) — and accept if the booking fits either.
     ts = TimeService()
     booking_date = scheduled_start.date()
     try:
-        window_start, window_end = ts.get_viewing_window(booking_date)
+        tonight = _viewing_window_melbourne(ts, booking_date)
+        prev_night = _viewing_window_melbourne(ts, booking_date - timedelta(days=1))
     except Exception as e:
         logger.warning(f"Could not calculate viewing window for {booking_date}: {e}")
         return jsonify({"error": "validation_error", "message": "Could not verify nighttime viewing window"}), 400
 
-    # Convert window bounds to Melbourne time for comparison
-    if window_start.tzinfo is None:
-        window_start = MELBOURNE_TZ.localize(window_start)
-    else:
-        window_start = window_start.astimezone(MELBOURNE_TZ)
+    fits = _fits_window(scheduled_start, scheduled_end, *tonight) or \
+        _fits_window(scheduled_start, scheduled_end, *prev_night)
 
-    if window_end.tzinfo is None:
-        window_end = MELBOURNE_TZ.localize(window_end)
-    else:
-        window_end = window_end.astimezone(MELBOURNE_TZ)
-
-    if scheduled_end <= window_start or scheduled_start >= window_end:
+    if not fits:
+        # Report whichever window the booking is nearer to: early-morning slots
+        # (before tonight's window opens) compare against the previous night.
+        window_start, window_end = prev_night if scheduled_start < tonight[0] else tonight
         return jsonify(
             {
                 "error": "validation_error",
