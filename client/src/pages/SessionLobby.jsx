@@ -17,6 +17,7 @@ function SessionLobby() {
     const [booking, setBooking] = useState(null)
     const [loading, setLoading] = useState(true)
     const [joinCode, setJoinCode] = useState('')
+    const [sessionError, setSessionError] = useState('')
     const [starting, setStarting] = useState(false)
 
 
@@ -56,11 +57,20 @@ function SessionLobby() {
                 try {
                     const sessionRes = await api.get(`/api/sessions/${bookingId}`)
                     const sessionData = sessionRes.data
-                    if (sessionData.success && sessionData.session) {
+                    if (sessionData.success && sessionData.session?.joinCode) {
                         setJoinCode(sessionData.session.joinCode)
+                        setSessionError('')
+                    } else {
+                        throw new Error('Session response missing join code')
                     }
                 } catch (e) {
                     console.error('[Lobby] Session fetch failed:', e)
+                    // Don't leave the code area silently blank — tell the
+                    // teacher the join code couldn't be loaded and why.
+                    const message = e.response?.data?.message
+                        || 'Could not load the session join code. Please refresh or try again.'
+                    setSessionError(message)
+                    showToast({ type: 'error', message })
                 }
             } catch (err) {
                 console.error('Failed to fetch booking or session:', err)
@@ -70,7 +80,7 @@ function SessionLobby() {
         }
 
         fetchBookingAndSession()
-    }, [bookingId])
+    }, [bookingId, showToast])
 
     // Poll for participants
     useEffect(() => {
@@ -160,6 +170,9 @@ function SessionLobby() {
                             </div>
                         ))}
                     </div>
+                    {!joinCode && sessionError && (
+                        <div className="lobby-code-error" role="alert">{sessionError}</div>
+                    )}
 
                     <div className="lobby-qr">
                         <div className="lobby-qr-box">

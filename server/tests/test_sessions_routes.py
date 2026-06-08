@@ -114,6 +114,48 @@ class TestSessionsRoutes(unittest.TestCase):
         resp = self.client.get(f"/api/sessions/{BOOKING_ID}")
         self.assertEqual(resp.status_code, 401)
 
+    def test_get_session_returns_code_despite_other_active_session(self):
+        """Regression: viewing a lobby must return its join code even when the
+        teacher has a (possibly stale) active session for another booking —
+        otherwise the lobby shows a blank join code with no explanation."""
+        booking = MagicMock()
+        booking.id = BOOKING_ID
+        booking.teacher_id = TEACHER_ID
+
+        obs_q = MagicMock()
+        # 1st lookup (this booking's active session) -> None, forcing create.
+        # A 2nd lookup would be the cross-booking guard -> an active session;
+        # the GET path must NOT perform it.
+        obs_q.filter.return_value.with_for_update.return_value.first.side_effect = [
+            None,
+            MagicMock(name="other_active_session"),
+        ]
+
+        db = MagicMock()
+
+        def _query(model):
+            name = str(getattr(model, "__name__", model))
+            if "Booking" in name:
+                bq = MagicMock()
+                bq.filter.return_value.first.return_value = booking
+                return bq
+            return obs_q
+
+        db.query.side_effect = _query
+
+        with patch("app.middleware.auth.validate_teacher", return_value=TEACHER_USER), \
+             patch("app.routes.sessions.get_db", lambda: _make_get_db(db)), \
+             patch("app.routes.sessions.generate_session_code", return_value="ABC123"):
+            resp = self.client.get(
+                f"/api/sessions/{BOOKING_ID}",
+                headers=self._headers(),
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["session"]["joinCode"], "ABC123")
+
     def test_queue_status_returns_pending_when_no_session(self):
         mock_booking = MagicMock()
         mock_booking.id = BOOKING_ID
@@ -305,6 +347,40 @@ class TestStartSessionWindow(unittest.TestCase):
 
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.get_json()["success"])
+
+    def test_start_rejects_when_other_session_active(self):
+        """The single-active guard still applies at go-live: starting a new
+        session while another booking's session is active returns a conflict."""
+        now = datetime.now(timezone.utc)
+        booking = self._booking(now - timedelta(minutes=5), now + timedelta(hours=1))
+
+        obs_q = MagicMock()
+        obs_q.filter.return_value.with_for_update.return_value.first.side_effect = [
+            None,  # no active session for this booking
+            MagicMock(name="other_active_session"),  # but one for another booking
+        ]
+
+        db = MagicMock()
+
+        def _query(model):
+            name = str(getattr(model, "__name__", model))
+            if "Booking" in name:
+                bq = MagicMock()
+                bq.filter.return_value.first.return_value = booking
+                return bq
+            return obs_q
+
+        db.query.side_effect = _query
+
+        with patch("app.middleware.auth.validate_teacher", return_value=TEACHER_USER), \
+             patch("app.routes.sessions.get_db", lambda: _make_get_db(db)):
+            resp = self.client.post(
+                f"/api/sessions/{BOOKING_ID}/start",
+                headers=self._headers(),
+            )
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.get_json()["error"], "conflict")
 
 
 if __name__ == "__main__":

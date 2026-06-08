@@ -11,9 +11,12 @@ def generate_session_code() -> str:
     for _ in range(MAX_ATTEMPTS):
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         with get_db() as db:
+            # session_code carries a global UNIQUE constraint, so a code is
+            # only free if no session of ANY status already uses it — checking
+            # only active sessions would let an old (ended) code collide and
+            # blow up the insert with an IntegrityError.
             exists = db.query(ObservationSession).filter(
                 ObservationSession.session_code == code,
-                ObservationSession.status == "active",
             ).first()
             if not exists:
                 return code

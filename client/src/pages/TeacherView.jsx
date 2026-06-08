@@ -136,7 +136,8 @@ function TeacherView() {
             .catch(err => console.error('Failed to load session:', err))
     }, [bookingId])
 
-    // Poll participants every 10 s
+    // Poll participants every 3 s (matches the lobby cadence so the count
+    // stays close to real-time without a websocket).
     useEffect(() => {
         if (!bookingId) return
         const fetchParticipants = () => {
@@ -145,7 +146,7 @@ function TeacherView() {
                 .catch(() => {})
         }
         fetchParticipants()
-        const intervalId = setInterval(fetchParticipants, 10000)
+        const intervalId = setInterval(fetchParticipants, 3000)
         return () => clearInterval(intervalId)
     }, [bookingId])
 

@@ -15,6 +15,7 @@ from app.services.database import get_db
 from app.services.alpaca_client import alpaca_client
 from app.services.safety_manager import SafetyManager
 from app.services.session_codes import generate_session_code
+from app.services.student_session_manager import get_student_session_manager
 from app.models.booking import Booking
 from app.models.capture import Capture
 from app.models.session import ObservationSession
@@ -240,8 +241,17 @@ def _execute(booking_id: str) -> None:
         except Exception as e:
             logger.error("Headless job %s: park failed — %s", booking_id, e)
 
-        # e. End session
-        _end_run(db, obs, booking, completed=True)
+        # e. End session — but never yank a session that has live student
+        # participants out from under them. If a teacher has gone interactive
+        # on this booking, leave the session active for them to end.
+        connected = get_student_session_manager().get_session_count(str(obs.id))
+        if connected > 0:
+            logger.warning(
+                "Headless job %s: %d student(s) connected — leaving session active "
+                "instead of auto-ending", booking_id, connected,
+            )
+        else:
+            _end_run(db, obs, booking, completed=True)
 
 
 # ---------------------------------------------------------------------------

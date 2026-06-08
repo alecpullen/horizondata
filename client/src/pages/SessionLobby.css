@@ -104,6 +104,14 @@
     box-shadow: 0 0 32px rgba(94,234,212,0.1);
 }
 
+.lobby-code-error {
+    margin-top: 14px;
+    max-width: 420px;
+    color: var(--red, #f87171);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
 .lobby-qr {
     display: flex;
     flex-direction: column;

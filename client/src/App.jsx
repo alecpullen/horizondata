@@ -20,6 +20,7 @@ import NewBooking from './pages/NewBooking'
 import Captures from './pages/Captures'
 import BookingCaptures from './pages/BookingCaptures'
 import Scheduling from './pages/Scheduling'
+import StudentRoute  from './components/auth/StudentRoute'
 import AdminRoute    from './components/auth/AdminRoute'
 import AdminShell    from './pages/admin/AdminShell'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -112,8 +113,10 @@ function AppRoutes() {
                 <Route path="/live/teacher" element={
                     <ProtectedRoute><TeacherView /></ProtectedRoute>
                 } />
-                {/* Students are anonymous — no auth required */}
-                <Route path="/live/student" element={<StudentView />} />
+                {/* Students must have joined via a session code to be tracked */}
+                <Route path="/live/student" element={
+                    <StudentRoute><StudentView /></StudentRoute>
+                } />
                 <Route path="/lobby/:bookingId?" element={
                     <ProtectedRoute><SessionLobby /></ProtectedRoute>
                 } />

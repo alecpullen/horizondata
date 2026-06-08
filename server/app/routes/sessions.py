@@ -84,10 +84,13 @@ def _load_booking_owned(db, booking_id):
     return booking, None
 
 
-def _get_or_create_session(db, booking):
+def _get_or_create_session(db, booking, enforce_single_active=False):
     """Return the active ObservationSession for this booking, creating one if needed.
-    
-    Raises ValueError if the teacher already has an unrelated active session.
+
+    When ``enforce_single_active`` is True, raises ValueError if the teacher
+    already has an active session for a *different* booking. This guard belongs
+    to the go-live action (``/start``) — merely viewing a lobby to display its
+    join code must never be blocked by an unrelated (often stale) session.
     """
     # 1. Return existing session for this booking
     obs = (
@@ -102,21 +105,22 @@ def _get_or_create_session(db, booking):
     if obs:
         return obs
 
-    # 2. Prevent multiple active sessions for the same teacher
-    existing = (
-        db.query(ObservationSession)
-        .filter(
-            ObservationSession.teacher_id == g.user["id"],
-            ObservationSession.status == "active",
-            ObservationSession.booking_id != booking.id,
+    # 2. Optionally prevent multiple active sessions for the same teacher
+    if enforce_single_active:
+        existing = (
+            db.query(ObservationSession)
+            .filter(
+                ObservationSession.teacher_id == g.user["id"],
+                ObservationSession.status == "active",
+                ObservationSession.booking_id != booking.id,
+            )
+            .with_for_update()
+            .first()
         )
-        .with_for_update()
-        .first()
-    )
-    if existing:
-        raise ValueError(
-            f"Teacher already has an active observation session (booking {existing.booking_id})"
-        )
+        if existing:
+            raise ValueError(
+                f"Teacher already has an active observation session (booking {existing.booking_id})"
+            )
 
     obs = ObservationSession(
         teacher_id=g.user["id"],
@@ -254,7 +258,7 @@ def start_session(booking_id):
             window_err = _check_booking_window(booking)
             if window_err:
                 return window_err
-            obs = _get_or_create_session(db, booking)
+            obs = _get_or_create_session(db, booking, enforce_single_active=True)
             obs.status = "active"  # idempotent
 
         return jsonify({"success": True})
