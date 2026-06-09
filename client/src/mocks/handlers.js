@@ -475,6 +475,56 @@ const activeSessions = new Map()
 // GET /api/auth/student/session-info can resolve their session's status.
 const studentSessions = new Map()
 
+// ── Cross-tab session sharing ────────────────────────────────────────────────
+// Each browser tab loads its own copy of these handlers with its own in-memory
+// Maps. A teacher in one tab and a student in another would therefore never see
+// each other (student never appears in the lobby; teacher's "start" never
+// reaches the student). We mirror both Maps through localStorage so that every
+// same-origin tab reads/writes one shared store, and re-hydrate on the `storage`
+// event when another tab writes. Persisting studentSessions also means a student
+// who reloads keeps a valid session instead of 401-ing (which would bounce them
+// to /login via the api.js auth interceptor).
+const ACTIVE_SESSIONS_KEY = 'mock-active-sessions'
+const STUDENT_SESSIONS_KEY = 'mock-student-sessions'
+
+function persistSessions() {
+    if (typeof window === 'undefined') return
+    try {
+        localStorage.setItem(ACTIVE_SESSIONS_KEY, JSON.stringify([...activeSessions.entries()]))
+        localStorage.setItem(STUDENT_SESSIONS_KEY, JSON.stringify([...studentSessions.entries()]))
+    } catch { /* ignore quota / serialization errors — mock state is best-effort */ }
+}
+
+// Replace the in-memory Maps' contents with whatever is in localStorage.
+// Returns true if shared session state already existed (so callers can skip
+// re-seeding and adopt the running demo instead).
+function hydrateSessions() {
+    if (typeof window === 'undefined') return false
+    let hadActive = false
+    try {
+        const rawActive = localStorage.getItem(ACTIVE_SESSIONS_KEY)
+        if (rawActive) {
+            activeSessions.clear()
+            for (const [k, v] of JSON.parse(rawActive)) activeSessions.set(k, v)
+            hadActive = true
+        }
+        const rawStudent = localStorage.getItem(STUDENT_SESSIONS_KEY)
+        if (rawStudent) {
+            studentSessions.clear()
+            for (const [k, v] of JSON.parse(rawStudent)) studentSessions.set(k, v)
+        }
+    } catch { /* corrupt data — fall back to fresh seed */ }
+    return hadActive
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+        if (e.key === ACTIVE_SESSIONS_KEY || e.key === STUDENT_SESSIONS_KEY) {
+            hydrateSessions()
+        }
+    })
+}
+
 // Mock telescope hardware state
 let mockTelescope = {
     connected: false,
@@ -503,12 +553,21 @@ function getOrCreateSession(bookingId) {
             createdAt: new Date().toISOString(),
             status: 'waiting' // waiting, active, ended
         })
+        persistSessions()
     }
     return activeSessions.get(bookingId)
 }
 
 // Initialize mock sessions with sample data for UX testing
 function initializeMockSessions() {
+    // Adopt shared state from another tab / earlier load so both tabs agree on
+    // participants and status — but only while a demo is actually in progress.
+    // If the previous demo already finished (booking 99 ended) we fall through
+    // and reseed, so repeated test runs don't inherit a stale 'ended' session.
+    const hadShared = hydrateSessions()
+    const demo = activeSessions.get(99)
+    if (hadShared && demo && demo.status !== 'ended') return
+
     // Mock students for testing
     const mockStudents = [
         { id: '101', name: 'Emma Wilson', joinedAt: new Date(Date.now() - 5 * 60000).toISOString() },
@@ -537,6 +596,9 @@ function initializeMockSessions() {
         createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
         status: 'waiting'
     })
+
+    // Publish the freshly seeded demo so other tabs share this exact state.
+    persistSessions()
 }
 
 // Initialize mock data
@@ -668,6 +730,15 @@ export const handlers = [
         const studentSessionId = `student-${Date.now()}`
         const obsSessionId = `obs-${matchedSession.bookingId}`
         studentSessions.set(studentSessionId, matchedSession.bookingId)
+        // Add the joiner to the session roster so the teacher's lobby (which
+        // polls GET /api/sessions/:id/participants) actually shows them. Shape
+        // matches what SessionLobby renders: { id, name, joinedAt }.
+        matchedSession.participants.push({
+            id: studentSessionId,
+            name: display_name,
+            joinedAt: new Date().toISOString(),
+        })
+        persistSessions()
         return HttpResponse.json({ success: true, session_id: studentSessionId, display_name, observation_session_id: obsSessionId }, { status: 201 })
     }),
 
@@ -1380,6 +1451,7 @@ export const handlers = [
             joinedAt: new Date().toISOString()
         }
         session.participants.push(participant)
+        persistSessions()
 
         return HttpResponse.json({
             success: true,
@@ -1500,6 +1572,7 @@ export const handlers = [
 
         session.status = 'active'
         session.startedAt = new Date().toISOString()
+        persistSessions()
 
         return HttpResponse.json({
             success: true,
@@ -1613,6 +1686,7 @@ export const handlers = [
         if (!session) return HttpResponse.json({ error: 'not_found', message: 'No active session for this booking' }, { status: 404 })
         session.status = 'ended'
         session.endedAt = new Date().toISOString()
+        persistSessions()
         return HttpResponse.json({ success: true })
     }),
 
@@ -2003,6 +2077,7 @@ export const handlers = [
             status:       'terminated',
         })
         activeSessions.delete(bookingId)
+        persistSessions()
         return HttpResponse.json({ success: true })
     }),
 
