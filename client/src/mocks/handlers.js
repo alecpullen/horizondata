@@ -486,12 +486,32 @@ const studentSessions = new Map()
 // to /login via the api.js auth interceptor).
 const ACTIVE_SESSIONS_KEY = 'mock-active-sessions'
 const STUDENT_SESSIONS_KEY = 'mock-student-sessions'
+// Heartbeat: any open lobby/session UI refreshes this on every poll. If the
+// shared state hasn't been touched within this window, it's an abandoned/old
+// run (all tabs closed), so a fresh load reseeds 'waiting' instead of adopting
+// a stale 'active'/'ended' status. Must exceed the UI poll interval (~3–5s).
+const SESSIONS_TOUCHED_KEY = 'mock-sessions-touched'
+const SESSIONS_STALE_MS = 15000
+
+// Mark the shared session state as live (called on writes and on every poll).
+function touchSessions() {
+    if (typeof window === 'undefined') return
+    try { localStorage.setItem(SESSIONS_TOUCHED_KEY, String(Date.now())) } catch { /* best-effort */ }
+}
+
+// Is the persisted shared state from a still-running demo (recently polled)?
+function isShareFresh() {
+    if (typeof window === 'undefined') return false
+    const ts = Number(localStorage.getItem(SESSIONS_TOUCHED_KEY) || 0)
+    return Date.now() - ts < SESSIONS_STALE_MS
+}
 
 function persistSessions() {
     if (typeof window === 'undefined') return
     try {
         localStorage.setItem(ACTIVE_SESSIONS_KEY, JSON.stringify([...activeSessions.entries()]))
         localStorage.setItem(STUDENT_SESSIONS_KEY, JSON.stringify([...studentSessions.entries()]))
+        touchSessions()
     } catch { /* ignore quota / serialization errors — mock state is best-effort */ }
 }
 
@@ -560,13 +580,18 @@ function getOrCreateSession(bookingId) {
 
 // Initialize mock sessions with sample data for UX testing
 function initializeMockSessions() {
-    // Adopt shared state from another tab / earlier load so both tabs agree on
-    // participants and status — but only while a demo is actually in progress.
-    // If the previous demo already finished (booking 99 ended) we fall through
-    // and reseed, so repeated test runs don't inherit a stale 'ended' session.
+    // Adopt shared state only while a demo is actually LIVE in another tab —
+    // i.e. some lobby/session UI has polled within SESSIONS_STALE_MS. Otherwise
+    // this is a fresh run inheriting an old localStorage snapshot (e.g. a session
+    // left 'active' after a previous demo), so we reseed a clean 'waiting' state.
+    // This is what keeps a newly-joined student waiting in the lobby instead of
+    // jumping straight to StudentView.
     const hadShared = hydrateSessions()
     const demo = activeSessions.get(99)
-    if (hadShared && demo && demo.status !== 'ended') return
+    if (hadShared && demo && demo.status !== 'ended' && isShareFresh()) return
+
+    // Fresh run: drop any stale student→session mappings from the old snapshot.
+    studentSessions.clear()
 
     // Mock students for testing
     const mockStudents = [
@@ -774,6 +799,7 @@ export const handlers = [
         if (!session) {
             return HttpResponse.json({ error: 'unauthorized', message: 'No active session for this student' }, { status: 401 })
         }
+        touchSessions() // keep the shared demo state alive while a student is polling
         return HttpResponse.json({
             success: true,
             status: session.status,
@@ -1485,6 +1511,7 @@ export const handlers = [
             })
         }
 
+        touchSessions() // teacher lobby polls this — keeps the shared demo state alive
         console.log('[MSW] Returning participants:', session.participants)
         return HttpResponse.json({
             success: true,
