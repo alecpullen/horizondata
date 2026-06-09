@@ -469,6 +469,10 @@ const SESSION_KEY = 'horizon-session'
 // Key: bookingId, Value: { joinCode, participants[], createdAt }
 const activeSessions = new Map()
 
+// Maps a student's session id (X-Session-ID) -> bookingId they joined, so
+// GET /api/auth/student/session-info can resolve their session's status.
+const studentSessions = new Map()
+
 // Mock telescope hardware state
 let mockTelescope = {
     connected: false,
@@ -656,6 +660,7 @@ export const handlers = [
         if (!matchedSession) return HttpResponse.json({ error: 'session_not_found', message: 'Session not found or has ended' }, { status: 404 })
         const studentSessionId = `student-${Date.now()}`
         const obsSessionId = `obs-${matchedSession.bookingId}`
+        studentSessions.set(studentSessionId, matchedSession.bookingId)
         return HttpResponse.json({ success: true, session_id: studentSessionId, display_name, observation_session_id: obsSessionId }, { status: 201 })
     }),
 
@@ -676,6 +681,26 @@ export const handlers = [
             success: true,
             user: { id: sessionId, display_name: 'Mock Student', observation_session_id: 'obs-mock', user_type: 'student' },
             rate_limits: { captures_remaining: 5 }
+        })
+    }),
+
+    // GET /api/auth/student/session-info - status + title for the student's
+    // joined session. StudentLobby waits for status 'active' to go live;
+    // StudentView ejects on 'ended'. Both read top-level `status`/`booking_title`.
+    http.get(apiUrl('/api/auth/student/session-info'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(200)
+        const sessionId = request.headers.get('X-Session-ID')
+        const bookingId = sessionId ? studentSessions.get(sessionId) : null
+        const session = bookingId != null ? activeSessions.get(bookingId) : null
+        if (!session) {
+            return HttpResponse.json({ error: 'unauthorized', message: 'No active session for this student' }, { status: 401 })
+        }
+        return HttpResponse.json({
+            success: true,
+            status: session.status,
+            booking_title: `Session HD-${session.bookingId}`,
+            observation_session_id: `obs-${session.bookingId}`,
         })
     }),
 
