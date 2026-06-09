@@ -8,7 +8,10 @@ async function enableMocking() {
     let mockTelescopeEnabled = false
     try {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-        const res = await fetch(`${API_URL}/api/settings`)
+        // Use the public settings endpoint: this runs at app boot, before any
+        // login, so it must not require auth. /api/settings is auth-gated and
+        // would 401 here, silently disabling the mock API.
+        const res = await fetch(`${API_URL}/api/settings/public`)
         if (res.ok) {
             const data = await res.json()
             mswEnabled = data.msw_enabled === 'true'

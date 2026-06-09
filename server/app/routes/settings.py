@@ -24,6 +24,35 @@ def get_settings():
         logger.error(f"Failed to fetch settings: {e}")
         return jsonify({"error": "Failed to fetch settings", "message": str(e)}), 500
 
+# Demo/dev toggles that the frontend must read before any login (it decides
+# whether to start the MSW mock worker at app boot, when no token exists yet).
+# Only these non-sensitive flags are exposed publicly; the full settings table
+# above stays auth-gated.
+PUBLIC_SETTING_KEYS = ("msw_enabled", "mock_telescope_enabled")
+
+@settings_bp.route("/public", methods=["GET"])
+def get_public_settings():
+    """
+    Get the public subset of system settings (mock/demo toggles).
+
+    Unauthenticated: the SPA calls this at startup, before login, to decide
+    whether to enable the in-browser mock API.
+    """
+    try:
+        with get_db() as db:
+            settings = (
+                db.query(SystemSetting)
+                .filter(SystemSetting.key.in_(PUBLIC_SETTING_KEYS))
+                .all()
+            )
+            stored = {s.key: s.value for s in settings}
+            # Default every public key to "false" so the frontend gets a stable shape.
+            result = {key: stored.get(key, "false") for key in PUBLIC_SETTING_KEYS}
+            return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Failed to fetch public settings: {e}")
+        return jsonify({"error": "Failed to fetch settings", "message": str(e)}), 500
+
 @settings_bp.route("", methods=["PUT"])
 @require_admin
 def update_settings():
