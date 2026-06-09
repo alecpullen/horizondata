@@ -626,7 +626,12 @@ export const handlers = [
     http.post(apiUrl('/api/auth/teacher/refresh'), async ({ request }) => {
         if (!isMswEnabled()) return passthrough()
         await delay(200)
-        const { refresh_token } = await request.json()
+        // Both callers (AuthContext.refreshToken and the api.js 401 interceptor)
+        // send the refresh token in the Authorization header with an EMPTY body —
+        // reading it from request.json() always yields undefined → 400, which the
+        // 401 interceptor treats as a failed refresh and hard-logs-out the user.
+        const authHeader = request.headers.get('Authorization') || ''
+        const refresh_token = authHeader.replace(/^Bearer\s+/i, '')
         if (!refresh_token) return HttpResponse.json({ error: 'invalid_request', message: 'Refresh token required' }, { status: 400 })
         const user = getCurrentUser()
         if (!user) return HttpResponse.json({ error: 'invalid_token', message: 'Invalid or expired token' }, { status: 401 })
@@ -1901,6 +1906,42 @@ export const handlers = [
         }
         job.status = 'aborted'
         return HttpResponse.json({ id: job.id, status: job.status })
+    }),
+
+    // GET /api/admin/sessions — combined active + past list, polled by
+    // AdminSessions which splits by status client-side and reads snake_case
+    // fields ({ items: [...] }). Without this the bare path 401s on every poll.
+    http.get(apiUrl('/api/admin/sessions'), async () => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(150)
+        const items = []
+        for (const [bookingId, session] of activeSessions) {
+            if (session.status === 'ended') continue
+            const booking = mockAdminBookings.find(b => b.id === bookingId) ?? {}
+            items.push({
+                id:            bookingId,
+                title:         booking.title       ?? `Session #${bookingId}`,
+                teacher_name:  booking.teacherName ?? 'Unknown',
+                started_at:    session.createdAt,
+                ended_at:      null,
+                student_count: session.participants.length,
+                session_code:  session.joinCode,
+                status:        'active',
+            })
+        }
+        for (const past of mockPastSessions) {
+            items.push({
+                id:            past.bookingId,
+                title:         past.title,
+                teacher_name:  past.teacherName,
+                started_at:    past.startedAt,
+                ended_at:      past.endedAt,
+                student_count: 0,
+                session_code:  null,
+                status:        past.status,
+            })
+        }
+        return HttpResponse.json({ items })
     }),
 
     // GET /api/admin/sessions/active — live list of active sessions (polled)
