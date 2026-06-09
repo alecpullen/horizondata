@@ -456,12 +456,12 @@ let mockQueue = [
 
 // Mock teacher accounts (mutable — approve/suspend actions update this in memory)
 const mockTeachers = [
-    { id: 101, fullName: 'Sarah Chen',      email: 'sarah.chen@bundoora.edu.au',    institution: 'Bundoora Secondary',   registeredAt: '2026-01-12', status: 'pending'   },
-    { id: 102, fullName: 'James Okafor',    email: 'j.okafor@latrobe.edu.au',       institution: 'La Trobe University',  registeredAt: '2026-02-08', status: 'approved'  },
-    { id: 103, fullName: 'Maria Nguyen',    email: 'm.nguyen@rmit.edu.au',          institution: 'RMIT University',      registeredAt: '2026-03-01', status: 'suspended' },
-    { id: 104, fullName: 'Tom Adeyemi',     email: 'tadeyemi@princes-hill.vic.edu', institution: "Prince's Hill SC",     registeredAt: '2026-03-14', status: 'pending'   },
-    { id: 105, fullName: 'Priya Sharma',    email: 'priya.s@monash.edu.au',         institution: 'Monash University',    registeredAt: '2026-04-02', status: 'approved'  },
-    { id: 106, fullName: 'Daniel Kowalski', email: 'd.kowalski@melbhs.vic.edu.au',  institution: 'Melbourne High School',registeredAt: '2026-04-20', status: 'pending'   },
+    { id: 101, fullName: 'Sarah Chen',      email: 'sarah.chen@bundoora.edu.au',    institution: 'Bundoora Secondary',   registeredAt: '2026-01-12', status: 'pending',   emailVerified: false },
+    { id: 102, fullName: 'James Okafor',    email: 'j.okafor@latrobe.edu.au',       institution: 'La Trobe University',  registeredAt: '2026-02-08', status: 'approved',  emailVerified: true  },
+    { id: 103, fullName: 'Maria Nguyen',    email: 'm.nguyen@rmit.edu.au',          institution: 'RMIT University',      registeredAt: '2026-03-01', status: 'suspended', emailVerified: true  },
+    { id: 104, fullName: 'Tom Adeyemi',     email: 'tadeyemi@princes-hill.vic.edu', institution: "Prince's Hill SC",     registeredAt: '2026-03-14', status: 'pending',   emailVerified: true  },
+    { id: 105, fullName: 'Priya Sharma',    email: 'priya.s@monash.edu.au',         institution: 'Monash University',    registeredAt: '2026-04-02', status: 'approved',  emailVerified: true  },
+    { id: 106, fullName: 'Daniel Kowalski', email: 'd.kowalski@melbhs.vic.edu.au',  institution: 'Melbourne High School',registeredAt: '2026-04-20', status: 'pending',   emailVerified: false },
 ]
 
 // Session storage key for persistence across reloads
@@ -1981,11 +1981,22 @@ export const handlers = [
         return HttpResponse.json(resolveAdminSafetyStatus())
     }),
 
-    // GET /api/admin/queue — observation job queue
+    // GET /api/admin/queue — observation job queue. AdminQueue reads
+    // res.data.items with snake_case fields: { booking_id, teacher_name,
+    // scheduled_start, completed, total, status }.
     http.get(apiUrl('/api/admin/queue'), async () => {
         if (!isMockTelescopeEnabled()) return passthrough()
         await delay(180)
-        return HttpResponse.json(mockQueue)
+        const items = mockQueue.map(j => ({
+            booking_id:     j.id,
+            title:          j.title,
+            teacher_name:   j.teacherName,
+            scheduled_start: j.scheduledAt,
+            completed:      j.targetsCompleted,
+            total:          j.targetsTotal,
+            status:         j.status,
+        }))
+        return HttpResponse.json({ items })
     }),
 
     // POST /api/admin/queue/:id/abort — abort a pending or running job
@@ -2088,8 +2099,9 @@ export const handlers = [
         return HttpResponse.json(mockPastSessions)
     }),
 
-    // GET /api/admin/stats — aggregate numbers for the admin dashboard
-    http.get(apiUrl('/api/admin/stats'), async () => {
+    // GET /api/admin/summary — aggregate numbers for the admin dashboard
+    // (AdminDashboard reads res.data.{pending_accounts,pending_bookings,...}).
+    http.get(apiUrl('/api/admin/summary'), async () => {
         if (!isMswEnabled()) return passthrough()
         await delay(180)
         const MS_PER_DAY = 86400000
@@ -2142,77 +2154,76 @@ export const handlers = [
         })
     }),
 
-    // GET /api/admin/bookings
+    // GET /api/admin/bookings — AdminBookings reads res.data.items with the
+    // nested/snake_case contract: { teacher:{name}, targets:{celestialObjects:[{name}]} }.
     http.get(apiUrl('/api/admin/bookings'), async ({ request }) => {
         if (!isMswEnabled()) return passthrough()
         await delay(220)
         const status = new URL(request.url).searchParams.get('status')
-        const results = status ? mockAdminBookings.filter(b => b.status === status) : mockAdminBookings
-        return HttpResponse.json(results)
+        const source = status ? mockAdminBookings.filter(b => b.status === status) : mockAdminBookings
+        const items = source.map(b => ({
+            id:       b.id,
+            title:    b.title,
+            teacher:  { name: b.teacherName },
+            date:     b.date,
+            time:     b.time,
+            targets:  { celestialObjects: (b.targets ?? []).map(name => ({ name })) },
+            headless: b.headless,
+            status:   b.status,
+        }))
+        return HttpResponse.json({ items })
     }),
 
-    // POST /api/admin/bookings/:id/confirm
-    http.post(apiUrl('/api/admin/bookings/:id/confirm'), async ({ params }) => {
+    // PATCH /api/admin/bookings/:id — body: { status, reason? }. The admin
+    // Bookings UI confirms/rejects/cancels via this single endpoint.
+    http.patch(apiUrl('/api/admin/bookings/:id'), async ({ request }) => {
         if (!isMswEnabled()) return passthrough()
         await delay(150)
-        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
-        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
-        b.status = 'confirmed'
-        return HttpResponse.json({ id: b.id, status: b.status })
-    }),
-
-    // POST /api/admin/bookings/:id/reject  — body: { reason }
-    http.post(apiUrl('/api/admin/bookings/:id/reject'), async ({ params, request }) => {
-        if (!isMswEnabled()) return passthrough()
-        await delay(150)
-        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
+        const b = mockAdminBookings.find(b => b.id === parseInt(pathSegment(request, 3), 10))
         if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
         const body = await request.json().catch(() => ({}))
-        b.status = 'rejected'
-        b.rejectReason = body.reason ?? ''
+        if (body.status) b.status = body.status
+        if (body.reason != null) b.rejectReason = body.reason
         return HttpResponse.json({ id: b.id, status: b.status })
     }),
 
-    // POST /api/admin/bookings/:id/cancel
-    http.post(apiUrl('/api/admin/bookings/:id/cancel'), async ({ params }) => {
-        if (!isMswEnabled()) return passthrough()
-        await delay(150)
-        const b = mockAdminBookings.find(b => b.id === parseInt(params.id, 10))
-        if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
-        b.status = 'cancelled'
-        return HttpResponse.json({ id: b.id, status: b.status })
-    }),
-
-    // GET /api/admin/teachers — list all teacher accounts
+    // GET /api/admin/teachers — AdminTeachers reads res.data.items with
+    // snake_case fields: { name, email, created_at, account_status, email_verified }.
     http.get(apiUrl('/api/admin/teachers'), async ({ request }) => {
         if (!isMswEnabled()) return passthrough()
         await delay(220)
         const url = new URL(request.url)
         const statusFilter = url.searchParams.get('status')
-        const results = statusFilter
+        const source = statusFilter
             ? mockTeachers.filter(t => t.status === statusFilter)
             : mockTeachers
-        return HttpResponse.json(results)
+        const items = source.map(t => ({
+            id:             t.id,
+            name:           t.fullName,
+            email:          t.email,
+            institution:    t.institution,
+            created_at:     t.registeredAt,
+            account_status: t.status,
+            email_verified: t.emailVerified,
+        }))
+        return HttpResponse.json({ items })
     }),
 
-    // POST /api/admin/teachers/:id/approve
-    http.post(apiUrl('/api/admin/teachers/:id/approve'), async ({ params }) => {
+    // PATCH /api/admin/teachers/:id — body: { status } to approve/suspend, or
+    // { email_verified } to mark a teacher's email verified.
+    http.patch(apiUrl('/api/admin/teachers/:id'), async ({ request }) => {
         if (!isMswEnabled()) return passthrough()
         await delay(150)
-        const teacher = mockTeachers.find(t => t.id === parseInt(params.id, 10))
+        const teacher = mockTeachers.find(t => t.id === parseInt(pathSegment(request, 3), 10))
         if (!teacher) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
-        teacher.status = 'approved'
-        return HttpResponse.json({ id: teacher.id, status: teacher.status })
-    }),
-
-    // POST /api/admin/teachers/:id/suspend
-    http.post(apiUrl('/api/admin/teachers/:id/suspend'), async ({ params }) => {
-        if (!isMswEnabled()) return passthrough()
-        await delay(150)
-        const teacher = mockTeachers.find(t => t.id === parseInt(params.id, 10))
-        if (!teacher) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
-        teacher.status = 'suspended'
-        return HttpResponse.json({ id: teacher.id, status: teacher.status })
+        const body = await request.json().catch(() => ({}))
+        if (body.status) teacher.status = body.status
+        if (body.email_verified != null) teacher.emailVerified = body.email_verified
+        return HttpResponse.json({
+            id: teacher.id,
+            account_status: teacher.status,
+            email_verified: teacher.emailVerified,
+        })
     }),
 
     // GET /api/settings — Retrieve mock settings
