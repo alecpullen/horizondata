@@ -36,7 +36,9 @@ function PublicView() {
     })
 
     useEffect(() => {
-        api.get('/api/settings')
+        // Public view is unauthenticated — use the public settings endpoint
+        // (exposes stream URLs without a token); /api/settings is auth-gated.
+        api.get('/api/settings/public')
             .then(res => {
                 setStreamUrls({
                     primaryWebrtc: res.data.primary_stream_webrtc_url || null,

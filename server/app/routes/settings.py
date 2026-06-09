@@ -24,30 +24,40 @@ def get_settings():
         logger.error(f"Failed to fetch settings: {e}")
         return jsonify({"error": "Failed to fetch settings", "message": str(e)}), 500
 
-# Demo/dev toggles that the frontend must read before any login (it decides
-# whether to start the MSW mock worker at app boot, when no token exists yet).
-# Only these non-sensitive flags are exposed publicly; the full settings table
-# above stays auth-gated.
-PUBLIC_SETTING_KEYS = ("msw_enabled", "mock_telescope_enabled")
+# Non-sensitive settings the frontend needs before (or without) any login:
+#  - the MSW/mock-telescope toggles, read at app boot to decide whether to
+#    start the in-browser mock worker (no token exists yet); and
+#  - the live stream URLs, so the unauthenticated public view can render the
+#    feed. Everything else in the settings table stays auth-gated.
+# Each key carries a default so the response shape is stable; URLs default to
+# "" (falsy) rather than "false" so the frontend treats a missing URL as empty.
+PUBLIC_SETTING_DEFAULTS = {
+    "msw_enabled": "false",
+    "mock_telescope_enabled": "false",
+    "primary_stream_webrtc_url": "",
+    "primary_stream_url": "",
+    "site_camera_webrtc_url": "",
+    "site_camera_url": "",
+}
 
 @settings_bp.route("/public", methods=["GET"])
 def get_public_settings():
     """
-    Get the public subset of system settings (mock/demo toggles).
+    Get the public subset of system settings (mock/demo toggles + stream URLs).
 
-    Unauthenticated: the SPA calls this at startup, before login, to decide
-    whether to enable the in-browser mock API.
+    Unauthenticated: the SPA calls this at startup to decide whether to enable
+    the in-browser mock API, and the public live view reads the stream URLs.
     """
     try:
         with get_db() as db:
             settings = (
                 db.query(SystemSetting)
-                .filter(SystemSetting.key.in_(PUBLIC_SETTING_KEYS))
+                .filter(SystemSetting.key.in_(PUBLIC_SETTING_DEFAULTS.keys()))
                 .all()
             )
             stored = {s.key: s.value for s in settings}
-            # Default every public key to "false" so the frontend gets a stable shape.
-            result = {key: stored.get(key, "false") for key in PUBLIC_SETTING_KEYS}
+            # Fill any missing key with its default for a stable response shape.
+            result = {key: stored.get(key, default) for key, default in PUBLIC_SETTING_DEFAULTS.items()}
             return jsonify(result), 200
     except Exception as e:
         logger.error(f"Failed to fetch public settings: {e}")

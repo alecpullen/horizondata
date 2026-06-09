@@ -29,7 +29,6 @@ def create_error_response(error_code: str, message: str, status_code: int = 500)
 
 
 @safety_bp.route('/status', methods=['GET'])
-@require_any_auth
 def get_safety_status():
     """
     Get current safety status of the telescope system.
@@ -152,7 +151,6 @@ def get_next_available_time():
 
 
 @safety_bp.route('/weather', methods=['GET'])
-@require_any_auth
 def get_weather_safety():
     """
     Get detailed weather safety information.

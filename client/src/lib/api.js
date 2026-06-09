@@ -75,6 +75,13 @@ api.interceptors.response.use(
     const storedRefreshToken = getStoredItem('refreshToken');
     const userType = getStoredItem('userType');
 
+    // Anonymous visitor (e.g. PublicView) — there is no session to log out of.
+    // A 401 here just means the request hit an auth-gated endpoint; reject and
+    // let the caller handle it rather than hijacking the page to /login.
+    if (!userType) {
+      return Promise.reject(error);
+    }
+
     // Students have no refresh token — clear and redirect immediately.
     // Also guard against corrupted localStorage values (e.g. the string
     // "null" or "undefined" stored by older code that received a null

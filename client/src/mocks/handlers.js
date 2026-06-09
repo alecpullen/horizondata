@@ -21,7 +21,9 @@ function isMockTelescopeEnabled() {
 // In-memory store for mock settings, synced with localStorage for persistence
 const mockSettings = {
     primary_stream_url: localStorage.getItem('primary-stream-url') || '',
+    primary_stream_webrtc_url: localStorage.getItem('primary-stream-webrtc-url') || '',
     site_camera_url: localStorage.getItem('site-camera-url') || '',
+    site_camera_webrtc_url: localStorage.getItem('site-camera-webrtc-url') || '',
     msw_enabled: localStorage.getItem('msw-enabled') || 'false',
     mock_telescope_enabled: localStorage.getItem('mock-telescope-enabled') || 'false',
     alpaca_base: localStorage.getItem('alpaca-base') || 'http://localhost:32323/api/v1/telescope/0',
@@ -1832,6 +1834,24 @@ export const handlers = [
         })
     }),
 
+    // GET /api/safety/weather — per-condition detail for the WeatherWidget
+    // (reads conditions[key].{value,safe} and timestamp). Without this the
+    // public view's poll bypasses to the real backend.
+    http.get(apiUrl('/api/safety/weather'), async () => {
+        if (!isMockTelescopeEnabled()) return passthrough()
+        await delay(220)
+        return HttpResponse.json({
+            conditions: {
+                temperature:    { value: 18.5,  safe: true },
+                humidity:       { value: 45,    safe: true },
+                pressure:       { value: 1013,  safe: true },
+                dew_point_diff: { value: 4.2,   safe: true },
+                wind_speed:     { value: 12.4,  safe: true },
+            },
+            timestamp: new Date().toISOString(),
+        })
+    }),
+
     // GET /api/safety/comprehensive
     http.get(apiUrl('/api/safety/comprehensive'), async () => {
         if (!isMockTelescopeEnabled()) return passthrough()
@@ -2121,6 +2141,21 @@ export const handlers = [
     }),
 
     // GET /api/settings — Retrieve mock settings
+    // GET /api/settings/public — unauthenticated subset (mock flags + stream
+    // URLs) the public view reads. Mirrors the backend's /public endpoint.
+    http.get(apiUrl('/api/settings/public'), async () => {
+        if (!isMswEnabled() && !isMockTelescopeEnabled()) return passthrough()
+        await delay(100)
+        return HttpResponse.json({
+            msw_enabled:               mockSettings.msw_enabled,
+            mock_telescope_enabled:    mockSettings.mock_telescope_enabled,
+            primary_stream_webrtc_url: mockSettings.primary_stream_webrtc_url || '',
+            primary_stream_url:        mockSettings.primary_stream_url || '',
+            site_camera_webrtc_url:    mockSettings.site_camera_webrtc_url || '',
+            site_camera_url:           mockSettings.site_camera_url || '',
+        })
+    }),
+
     http.get(apiUrl('/api/settings'), async () => {
         if (!isMswEnabled() && !isMockTelescopeEnabled()) return passthrough()
         await delay(100)
