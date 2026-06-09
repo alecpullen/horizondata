@@ -657,6 +657,41 @@ function pathSegment(request, index) {
     return pathname.split('/').filter(Boolean)[index]
 }
 
+// ── Teacher ↔ Admin booking sync ─────────────────────────────────────────────
+// The teacher-facing store (mockBookings: {upcoming,pending,past}) and the
+// admin-facing store (mockAdminBookings: flat array) are kept in sync so a
+// teacher-created booking shows up for admin approval, and an admin decision
+// (or a teacher cancel) reflects back on the other side.
+
+function currentTeacherName() {
+    return getCurrentUser()?.fullName || 'Dr. Jane Smith'
+}
+
+// Map an admin status -> how the teacher view should display it + which tab.
+const ADMIN_TO_TEACHER_STATUS = {
+    confirmed: { status: 'Confirmed', statusColor: 'confirmed', section: 'upcoming' },
+    pending:   { status: 'Pending',   statusColor: 'pending',   section: 'pending'  },
+    rejected:  { status: 'Rejected',  statusColor: 'completed', section: 'past'     },
+    cancelled: { status: 'Cancelled', statusColor: 'completed', section: 'past'     },
+}
+
+// Reflect an admin decision onto the teacher-facing store: find the booking in
+// whichever section it currently sits, update its display status, and move it to
+// the section that matches the new status. No-op if the booking belongs to a
+// different teacher (admin-only seed data with no teacher-store counterpart).
+function syncAdminStatusToTeacher(id, adminStatus) {
+    let found = null
+    for (const key of ['upcoming', 'pending', 'past']) {
+        const idx = mockBookings[key].findIndex(b => b.id === id)
+        if (idx !== -1) { found = mockBookings[key].splice(idx, 1)[0]; break }
+    }
+    if (!found) return
+    const m = ADMIN_TO_TEACHER_STATUS[adminStatus] || ADMIN_TO_TEACHER_STATUS.pending
+    found.status = m.status
+    found.statusColor = m.statusColor
+    mockBookings[m.section].unshift(found)
+}
+
 export const handlers = [
     // POST /api/auth/teacher/signup - register new teacher
     http.post(apiUrl('/api/auth/teacher/signup'), async ({ request }) => {
@@ -909,8 +944,21 @@ export const handlers = [
             targetNames: targetNames
         }
 
-        // Add to upcoming bookings
+        // Add to the teacher's pending bookings
         mockBookings.pending.unshift(booking)
+
+        // Mirror into the admin store so it shows up for approval and bumps the
+        // admin dashboard's pending count. Admin shape uses ISO date + name list.
+        mockAdminBookings.unshift({
+            id: bookingId,
+            teacherName: currentTeacherName(),
+            title: newBooking.title,
+            date: newBooking.date,                                   // YYYY-MM-DD
+            time: `${newBooking.startTime} – ${newBooking.endTime}`,
+            targets: targets.map(t => t.name || t),
+            headless: newBooking.headless ?? false,
+            status: 'pending',
+        })
 
         return HttpResponse.json({
             success: true,
@@ -1045,6 +1093,22 @@ export const handlers = [
         }
 
         return HttpResponse.json(booking)
+    }),
+
+    // DELETE /api/bookings/:id - teacher cancels their own booking. Remove it
+    // from the teacher store and mark the admin-side copy 'cancelled' so the two
+    // views stay consistent.
+    http.delete(apiUrl('/api/bookings/:id'), async ({ request }) => {
+        if (!isMswEnabled()) return passthrough()
+        await delay(300)
+        const bookingId = parseInt(pathSegment(request, 2), 10)
+        for (const key of ['upcoming', 'pending', 'past']) {
+            const idx = mockBookings[key].findIndex(b => b.id === bookingId)
+            if (idx !== -1) { mockBookings[key].splice(idx, 1); break }
+        }
+        const adminCopy = mockAdminBookings.find(b => b.id === bookingId)
+        if (adminCopy) adminCopy.status = 'cancelled'
+        return HttpResponse.json({ success: true })
     }),
 
     // GET /api/space-objects - search/filter celestial objects
@@ -2210,7 +2274,10 @@ export const handlers = [
         const b = mockAdminBookings.find(b => b.id === parseInt(pathSegment(request, 3), 10))
         if (!b) return HttpResponse.json({ error: 'not_found' }, { status: 404 })
         const body = await request.json().catch(() => ({}))
-        if (body.status) b.status = body.status
+        if (body.status) {
+            b.status = body.status
+            syncAdminStatusToTeacher(b.id, body.status) // reflect onto teacher's My Bookings
+        }
         if (body.reason != null) b.rejectReason = body.reason
         return HttpResponse.json({ id: b.id, status: b.status })
     }),
